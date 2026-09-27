@@ -55,16 +55,17 @@ function label(text: string, color = MUTED): HTMLElement {
 }
 
 /**
- * The gear layout follows the body: helmet on top with the totem and relic at
- * the shoulders, the chest in the middle with the weapon and shield in either
- * hand and the amulet and charm at its sides, then gloves, rings, belt and
- * boots along the bottom.
+ * The gear layout follows the body in three columns: helmet and amulet on
+ * top, the chest between the weapon and shield, rings either side of the
+ * belt, gloves and boots below. The trinkets sit under a rule.
  */
 const DOLL: (EquipKey | null)[][] = [
-  ['totem', null, 'helmet', null, 'relic'],
-  ['weapon', 'amulet', 'chest', 'charm', 'shield'],
-  ['gloves', 'ring1', 'belt', 'ring2', 'boots'],
+  [null, 'helmet', 'amulet'],
+  ['weapon', 'chest', 'shield'],
+  ['ring1', 'belt', 'ring2'],
+  [null, 'gloves', 'boots'],
 ];
+const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
 
 /**
  * The hero menu: one pixel-art window with Inventory and Skills tabs. Inventory
@@ -121,7 +122,8 @@ export class HeroMenu {
     // Stats take the left third at full height with their own scrollbar;
     // the right two thirds hold the worn gear on top and the bag underneath
     const stats = h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender));
-    const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map((row) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)))));
+    const dollRow = (row: (EquipKey | null)[]) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)));
+    const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map(dollRow), h('div', { class: 'doll-rule' }), dollRow(TRINKETS));
     const side = this.mouse
       ? h('div', { class: 'px-inset px-itembox howto' }, pxText('Hover an item for its stats.\nClick to equip or take off.\nRight-click to drop.\nDrag to move it in the bag.', { color: MUTED }))
       : this.itemPanel(w, rerender);

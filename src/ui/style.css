@@ -420,6 +420,7 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
 .mt { font-size: 14px; line-height: 1.3; white-space: pre-line; }
 .mt.small { font-size: 11px; }
+.doll-slot .mt { font-size: 9px; letter-spacing: 0; }
 .px-tabs .mt { font-size: 15px; letter-spacing: 0.06em; }
 .px-tabs-title .mt { font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
 .pxb .mt { font-size: 13px; }
@@ -469,9 +470,10 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .bag-block { align-items: flex-start; }
 
 /* Paper doll */
-.doll { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; align-items: center; }
-.doll-row { display: flex; gap: 4px; }
-.doll-slot { width: 60px; height: 60px; display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
+.doll { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px; align-items: center; }
+.doll-row { display: flex; gap: 3px; }
+.doll-rule { width: 100%; height: 2px; background: var(--line); margin: 2px 0; }
+.doll-slot { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
 .doll-slot.on { border-image-source: var(--px-slotOn); }
 .doll-slot.empty { cursor: default; }
 .doll-slot.empty-space { border: 0; visibility: hidden; }
