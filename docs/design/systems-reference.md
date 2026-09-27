@@ -55,15 +55,19 @@ arrives.
 
 Phones and tablets get the layout mobile action RPGs use: a floating joystick
 appears wherever the left thumb lands on the ground, and the right thumb has a
-big Attack button with the five skill buttons on an arc around it. Tapping
-Attack is one swing at whatever is already in reach; holding it keeps swinging,
-and it never walks the hero anywhere. Next to a merchant, station, waypoint
+big Attack button with the five skill buttons on an arc around it. The
+joystick is the only way to move: touching the ground never taps an enemy, a
+merchant or a spot to walk to. Attack and the skills pick their own target,
+the nearest enemy in sight (never one behind a wall). Tapping Attack is one
+swing at whatever is in reach; holding it keeps swinging; with nothing in reach
+it targets the nearest enemy in sight and the hero walks to it until the
+joystick moves, which always cancels the target. Next to a merchant, station, waypoint
 or portal the same button turns gold and becomes the action button (Trade,
 Open, Travel, Enter); tapping it uses the thing. The hero menu on touch has
 four tabs, Inventory, Stats, Skills and Passives, since the stat sheet does not
 fit beside the bag on a phone. Tapping a skill casts it at the nearest
-enemy; holding a skill repeats it; dragging from a skill aims it. Tapping an
-enemy directly still walks to it and attacks. Loot labels, the merchant and
+enemy; holding a skill repeats it; dragging from a skill aims it. Loot is
+picked up by walking over it. Loot labels, the merchant and
 the stations can be tapped directly too.
 Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
 

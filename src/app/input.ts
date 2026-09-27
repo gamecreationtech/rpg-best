@@ -26,7 +26,7 @@ const JOY_DEAD = 8;
 
 /**
  * Pointer and keyboard input. In `tap` mode: tap to move, hold to keep walking.
- * In `touch` mode: a floating joystick appears wherever the thumb lands on empty
+ * In `touch` mode: a floating joystick appears wherever the thumb lands on the
  * ground; tapping an enemy, a merchant or a station still works.
  */
 export class Input {
@@ -63,13 +63,15 @@ export class Input {
       this.host.castSlot(5, e.clientX, e.clientY);
       return;
     }
-    if (this.host.tapEnemy(e.clientX, e.clientY)) return;
-    if (this.host.tapInteractable(e.clientX, e.clientY)) return;
     if (this.mode === 'touch') {
+      // Joystick and buttons only: a thumb on the ground steers, it never taps
+      // an enemy, a merchant or a spot to walk to
       this.joy = { x: e.clientX, y: e.clientY, moved: false };
       this.host.joystick(true, e.clientX, e.clientY, 0, 0);
       return;
     }
+    if (this.host.tapEnemy(e.clientX, e.clientY)) return;
+    if (this.host.tapInteractable(e.clientX, e.clientY)) return;
     this.host.tapGround(e.clientX, e.clientY);
     this.holding = true;
     this.holdTimer = 0;
@@ -108,11 +110,9 @@ export class Input {
     this.pointerId = -1;
     this.holding = false;
     if (this.joy) {
-      const tapped = !this.joy.moved;
       this.joy = null;
       this.host.joystick(false, 0, 0, 0, 0);
       this.host.setMoveInput(0, 0);
-      if (tapped) this.host.tapGround(e.clientX, e.clientY);
     }
   }
 

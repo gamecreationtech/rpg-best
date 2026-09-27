@@ -240,16 +240,44 @@ describe('aggro', () => {
 });
 
 describe('touch attack button', () => {
-  it('one tap is one swing at something in reach and never walks', () => {
+  it('targets the nearest enemy in sight and walks to it while the joystick is idle', () => {
     const w = new World(createPlayer('knight', 'titan'), 21);
     w.travel('arena');
+    // A clear lane so the skeleton is in sight
+    for (let c = Math.floor(w.px) - 1; c <= Math.floor(w.px) + 8; c++) for (let r = Math.floor(w.pz) - 1; r <= Math.floor(w.pz) + 1; r++) w.map.set(c, r, 1);
     const far = w.spawnEnemy(MONSTERS.skeleton!, w.px + 6, w.pz);
     far.speed = 0;
     const startX = w.px;
     expect(w.attackOnce()).toBe(false);
+    expect(w.targetId).toBe(far.id);
     run(w, 1);
-    expect(w.px).toBeCloseTo(startX, 3);
+    expect(w.px).toBeGreaterThan(startX + 1); // walked toward it
+    // The joystick cancels the target, so steering always wins
+    w.setMoveInput(0, 1);
     expect(w.targetId).toBe(-1);
+    w.setMoveInput(0, 0);
+    far.alive = false;
+  });
+
+  it('never picks an enemy behind a wall', () => {
+    const w = new World(createPlayer('knight', 'titan'), 22);
+    w.travel('arena');
+    const c = Math.floor(w.px) + 2;
+    for (let r = Math.floor(w.pz) - 2; r <= Math.floor(w.pz) + 2; r++) w.map.set(c, r, 0);
+    const hidden = w.spawnEnemy(MONSTERS.skeleton!, w.px + 3.5, w.pz);
+    hidden.speed = 0;
+    for (let r = Math.floor(w.pz); r <= Math.floor(w.pz) + 5; r++) w.map.set(Math.floor(w.px), r, 1);
+    const seen = w.spawnEnemy(MONSTERS.skeleton!, w.px, w.pz + 4);
+    seen.speed = 0;
+    expect(w.nearestEnemy(w.px, w.pz, 12)?.id).toBe(seen.id);
+    w.attackOnce();
+    expect(w.targetId).toBe(seen.id);
+  });
+
+  it('one tap is one swing at something in reach', () => {
+    const w = new World(createPlayer('knight', 'titan'), 21);
+    w.travel('arena');
+    const startX = w.px;
     const near = w.spawnEnemy(MONSTERS.skeleton!, w.px + 1.2, w.pz);
     near.speed = 0;
     expect(w.attackOnce()).toBe(true);

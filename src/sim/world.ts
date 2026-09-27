@@ -289,6 +289,7 @@ export class World {
     return e && e.alive && !e.dead ? e : null;
   }
 
+  /** The nearest living enemy with a clear line from (x, z); enemies behind walls are never picked. */
   nearestEnemy(x: number, z: number, maxDist: number, exclude: number[] | null = null, includeDummies = true): Enemy | null {
     let best: Enemy | null = null;
     let bestD = maxDist * maxDist;
@@ -297,10 +298,12 @@ export class World {
       if (!includeDummies && e.dummy) continue;
       if (exclude && exclude.includes(e.id)) continue;
       const d = (e.x - x) ** 2 + (e.z - z) ** 2;
-      if (d < bestD) {
-        bestD = d;
-        best = e;
-      }
+      if (d >= bestD) continue;
+      // Touching bodies count even across a wall corner; anything further must be in sight
+      const touch = e.radius + PLAYER_RADIUS + 0.5;
+      if (d > touch * touch && this.map.lineBlocked(x, z, e.x, e.z)) continue;
+      bestD = d;
+      best = e;
     }
     return best;
   }
@@ -995,11 +998,20 @@ export class World {
    * One swing at whatever is already in reach. Never moves the hero. Used by the
    * touch Attack button: a tap is one attack, holding repeats it.
    */
+  /**
+   * The touch Attack button: swing at the nearest enemy in reach. With nothing
+   * in reach it targets the nearest enemy in sight, and the hero walks to it
+   * while the joystick is idle, as a skill out of range does.
+   */
   attackOnce(): boolean {
     if (this.playerDead || this.leap || this.charge || this.pStatus.stun > 0 || this.pStatus.freeze > 0) return false;
-    if (this.attackTimer > 0) return false;
     const t = this.nearestInReach();
-    if (!t) return false;
+    if (!t) {
+      const far = this.nearestEnemy(this.px, this.pz, 12, null, false) ?? this.nearestEnemy(this.px, this.pz, 12);
+      if (far) this.setTarget(far.id);
+      return false;
+    }
+    if (this.attackTimer > 0) return false;
     this.performAttack(t);
     return true;
   }
