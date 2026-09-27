@@ -57,6 +57,9 @@ interface Look {
   claws?: boolean;
   /** Forward lean of the whole body in side view. */
   hunch?: number;
+  /** A long robe from the shoulders to the ground instead of a torso and legs; `robeFold` shades its folds. */
+  robe?: boolean;
+  robeFold?: string;
   /** Wider body. */
   stout?: boolean;
 }
@@ -142,13 +145,14 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   const armW = Math.max(2, px(W * 0.16));
   const armTop = px(H * 0.36);
   const armLen = px(H * 0.26);
+  const sleeve = look.robe ? 1 : 0;
   const drawArm = (side: number, swing: number) => {
     const x = px(ox + hw + side * (W * 0.32) - armW / 2 + swing * W * 0.1 + lean * 0.5);
     const raise = Math.max(0, -swing) * px(H * 0.12);
-    d.buf.rect(x, oy + armTop - raise, armW, armLen, base(d, look.arms ?? look.body));
+    d.buf.rect(x - sleeve, oy + armTop - raise, armW + sleeve, armLen, base(d, look.arms ?? look.body));
     d.buf.rect(x, oy + armTop - raise + armLen, armW, Math.max(1, px(H * 0.05)), base(d, look.skin));
   };
-  drawLeg(pose.legR);
+  if (!look.robe) drawLeg(pose.legR);
   drawArm(-1, pose.armB);
   if (shield) {
     // The shield hangs on the back arm, a sliver shows behind the body
@@ -172,14 +176,35 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   const shoulderH = Math.max(1, px(H * 0.06));
   d.buf.rect(tx - 1, oy + torsoTop, torsoW + 2, shoulderH, base(d, look.arms ?? look.body));
   if (look.ribs) for (let i = 0; i < 3; i++) d.buf.rect(tx + 1, oy + torsoTop + 2 + i * Math.max(2, px(H * 0.07)), torsoW - 2, 1, base(d, 'boneDark'));
-  const beltH = Math.max(1, px(H * 0.05));
-  d.buf.rect(tx + waist, oy + legTop - beltH, torsoW - waist * 2, beltH, base(d, look.trim ?? look.belt ?? 'leather'));
+  if (look.robe) {
+    // A robe: widens from the shoulders to a hem at the ground that sways with the stride
+    const cx = ox + hw + lean;
+    const fold = base(d, look.robeFold ?? look.legs);
+    const top = oy + torsoTop + shoulderH;
+    const bottom = oy + H;
+    for (let y = top; y < bottom; y++) {
+      const t = (y - top) / (bottom - top);
+      const half = Math.round(torsoW / 2 + t * (W * 0.42 - torsoW / 2));
+      const back = Math.round(cx - half + pose.legR * t * 1.5);
+      const front = Math.round(cx + half + pose.legL * t * 1.5);
+      d.buf.rect(back, y, front - back + 1, 1, base(d, look.body));
+      // Two folds down the front and the back edge in shadow
+      if (t > 0.3 && y % 2 === 0) d.buf.set(front - Math.round(half * 0.6), y, fold);
+      if (t > 0.2) d.buf.set(back, y, fold);
+    }
+    d.buf.rect(Math.round(cx - W * 0.42 + pose.legR * 1.5), bottom - 1, Math.round(W * 0.84) + 1, 1, fold);
+    const sashY = oy + px(H * 0.52);
+    d.buf.rect(Math.round(cx - torsoW * 0.55), sashY, px(torsoW * 1.1), Math.max(1, px(H * 0.05)), base(d, look.trim ?? look.belt ?? 'leather'));
+  } else {
+    const beltH = Math.max(1, px(H * 0.05));
+    d.buf.rect(tx + waist, oy + legTop - beltH, torsoW - waist * 2, beltH, base(d, look.trim ?? look.belt ?? 'leather'));
+  }
   // Head
   const headR = Math.max(2, px(H * 0.12));
   const hx = px(ox + hw + W * 0.05 + lean);
   const hy = oy + px(H * 0.17);
   sideHead(d, pal, look, hx, hy, headR);
-  drawLeg(pose.legL);
+  if (!look.robe) drawLeg(pose.legL);
   drawArm(1, pose.armF);
   if (weapon) {
     const handX = px(ox + hw + W * 0.32 + pose.armF * W * 0.1 + lean * 0.5);
@@ -249,11 +274,29 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
     d.buf.rect(x, oy + legTop, legW, legLen - up, base(d, look.legs));
     d.buf.rect(x, oy + H - Math.max(1, px(H * 0.06)) - up, legW, Math.max(1, px(H * 0.06)), base(d, look.belt ?? 'leather'));
   };
-  drawLeg(-1, pose.legL);
-  drawLeg(1, pose.legR);
+  if (!look.robe) {
+    drawLeg(-1, pose.legL);
+    drawLeg(1, pose.legR);
+  }
   // Cape shows from the back and covers the torso
   d.buf.rect(tx, oy + torsoTop, torsoW, torsoH, base(d, look.body));
-  if (!look.stout) {
+  if (look.robe) {
+    const fold = base(d, look.robeFold ?? look.legs);
+    const top = oy + torsoTop + Math.max(1, px(H * 0.06));
+    const bottom = oy + H;
+    for (let y = top; y < bottom; y++) {
+      const t = (y - top) / (bottom - top);
+      const half = Math.round(torsoW / 2 + t * (W * 0.46 - torsoW / 2));
+      const sway = Math.round((pose.legL - pose.legR) * t * 0.7);
+      d.buf.rect(Math.round(cx - half + sway), y, half * 2 + 1, 1, base(d, look.body));
+      if (t > 0.3 && y % 2 === 0) {
+        d.buf.set(Math.round(cx + sway), y, fold);
+        d.buf.set(Math.round(cx - half + sway), y, fold);
+      }
+    }
+    d.buf.rect(Math.round(cx - W * 0.46), bottom - 1, Math.round(W * 0.92) + 1, 1, fold);
+    if (!back) d.buf.rect(Math.round(cx - torsoW * 0.55), oy + px(H * 0.52), px(torsoW * 1.1), Math.max(1, px(H * 0.05)), base(d, look.trim ?? look.belt ?? 'leather'));
+  } else if (!look.stout) {
     const waist = Math.max(1, px(W * 0.06));
     for (let y = oy + torsoTop + px(torsoH * 0.55); y < oy + torsoTop + torsoH; y++) {
       for (let i = 0; i < waist; i++) {
@@ -267,7 +310,7 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
   const shoulderH = Math.max(1, px(H * 0.06));
   d.buf.rect(tx - 1, oy + torsoTop, torsoW + 2, shoulderH, base(d, look.arms ?? look.body));
   if (!back && look.ribs) for (let i = 0; i < 3; i++) d.buf.rect(tx + 1, oy + torsoTop + 2 + i * Math.max(2, px(H * 0.07)), torsoW - 2, 1, base(d, 'boneDark'));
-  if (!back) {
+  if (!back && !look.robe) {
     const beltH = Math.max(1, px(H * 0.05));
     d.buf.rect(tx + 1, oy + legTop - beltH, torsoW - 2, beltH, base(d, look.trim ?? look.belt ?? 'leather'));
   }
@@ -398,8 +441,8 @@ function pole(d: Doll, hx: number, hy: number, raise: number, facing: Facing, le
 
 function poleTip(d: Doll, hx: number, hy: number, raise: number, facing: Facing, len: number): [number, number] {
   if (facing === 'side') {
+    // Overhead on the wind-up; otherwise carried upright so it stays inside the frame
     if (raise > 0.8) return [hx - px(len * 0.3), hy - len];
-    if (raise > 0) return [hx + len, hy - px(len * 0.4)];
     return [hx + 1, hy - len];
   }
   if (raise > 0.8) return [hx, hy - len - 2];
@@ -410,7 +453,8 @@ function poleTip(d: Doll, hx: number, hy: number, raise: number, facing: Facing,
 function blade(d: Doll, hx: number, hy: number, raise: number, facing: Facing, len: number, width: number, steel: string, grip: string): void {
   const s = base(d, steel);
   const g = base(d, grip);
-  const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
+  // Blades swing forward and down on the walk and the follow-through
+  const [tx, ty] = facing === 'side' && raise > 0 && raise <= 0.8 ? [hx + px(len * 0.6), hy + px(len * 0.5)] : poleTip(d, hx, hy, raise, facing, len);
   for (let i = 0; i < width; i++) d.buf.line(hx + i, hy, tx + i, ty, s);
   // Crossguard at the hand
   if (facing === 'side' && raise > 0 && raise <= 0.8) d.buf.rect(hx, hy - 1, 2, 3, g);
@@ -495,7 +539,7 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     look.classId === 'knight'
       ? { skin: 'skin', body: 'cloth', head: 'steel', legs: 'leather', arms: 'steel', trim: 'trim', helm: true, cape: 'cape' }
       : look.classId === 'sorcerer'
-        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'cloth', arms: 'cloth', trim: 'trim', hood: true }
+        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', hood: true, robe: true, robeFold: 'hood' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leather', arms: 'skin', trim: 'trim', hood: true };
   const weapon = look.weapon ? WEAPONS[look.weapon] : look.classId === 'knight' ? WEAPONS.sword : look.classId === 'sorcerer' ? WEAPONS.staff : WEAPONS.bow;
   return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);
@@ -555,7 +599,7 @@ export function monsterSheet(kind: MonsterKind, pal: Palette, size: SpriteSize, 
       speed = 0.55;
       break;
     case 'necromancer':
-      look = { skin: 'pale', body: 'robe', head: 'robeDark', legs: 'robe', arms: 'robe', trim: 'boneDark', hood: true, eyes: [0x66, 0xe0, 0x70] };
+      look = { skin: 'pale', body: 'robe', head: 'robeDark', legs: 'robeDark', arms: 'robe', trim: 'boneDark', hood: true, robe: true, robeFold: 'robeDark', eyes: [0x66, 0xe0, 0x70] };
       weapon = WEAPONS.staff;
       break;
     default:
