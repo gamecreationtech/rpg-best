@@ -339,6 +339,23 @@ button.chip.spell.bolt { color: #cfd6ff; }
 .card-stats { font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
 .close { min-height: 34px; }
 
+/* Desktop bar */
+.dbar {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; justify-content: center; gap: 12px;
+  padding: 10px 14px calc(10px + var(--safe-b)); background: linear-gradient(to top, rgba(6, 7, 12, 0.96) 70%, rgba(6, 7, 12, 0));
+  border-top: 1px solid var(--line);
+}
+.dbar .status.in-bar { position: static; width: 250px; flex: 0 0 250px; }
+.dbar .potions.pair { flex: 0 0 auto; gap: 6px; }
+.dbar .potion { width: 44px; height: 52px; }
+.dbar .log-box { flex: 1 1 260px; min-width: 200px; max-width: 520px; height: 76px; border: 1px solid var(--line); border-radius: 6px; background: rgba(10, 12, 20, 0.7); padding: 6px 10px; overflow: hidden; display: flex; align-items: flex-end; }
+.dbar .log { min-height: 0; width: 100%; }
+.dbar .skills { flex: 0 0 auto; }
+.hud-root:not(.touch) .menu-row { position: absolute; right: 10px; top: calc(178px + var(--safe-t)); flex-direction: column; gap: 5px; }
+.hud-root:not(.touch) .menu-btn { min-width: 70px; height: 32px; font-size: 11px; opacity: 0.92; }
+.hud-root:not(.touch) .buff-bar { top: calc(12px + var(--safe-t)); }
+@media (max-width: 1100px) { .dbar .status.in-bar { width: 190px; flex-basis: 190px; } .dbar .log-box { min-width: 150px; } .dbar { gap: 8px; } }
+
 /* ------------------------------------------------------------------ touch controls */
 .joy-base { position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; border: 2px solid rgba(232, 180, 90, 0.45); background: rgba(10, 12, 20, 0.35); display: none; pointer-events: none; }
 .joy-knob { position: absolute; left: 34px; top: 34px; width: 52px; height: 52px; border-radius: 50%; background: rgba(232, 180, 90, 0.55); box-shadow: 0 0 12px rgba(232, 180, 90, 0.4); }

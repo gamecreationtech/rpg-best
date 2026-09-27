@@ -83,7 +83,7 @@ export class Hud {
       b.style.setProperty('--c', hex(c.color));
       b.append(h('span', { class: 'potion-key' }, c.key), h('span', { class: 'potion-count' }, '0'));
       b.title = c.name;
-      potionRow.appendChild(b);
+      if (touch) potionRow.appendChild(b);
       this.potions.push(b);
     }
     const menu = h('div', { class: 'menu-row' });
@@ -114,11 +114,17 @@ export class Hud {
       }
       this.root.append(h('div', { class: 'bottom-left' }, this.log, potionRow), menu, cluster);
     } else {
-      const bottom = h('div', { class: 'bottom' });
-      const row1 = h('div', { class: 'row-top' }, potionRow, menu);
-      const skillRow = h('div', { class: 'skills' }, ...this.slots);
-      bottom.append(this.log, row1, skillRow);
-      this.root.appendChild(bottom);
+      // Desktop: one classic bar along the bottom, left to right:
+      // status, life potion and bandage, message log, mana potion and incense, skills
+      status.classList.add('in-bar');
+      const bar = h('div', { class: 'dbar' },
+        status,
+        h('div', { class: 'potions pair' }, this.potions[0]!, this.potions[1]!),
+        h('div', { class: 'log-box' }, this.log),
+        h('div', { class: 'potions pair' }, this.potions[2]!, this.potions[3]!),
+        h('div', { class: 'skills' }, ...this.slots),
+      );
+      this.root.append(bar, menu);
     }
   }
 
