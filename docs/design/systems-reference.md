@@ -50,10 +50,12 @@ Proving Grounds.
 
 Phones and tablets get the layout mobile action RPGs use: a floating joystick
 appears wherever the left thumb lands on the ground, and the right thumb has a
-big Attack button with the five skill buttons on an arc around it. Holding
-Attack keeps hitting the nearest enemy; tapping a skill casts it at the nearest
-enemy; holding a skill repeats it; dragging from a skill aims it. Enemies,
-loot labels, the merchant and the stations can still be tapped directly.
+big Attack button with the five skill buttons on an arc around it. Tapping
+Attack is one swing at whatever is already in reach; holding it keeps swinging,
+and it never walks the hero anywhere. Tapping a skill casts it at the nearest
+enemy; holding a skill repeats it; dragging from a skill aims it. Tapping an
+enemy directly still walks to it and attacks. Loot labels, the merchant and
+the stations can be tapped directly too.
 Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
 
 Desktop keeps tap-to-move: tap to move, hold to keep walking, tap an enemy to

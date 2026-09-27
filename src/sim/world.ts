@@ -853,24 +853,58 @@ export class World {
     }
   }
 
-  private tickAutoAttack(dt: number): void {
-    let t = this.targetEnemy();
-    if (!t && this.attackHeld) {
-      const near = this.nearestEnemy(this.px, this.pz, 12);
-      if (near) {
-        this.targetId = near.id;
-        t = near;
+  /** How far the equipped weapon reaches, plus the target's body. */
+  private attackReach(t: Enemy): number {
+    const d = this.derived;
+    return (d.isRanged ? (this.player.equipment.get('weapon')?.weapon?.range ?? 300) + d.range : d.meleeRange) * PX + t.radius;
+  }
+
+  private inReach(t: Enemy): boolean {
+    if (this.dist(t.x, t.z) > this.attackReach(t)) return false;
+    return !(this.derived.isRanged && this.map.lineBlocked(this.px, this.pz, t.x, t.z));
+  }
+
+  /** Nearest enemy the hero could hit from where it stands, without moving. */
+  nearestInReach(): Enemy | null {
+    let best: Enemy | null = null;
+    let bestD = Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive || e.dead) continue;
+      const dd = this.dist(e.x, e.z);
+      if (dd < bestD && this.inReach(e)) {
+        bestD = dd;
+        best = e;
       }
     }
+    return best;
+  }
+
+  /**
+   * One swing at whatever is already in reach. Never moves the hero. Used by the
+   * touch Attack button: a tap is one attack, holding repeats it.
+   */
+  attackOnce(): boolean {
+    if (this.playerDead || this.leap || this.charge || this.pStatus.stun > 0 || this.pStatus.freeze > 0) return false;
+    if (this.attackTimer > 0) return false;
+    const t = this.nearestInReach();
+    if (!t) return false;
+    this.performAttack(t);
+    return true;
+  }
+
+  private tickAutoAttack(dt: number): void {
+    if (this.attackHeld && !this.pendingCast) {
+      // Held Attack: keep swinging at whatever is close, but stay put
+      const near = this.nearestInReach();
+      if (near && this.attackTimer <= 0) this.performAttack(near);
+    }
+    const t = this.targetEnemy();
     if (!t) {
       if (this.targetId >= 0) this.targetId = -1;
       return;
     }
     if (this.pendingCast) return; // handled by tickPendingCast
-    const d = this.derived;
-    const reach = (d.isRanged ? (this.player.equipment.get('weapon')?.weapon?.range ?? 300) + d.range : d.meleeRange) * PX + t.radius;
-    const dist = this.dist(t.x, t.z);
-    if (dist > reach || (d.isRanged && this.map.lineBlocked(this.px, this.pz, t.x, t.z))) {
+    if (!this.inReach(t)) {
       // With a joystick the player steers; only path when nothing else moves the hero
       if (!this.movingByInput) this.approach(t, dt);
       return;
@@ -878,6 +912,13 @@ export class World {
     this.path.length = 0;
     this.pyaw = Math.atan2(t.x - this.px, t.z - this.pz);
     if (this.attackTimer > 0) return;
+    this.performAttack(t);
+  }
+
+  private performAttack(t: Enemy): void {
+    const d = this.derived;
+    const reach = this.attackReach(t);
+    this.pyaw = Math.atan2(t.x - this.px, t.z - this.pz);
     this.attackTimer = 1 / d.atkSpd;
     this.breakInvisibility();
     this.emit({ type: 'player_attack', melee: !d.isRanged });

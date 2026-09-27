@@ -111,3 +111,28 @@ describe('world', () => {
     expect(w.player.hp).toBe(w.derived.maxHp);
   });
 });
+
+describe('touch attack button', () => {
+  it('one tap is one swing at something in reach and never walks', () => {
+    const w = new World(createPlayer('knight', 'titan'), 21);
+    w.travel('arena');
+    const far = w.spawnEnemy(PLACEHOLDER_ENEMIES[1]!, w.px + 6, w.pz);
+    far.speed = 0;
+    const startX = w.px;
+    expect(w.attackOnce()).toBe(false);
+    run(w, 1);
+    expect(w.px).toBeCloseTo(startX, 3);
+    expect(w.targetId).toBe(-1);
+    const near = w.spawnEnemy(PLACEHOLDER_ENEMIES[1]!, w.px + 1.2, w.pz);
+    near.speed = 0;
+    expect(w.attackOnce()).toBe(true);
+    const hp = near.hp;
+    expect(hp).toBeLessThan(near.maxHp);
+    run(w, 2);
+    expect(near.hp).toBe(hp); // a tap does not keep attacking
+    w.attackHeld = true;
+    run(w, 3);
+    expect(near.hp < hp || near.dead).toBe(true); // holding does
+    expect(w.px).toBeCloseTo(startX, 3);
+  });
+});

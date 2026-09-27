@@ -15,8 +15,10 @@ export interface HudHost {
   openPanel(kind: PanelKind): void;
   castSlot(slot: number, sx: number | null, sy: number | null): void;
   usePotion(id: (typeof CONSUMABLES)[number]['id']): void;
-  /** Touch attack button held down: keep attacking the nearest enemy. */
+  /** Touch attack button held down: keep attacking whatever is in reach, without moving. */
   attackHeld(on: boolean): void;
+  /** Touch attack button tapped: one attack at whatever is in reach. */
+  attackOnce(): void;
 }
 
 interface Message {
@@ -132,8 +134,12 @@ export class Hud {
       const drag = { slot: i, x: e.clientX, y: e.clientY, moved: false, repeat: null as number | null };
       this.drag = drag;
       if (i === 0) {
-        this.host.attackHeld(true);
-        this.host.castSlot(0, null, null);
+        if (this.touch) {
+          this.host.attackOnce();
+          this.host.attackHeld(true);
+        } else {
+          this.host.castSlot(0, null, null);
+        }
       } else {
         // Hold to keep casting (fire bolt style); a drag switches to aiming
         drag.repeat = window.setInterval(() => {

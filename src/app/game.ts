@@ -180,7 +180,7 @@ export class Game {
     this.screens.clearDead();
     this.screens.hide();
     this.hud!.banner(fresh ? 'Falling Sky' : 'Welcome back');
-    this.hud!.message(fresh ? (this.touchControls ? 'Drag on the ground to move. Hold the big button to attack. Tap skills to cast.' : 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.') : `Level ${player.level}, ${player.gold} gold.`);
+    this.hud!.message(fresh ? (this.touchControls ? 'Drag on the ground to move. Attack hits what is in reach. Tap skills to cast.' : 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.') : `Level ${player.level}, ${player.gold} gold.`);
     this.hud!.message(`${PROVING_GROUNDS.name} monsters are placeholders. Find the gold waypoint to travel.`, 0xa0a8c0);
     this.drainEvents();
     if (fresh) void this.autosave();
@@ -205,6 +205,9 @@ export class Game {
       usePotion: (id) => this.usePotion(id),
       attackHeld: (on) => {
         if (this.world) this.world.attackHeld = on;
+      },
+      attackOnce: () => {
+        if (this.world && !this.panels?.isOpen) this.world.attackOnce();
       },
     }, touch);
     this.input.mode = touch ? 'touch' : 'tap';
