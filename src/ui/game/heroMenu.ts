@@ -6,7 +6,7 @@ import { SKILLS, skillsFor } from '../../data/skills';
 import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
-import { describeItem, type Item } from '../../sim/items/item';
+import type { Item } from '../../sim/items/item';
 import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlockUltimate, unlockedSlots } from '../../sim/player';
 import { skillCooldown } from '../../sim/skills/cast';
 import type { World } from '../../sim/world';
@@ -251,21 +251,44 @@ export class HeroMenu {
     return grid;
   }
 
-  /** The lines of an item card: name, kind, stats with the difference to what is worn. */
+  /**
+   * The lines of an item card: "Name [Rarity]" in the rarity colour, the level
+   * requirement in grey, then the weapon's damage and speed (or the armour),
+   * then every other stat with the difference against what is worn.
+   */
   private itemLines(w: World, item: Item, from: 'bag' | 'equip'): HTMLElement[] {
     const compare = from === 'bag' ? w.player.equipment.get(w.player.equipment.targetKey(item)) : null;
     const color = hex(RARITIES[item.rarity].color);
-    const out: HTMLElement[] = [pxText(item.name, { color }), pxText(`${RARITIES[item.rarity].name} ${item.slot}, level ${item.reqLevel}, ${item.value} gold`, { color: MUTED, maxChars: 44 })];
-    for (const line of describeItem(item)) out.push(pxText(line, { color: TEXT, maxChars: 44 }));
+    const gap = () => h('div', { class: 'px-gap' });
+    const out: HTMLElement[] = [
+      h('div', { class: 'px-row tight' }, pxText(item.name, { color }), pxText(`[${RARITIES[item.rarity].name}]`, { color })),
+      pxText(`Required Level : ${item.reqLevel}`, { color: '#a8aec0' }),
+      gap(),
+    ];
     const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
-    for (const [k, v] of stats) {
-      const delta = compare && compare !== item ? v - (compare.stats[k] ?? 0) : 0;
-      const row = h('div', { class: 'px-row' }, pxText(formatStat(k, v), { color: BLUE }));
-      if (delta !== 0) row.append(pxText(`(${delta > 0 ? '+' : ''}${Math.round(delta * 100) / 100})`, { color: delta > 0 ? GREEN : RED }));
-      out.push(row);
+    const delta = (k: StatKey, v: number) => {
+      const d = compare && compare !== item ? v - (compare.stats[k] ?? 0) : 0;
+      return d !== 0 ? pxText(`(${d > 0 ? '+' : ''}${Math.round(d * 100) / 100})`, { color: d > 0 ? GREEN : RED }) : null;
+    };
+    if (item.weapon) {
+      const wp = item.weapon;
+      const cw = compare?.weapon;
+      const dmgDelta = cw ? Math.round(((wp.dmgMin + wp.dmgMax) / 2 - (cw.dmgMin + cw.dmgMax) / 2) * 10) / 10 : 0;
+      out.push(h('div', { class: 'px-row tight' }, pxText(`Damage ${wp.dmgMin} to ${wp.dmgMax}`, { color: TEXT }), dmgDelta ? pxText(`(${dmgDelta > 0 ? '+' : ''}${dmgDelta})`, { color: dmgDelta > 0 ? GREEN : RED }) : null));
+      out.push(pxText(`Weapon Speed ${wp.atkSpd.toFixed(2)}`, { color: TEXT }));
+      const tags = [wp.type, wp.ranged ? 'ranged' : 'melee', wp.magic ? 'magic' : '', wp.twoHanded ? 'two-handed' : ''].filter(Boolean).join(', ');
+      out.push(pxText(tags[0]!.toUpperCase() + tags.slice(1), { color: MUTED }));
+    } else if (item.stats.armor) {
+      out.push(h('div', { class: 'px-row tight' }, pxText(`Armor ${Math.round(item.stats.armor)}`, { color: TEXT }), delta('armor', item.stats.armor)));
     }
+    const rest = stats.filter(([k]) => !(k === 'armor' && !item.weapon));
+    if (rest.length && (item.weapon || item.stats.armor)) out.push(gap());
+    for (const [k, v] of rest) out.push(h('div', { class: 'px-row tight' }, pxText(formatStat(k, v), { color: BLUE }), delta(k, v)));
     if (item.affixes.length > 1) out.push(pxText(item.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
-    if (compare && compare !== item) out.push(pxText(`Worn: ${compare.name}`, { color: MUTED, maxChars: 44 }));
+    if (compare && compare !== item) {
+      out.push(gap());
+      out.push(pxText(`Worn: ${compare.name}`, { color: MUTED, maxChars: 44 }));
+    }
     return out;
   }
 

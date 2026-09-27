@@ -419,6 +419,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 /* Pixel text and icons: canvases scaled by whole numbers, never smoothed */
 .px, .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
 .px-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.px-row.tight { gap: 6px; }
+.px-gap { height: 6px; }
 .px-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .grow { flex: 1; }
 
