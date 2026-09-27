@@ -566,14 +566,15 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     skin: pal.skin,
     cloth,
     trim: pledge?.armor?.trim ?? (pledge ? pledge.color : pal.heroTrim),
-    leather: pal.leather,
-    // A knight's plate takes the pledge's colours once sworn
-    steel: pledge?.armor?.plate ?? pal.steel,
+    // A rogue's leathers and a knight's plate take the pledge's colours once sworn
+    leather: look.classId === 'rogue' && pledge?.armor ? pledge.armor.plate : pal.leather,
+    leatherDark: look.classId === 'rogue' && pledge?.armor ? pledge.armor.dark : darken(pal.leather, 0.8),
+    steel: look.classId === 'knight' && pledge?.armor ? pledge.armor.plate : pal.steel,
     wood: pal.wood,
     bone: pal.bone,
-    cape: pledge?.armor?.dark ?? (look.classId === 'knight' ? 0x5a6070 : cloth),
-    steelDark: pledge?.armor?.dark ?? 0x5a6070,
-    hood: look.classId === 'sorcerer' ? darken(cloth, 0.8) : pal.leather,
+    cape: look.classId === 'knight' && pledge?.armor ? pledge.armor.dark : look.classId === 'knight' ? 0x5a6070 : cloth,
+    steelDark: look.classId === 'knight' && pledge?.armor ? pledge.armor.dark : 0x5a6070,
+    hood: look.classId === 'sorcerer' ? darken(cloth, 0.8) : look.classId === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
   };
   // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour
   const heroLook: Look =
@@ -581,7 +582,7 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
       ? { skin: 'skin', body: 'steel', head: 'steel', legs: 'steelDark', arms: 'steel', trim: 'trim', belt: 'steelDark', helm: true, cape: 'cape' }
       : look.classId === 'sorcerer'
         ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
-        : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leather', arms: 'skin', trim: 'trim', hood: true };
+        : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leatherDark', arms: 'skin', trim: 'trim', hood: true };
   // Only what is actually equipped is drawn: no weapon means empty hands
   const weapon = look.weapon ? WEAPONS[look.weapon] : null;
   return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);

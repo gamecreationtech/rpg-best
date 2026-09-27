@@ -8,7 +8,7 @@ export interface PledgeDef {
   color: number;
   /** Robe or tabard colour when it should not be the pledge colour darkened. */
   cloth?: number;
-  /** Knight pledges: plate colour, the darker colour of legs and cape, and the trim. */
+  /** Knights: plate, the darker legs and cape, and the trim. Rogues: leathers, the darker legs and hood, and the belt. */
   armor?: { plate: number; dark: number; trim: number };
   description: string;
   /** Skill ids unlocked by this pledge. */
@@ -47,17 +47,17 @@ export const PLEDGES: Record<string, PledgeDef> = {
     skills: ['frozen_armor', 'frost_nova', 'blizzard'],
   },
   quiverbound: {
-    id: 'quiverbound', classId: 'rogue', name: 'Quiverbound', title: 'Master of the Hunt', color: 0x55cc33,
+    id: 'quiverbound', classId: 'rogue', name: 'Quiverbound', title: 'Master of the Hunt', color: 0x55cc33, armor: { plate: 0x3e7a2e, dark: 0x264a1e, trim: 0x8fe08f },
     description: 'Eyes sharp as a hawk, bow always drawn: rains death from afar with unmatched precision.',
     skills: ['arrow_of_beyond', 'arrow_storm', 'ricochet', 'autoaim', 'quickshot'],
   },
   impaler: {
-    id: 'impaler', classId: 'rogue', name: 'Impaler', title: 'Lance of the Wilds', color: 0xffcc22,
+    id: 'impaler', classId: 'rogue', name: 'Impaler', title: 'Lance of the Wilds', color: 0xff9a2a, armor: { plate: 0xb8621e, dark: 0x7a3a12, trim: 0xffb050 },
     description: 'Where others dodge and weave, the Impaler charges forward: skewering foes on steel with reckless ferocity.',
     skills: ['spear_wall', 'impale', 'reckless_charge'],
   },
   silverblade: {
-    id: 'silverblade', classId: 'rogue', name: 'Silverblade', title: 'Shadow of Daggers', color: 0xb0b0d0,
+    id: 'silverblade', classId: 'rogue', name: 'Silverblade', title: 'Shadow of Daggers', color: 0xb0b0d0, armor: { plate: 0x363640, dark: 0x1c1c24, trim: 0xb0b0d0 },
     description: 'A ghost in the dark: closes in unseen, then ends the fight before it begins.',
     skills: ['gods_hand', 'cutthroat', 'daggers_protection'],
   },
