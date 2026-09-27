@@ -174,6 +174,28 @@ describe('world', () => {
   });
 });
 
+describe('leveling pace', () => {
+  it('a fresh knight reaches level 2 in the Proving Grounds within five minutes of fighting', () => {
+    const w = new World(createPlayer('knight', null), 41);
+    w.travel('arena', 'proving_grounds');
+    let t = 0;
+    for (; t < 300 && w.player.level < 2 && !w.playerDead; t += 0.5) {
+      const alive = w.enemies.filter((e) => e.alive && !e.dead && e.def);
+      alive.sort((a, b) => Math.hypot(a.x - w.px, a.z - w.pz) - Math.hypot(b.x - w.px, b.z - w.pz));
+      const near = alive[0];
+      if (near && (w.targetId < 0 || w.enemies[w.targetId]!.dead)) {
+        if (w.dist(near.x, near.z) < 12) w.setTarget(near.id);
+        else w.moveTo(near.x, near.z);
+      }
+      if (w.player.hp < w.derived.maxHp * 0.4) w.useConsumable('hp_potion');
+      run(w, 0.5);
+    }
+    expect(w.playerDead).toBe(false);
+    expect(w.player.level).toBe(2);
+    expect(t).toBeLessThan(300);
+  });
+});
+
 describe('aggro', () => {
   it('monsters ignore the hero beyond 300 px and chase once inside it', () => {
     const w = new World(createPlayer('knight', 'titan'), 31);

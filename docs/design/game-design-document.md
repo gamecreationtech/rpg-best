@@ -62,18 +62,30 @@ Every feature must serve at least one of these. If it does not, cut it.
   moment: the hero is held in place and cannot be hurt until it is made.
 - **Skills:** base skills per class, pledge skills, and ultimates that replace
   a rank-5 base skill using the ultimate point earned at level 20. One skill
-  point, one passive point and five attribute points per level.
+  point, one passive point and five attribute points per level. The level cap
+  is 100.
 - **Passives:** a general tree plus one tree per class, with prerequisites.
 - **Stats:** Strength, Dexterity, Intelligence, Vitality. Full formulas are in
   `docs/design/systems-reference.md` and the export they came from.
 
 ### 4.2b Zones (first draft)
 
-Four zones reached from the town waypoint, each with its own map generator,
-colours and monsters, and a level that its monsters scale to: the Proving
-Grounds (open field, level 1), the Cursed Hollow (caves, 6), the Ashen Marsh
-(sunken ruins, 12) and the Frozen Crypt (halls and corridors, 18). Drafted by
-the engineer until the producer's zone and monster data replaces them.
+Eleven zones reached from the town waypoint, each with its own map
+generator, colours and monsters, and a level that its monsters scale to: the
+Proving Grounds (open field, level 1), the Cursed Hollow (caves, 6), the Ashen
+Marsh (sunken ruins, 12), the Frozen Crypt (halls and corridors, 18), the
+Ember Foundry (26), the Sunken Temple (35), the Blighted Orchard (45), the
+Obsidian Halls (58), the Storm Peaks (72), the Abyss (88) and the Throne of
+the Fallen (100). Drafted by the engineer until the producer's zone and
+monster data replaces them.
+
+### 4.2c Leveling pace
+
+The level cap is 100. A level is meant to take about a minute and a half of
+fighting at the start and about twenty at the end, twenty hours in all,
+in a zone of the hero's own level. The experience needed is derived from
+that target and the measured rate at each level, so the pace stays put when
+monster numbers change; the numbers live in `docs/design/systems-reference.md`.
 
 ### 4.3 Combat
 

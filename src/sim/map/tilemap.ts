@@ -57,14 +57,73 @@ export class TileMap {
     return false;
   }
 
-  /** Walks a straight line and reports whether it crosses a wall. */
+  /**
+   * Moves a circle from (x, z) toward (nx, nz), sliding along any wall it
+   * meets instead of stopping dead. The circle is pushed out of every wall
+   * tile it overlaps; if it still overlaps afterwards (a wall corner pinches
+   * it), the move falls back to one axis at a time, and finally stays put.
+   */
+  slide(x: number, z: number, nx: number, nz: number, radius: number, out: { x: number; z: number }): void {
+    let sx = nx;
+    let sz = nz;
+    for (let pass = 0; pass < 3; pass++) {
+      const c0 = Math.floor(sx - radius);
+      const c1 = Math.floor(sx + radius);
+      const r0 = Math.floor(sz - radius);
+      const r1 = Math.floor(sz + radius);
+      let pushed = false;
+      for (let r = r0; r <= r1; r++) {
+        for (let c = c0; c <= c1; c++) {
+          if (this.walkable(c, r)) continue;
+          const px = Math.max(c, Math.min(sx, c + 1));
+          const pz = Math.max(r, Math.min(sz, r + 1));
+          const dx = sx - px;
+          const dz = sz - pz;
+          const d2 = dx * dx + dz * dz;
+          if (d2 >= radius * radius || d2 < 1e-8) continue;
+          const d = Math.sqrt(d2);
+          const push = radius - d + 0.001;
+          sx += (dx / d) * push;
+          sz += (dz / d) * push;
+          pushed = true;
+        }
+      }
+      if (!pushed) break;
+    }
+    if (!this.circleBlocked(sx, sz, radius) && Math.hypot(sx - x, sz - z) <= Math.hypot(nx - x, nz - z) + 0.01) {
+      out.x = sx;
+      out.z = sz;
+      return;
+    }
+    out.x = this.circleBlocked(nx, z, radius) ? x : nx;
+    out.z = this.circleBlocked(out.x, nz, radius) ? z : nz;
+  }
+
+  /** Reports whether a straight line crosses a wall, visiting every tile the line touches. */
   lineBlocked(x0: number, z0: number, x1: number, z1: number): boolean {
+    let c = Math.floor(x0);
+    let r = Math.floor(z0);
+    const c1 = Math.floor(x1);
+    const r1 = Math.floor(z1);
     const dx = x1 - x0;
     const dz = z1 - z0;
-    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dz) * 3));
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      if (this.blockedAt(x0 + dx * t, z0 + dz * t)) return true;
+    const stepC = dx > 0 ? 1 : -1;
+    const stepR = dz > 0 ? 1 : -1;
+    const tDeltaC = dx !== 0 ? Math.abs(1 / dx) : Infinity;
+    const tDeltaR = dz !== 0 ? Math.abs(1 / dz) : Infinity;
+    let tMaxC = dx !== 0 ? (dx > 0 ? c + 1 - x0 : x0 - c) * tDeltaC : Infinity;
+    let tMaxR = dz !== 0 ? (dz > 0 ? r + 1 - z0 : z0 - r) * tDeltaR : Infinity;
+    for (let i = 0; i < 4096; i++) {
+      if (!this.walkable(c, r)) return true;
+      if (c === c1 && r === r1) return false;
+      if (tMaxC < tMaxR) {
+        c += stepC;
+        tMaxC += tDeltaC;
+      } else {
+        r += stepR;
+        tMaxR += tDeltaR;
+      }
+      if (tMaxC > 1 && tMaxR > 1 && (c !== c1 || r !== r1)) return false;
     }
     return false;
   }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LEVELING, xpForLevel, xpPerMinuteAt } from '../data/classes';
 import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlockUltimate, unlockedSlots } from './player';
 
 describe('player', () => {
@@ -20,19 +21,41 @@ describe('player', () => {
     expect(d.block).toBe(25);
   });
 
-  it('levels with the 1.45 curve and grants points', () => {
+  it('levels along the curve and grants points', () => {
     const p = createPlayer('sorcerer', 'wintercaller');
-    expect(p.xpToNext).toBe(60);
-    const r = addXp(p, 60);
+    expect(p.xpToNext).toBe(xpForLevel(1));
+    const r = addXp(p, xpForLevel(1));
     expect(r.levels).toBe(1);
     expect(p.level).toBe(2);
-    expect(p.xpToNext).toBe(87);
+    expect(p.xpToNext).toBe(xpForLevel(2));
     expect(p.statPoints).toBe(5);
     expect(p.skillPoints).toBe(1);
     expect(p.passivePoints).toBe(1);
     const d = deriveStats(p, [], {});
     // +4 INT per level: 14 INT -> 240 mana, wooden staff int 0
     expect(d.maxMana).toBe(100 + 14 * 10);
+  });
+
+  it('has a level curve that takes minutes early and under half an hour at the cap', () => {
+    let total = 0;
+    let prev = 0;
+    for (let level = 1; level < LEVELING.maxLevel; level++) {
+      const need = xpForLevel(level);
+      expect(need).toBeGreaterThan(prev);
+      prev = need;
+      const minutes = need / xpPerMinuteAt(level);
+      expect(minutes).toBeGreaterThanOrEqual(1);
+      expect(minutes).toBeLessThanOrEqual(30);
+      total += minutes;
+    }
+    expect(total / 60).toBeLessThan(30); // hours from 1 to 100
+    expect(xpForLevel(1)).toBeLessThan(300);
+  });
+
+  it('stops at the level cap', () => {
+    const p = createPlayer('knight', 'paladin');
+    for (let i = 0; i < 200; i++) addXp(p, xpForLevel(p.level));
+    expect(p.level).toBe(LEVELING.maxLevel);
   });
 
   it('unlocks slots and ultimates at the right levels', () => {

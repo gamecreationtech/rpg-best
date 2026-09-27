@@ -30,6 +30,37 @@ describe('maps', () => {
   });
 });
 
+describe('sliding', () => {
+  it('slides a body along a wall corner instead of snagging on it', () => {
+    const m = new TileMap(10, 10);
+    m.set(3, 3, Tile.Wall);
+    // A body just clipping the corner of the wall tile wants to move straight up
+    const out = { x: 0, z: 0 };
+    m.slide(4.36, 4.2, 4.36, 4.1, 0.38, out);
+    expect(out.z).toBeLessThan(4.2);
+    expect(out.x).toBeGreaterThan(4.36);
+    expect(m.circleBlocked(out.x, out.z, 0.38)).toBe(false);
+    // Straight into a flat wall it stops at the wall, keeping the sideways part
+    m.slide(4.5, 3.5, 3.7, 3.6, 0.38, out);
+    expect(out.x).toBeGreaterThanOrEqual(4.38);
+    expect(out.z).toBeCloseTo(3.6, 3);
+    expect(m.circleBlocked(out.x, out.z, 0.38)).toBe(false);
+  });
+});
+
+describe('line of sight', () => {
+  it('catches a wall tile the line only clips at a corner', () => {
+    const m = new TileMap(10, 10);
+    m.set(5, 5, Tile.Wall);
+    // A line that crosses the wall tile's corner region for less than a third of a tile
+    expect(m.lineBlocked(4.2, 5.95, 6.2, 5.05)).toBe(true);
+    expect(m.lineBlocked(4.2, 6.2, 6.2, 6.2)).toBe(false);
+    expect(m.lineBlocked(5.5, 2, 5.5, 4.9)).toBe(false);
+    expect(m.lineBlocked(5.5, 2, 5.5, 5.1)).toBe(true);
+    expect(m.lineBlocked(2.5, 2.5, 2.5, 2.5)).toBe(false);
+  });
+});
+
 describe('pathing', () => {
   const map = new TileMap(10, 10, Tile.Floor);
   for (let r = 0; r < 8; r++) map.set(5, r, Tile.Wall);

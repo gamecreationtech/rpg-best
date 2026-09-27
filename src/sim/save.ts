@@ -1,3 +1,4 @@
+import { xpForLevel } from '../data/classes';
 import type { ClassId } from '../data/classes';
 import { ITEM_RULES } from '../data/items';
 import { EQUIP_KEYS, Equipment, type EquipKey } from './items/equipment';
@@ -65,6 +66,9 @@ export function deserialize(data: SaveData): PlayerState {
     stash: src.stash.map((page) => restoreInventory(page, ITEM_RULES.stashCols, ITEM_RULES.stashRows)),
   };
   while (p.stash.length < ITEM_RULES.stashPages) p.stash.push(new Inventory(ITEM_RULES.stashCols, ITEM_RULES.stashRows));
+  // The curve can change between builds; the level is what counts, so the need is recomputed
+  p.xpToNext = xpForLevel(p.level);
+  p.xp = Math.min(p.xp, p.xpToNext - 1);
   return p;
 }
 

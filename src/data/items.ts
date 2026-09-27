@@ -119,11 +119,11 @@ export const SPECIAL_BASES: BaseItem[] = [
 
 /** Starter gear: item level 1, common, worth nothing. */
 export const STARTER_ITEMS: BaseItem[] = [
-  { id: 'wooden_sword', name: 'Wooden Sword', slot: 'weapon', size: [1, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'sword', dmgMin: 1, dmgMax: 3, atkSpd: 1.1, ranged: false, magic: false, twoHanded: false, range: 30 } },
+  { id: 'wooden_sword', name: 'Wooden Sword', slot: 'weapon', size: [1, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'sword', dmgMin: 2, dmgMax: 5, atkSpd: 1.1, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'wooden_shield', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 5, block: 25 }, noDrop: true, value: 0 },
-  { id: 'wooden_staff', name: 'Wooden Staff', slot: 'weapon', size: [1, 4], stats: {}, noDrop: true, value: 0, weapon: { type: 'staff', dmgMin: 1, dmgMax: 2, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 200 } },
-  { id: 'wooden_bow', name: 'Wooden Bow', slot: 'weapon', size: [2, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'bow', dmgMin: 2, dmgMax: 4, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 200 } },
-  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 2, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 25 } },
+  { id: 'wooden_staff', name: 'Wooden Staff', slot: 'weapon', size: [1, 4], stats: {}, noDrop: true, value: 0, weapon: { type: 'staff', dmgMin: 2, dmgMax: 4, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 200 } },
+  { id: 'wooden_bow', name: 'Wooden Bow', slot: 'weapon', size: [2, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'bow', dmgMin: 3, dmgMax: 6, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 200 } },
+  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 3, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 25 } },
   { id: 'starter_spear', name: 'Starter Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, noDrop: true, value: 0, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
 ];
 

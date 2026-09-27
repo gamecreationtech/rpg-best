@@ -14,6 +14,7 @@ arrives.
 | System | Where the numbers live | Notes |
 | --- | --- | --- |
 | Classes (Knight, Sorcerer, Rogue) | `src/data/classes.ts` | Base stats, per-level growth, starting gear, preferred weapons |
+| Leveling (cap 100) | `src/data/classes.ts` `LEVELING`, `xpForLevel` | Experience to leave a level = target minutes x expected experience per minute at that level. Target minutes: 1.5 at level 1 rising by 0.21 per level (about 22 at 99, 19.5 hours in all). Expected rate: 50 per minute at level 1, +6 per level, capped at 400, times the monster xp level factor. Measured in the simulation with level-appropriate magic gear: 2-3 minutes per level to 18, 5-10 to 45, 13-19 at 58 and above. Saves recompute the need from the level on load |
 | Pledges (9) | `src/data/pledges.ts` | Colour, description, unlocked skills |
 | Skills (53: 18 base, 12 ultimate, 23 pledge) | `src/data/skills.ts` | Every skill is data plus one of eight behaviour kinds; `src/sim/skills/cast.ts` executes them |
 | Passive trees (general + 3 class) | `src/data/passives.ts` | Ranks, per-rank stat, prerequisites |
@@ -29,8 +30,8 @@ arrives.
 | Town | `src/sim/map/tilemap.ts` | 44x33 safe field with merchant, stash, three stations, waypoint, return portal and five elemental training dummies |
 | Map generation | `src/sim/map/tilemap.ts` | 80x60 open field with rock blobs, wall segments and pillars; unreachable pockets are sealed |
 | Pathing | `src/sim/map/pathing.ts` | A* for tap-to-move, a flow field for enemies |
-| Zones (4) | `src/data/zones.ts`, `src/sim/map/tilemap.ts` | Proving Grounds (open field, level 1), Cursed Hollow (caves, 6), Ashen Marsh (ruins, 12), Frozen Crypt (rooms and corridors, 18). Each has its layout generator, stone colours, light colour, darkness, decoration and monster roster with weights. Reached from the town waypoint; the return portal goes back to the last zone |
-| Monsters (15) | `src/data/monsters.ts` | Ghoul, Skeleton, Wraith, Brute, Blood Bat, Cave Spider, Bone Archer, Hollow Ghoul, Plague Rat, Bog Crawler, Marsh Wisp, Marsh Troll, Frost Wraith, Revenant Knight, Necromancer, Ice Golem. Melee or ranged, an attack element, pack size, hover and glow. Life, damage, xp and gold scale with the zone's level (`MONSTER_RULES`), never with the hero. Monsters stand still until the hero comes within 300 px (`MONSTER_RULES.aggroRange`) or hits them, then chase for good |
+| Zones (11) | `src/data/zones.ts`, `src/sim/map/tilemap.ts` | Proving Grounds (open field, level 1), Cursed Hollow (caves, 6), Ashen Marsh (ruins, 12), Frozen Crypt (rooms and corridors, 18), Ember Foundry (ruins, 26), Sunken Temple (caves, 35), Blighted Orchard (field, 45), Obsidian Halls (crypt, 58), Storm Peaks (field, 72), The Abyss (caves, 88), Throne of the Fallen (crypt, 100). Four layout generators shared between them; each zone has its own stone colours, light colour, darkness, decoration and monster roster with weights. Reached from the town waypoint; the return portal goes back to the last zone |
+| Monsters (46) | `src/data/monsters.ts` | Sixteen in the first four zones (Ghoul, Skeleton, Wraith, Brute, Blood Bat, Cave Spider, Bone Archer, Hollow Ghoul, Plague Rat, Bog Crawler, Marsh Wisp, Marsh Troll, Frost Wraith, Revenant Knight, Necromancer, Ice Golem) and thirty more for the seven later zones, reusing the fifteen sprite looks with new names, elements, glows and numbers. Melee or ranged, an attack element, pack size, hover and glow. Base experience is about a ninth of base life. Life, damage, xp and gold scale with the zone's level (`MONSTER_RULES`), never with the hero. Monsters stand still until the hero comes within 300 px (`MONSTER_RULES.aggroRange`) or hits them, then chase for good |
 | Audio | `src/audio/` | Sixteen synthesised effects from the export table plus a generative drone score |
 | Save | `src/sim/save.ts`, `src/app/storage.ts` | IndexedDB with a localStorage fallback, autosave on level up, travel and every 45 seconds, and a copyable save code |
 | Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
@@ -83,6 +84,6 @@ sheet and are never saved. Delete the file and the key before release.
 
 ## Known gaps
 
-- Zones and monsters are engineer drafts awaiting the producer's real data. No bosses or zone unlocks yet: every zone is open from the waypoint.
+- Zones and monsters are engineer drafts awaiting the producer's real data. No bosses or zone unlocks yet: every zone is open from the waypoint. Zones are 6 to 16 levels apart, so a hero spends the second half of each zone above its level and earns 10-20% less than the curve assumes.
 - Performance on real phones has not been measured; the target remains 60 fps.
 - Equipment other than weapons and shields does not change the hero's appearance yet.

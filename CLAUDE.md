@@ -43,7 +43,9 @@ simulation is `src/sim/world.ts` plus `combat.ts` and `skills/cast.ts`; it emits
 `SimEvent`s that `src/render2d/pixelView.ts`, the HUD and audio consume.
 Zones live in `src/data/zones.ts` and monsters in `src/data/monsters.ts`; both
 are engineer drafts to be replaced by the producer's data when it arrives. `npm run check` must
-pass before every push.
+pass before every push. `npm run balance` plays every class through every zone
+for four simulated minutes and reports the leveling pace; run it after touching
+monsters, zones, items or the level curve.
 
 ## Verifying visuals
 

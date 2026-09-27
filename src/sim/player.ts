@@ -1,4 +1,4 @@
-import { CLASSES, LEVELING, type BaseStats, type ClassId } from '../data/classes';
+import { CLASSES, LEVELING, type BaseStats, type ClassId, xpForLevel } from '../data/classes';
 import type { ConsumableId } from '../data/consumables';
 import { CONSUMABLES } from '../data/consumables';
 import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/professions';
@@ -112,7 +112,7 @@ export function createPlayer(classId: ClassId, pledgeId: string | null): PlayerS
     pledgeId,
     level: 1,
     xp: 0,
-    xpToNext: LEVELING.xpStart,
+    xpToNext: xpForLevel(1),
     allocated: { str: 0, dex: 0, int: 0, vit: 0 },
     statPoints: 0,
     skillPoints: 1,
@@ -268,7 +268,7 @@ export function addXp(p: PlayerState, amount: number): LevelUpResult {
   while (p.xp >= p.xpToNext && p.level < LEVELING.maxLevel) {
     p.xp -= p.xpToNext;
     p.level++;
-    p.xpToNext = Math.round(p.xpToNext * LEVELING.xpGrowth);
+    p.xpToNext = xpForLevel(p.level);
     p.statPoints += LEVELING.statPointsPerLevel;
     p.skillPoints += LEVELING.skillPointsPerLevel;
     p.passivePoints += LEVELING.passivePointsPerLevel;

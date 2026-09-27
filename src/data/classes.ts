@@ -82,8 +82,20 @@ export const CLASS_LIST: ClassDef[] = [CLASSES.knight, CLASSES.sorcerer, CLASSES
 
 /** Per level: +5 stat points, +1 skill point, +1 passive point. Level 20 grants an ultimate point. */
 export const LEVELING = {
-  xpStart: 60,
-  xpGrowth: 1.45,
+  /**
+   * The experience curve is built from a target time per level and the
+   * experience a hero of that level earns per minute in a matching zone
+   * (measured in the simulation with level-appropriate magic gear). Level 1
+   * takes about a minute and a half with starter gear, the last levels about twenty.
+   */
+  minutesAtOne: 1.5,
+  minutesPerLevel: 0.21,
+  /** Experience per minute at level 1 and its growth per level, before the zone-level factor. */
+  xpRateAtOne: 50,
+  xpRatePerLevel: 6,
+  xpRateCap: 400,
+  /** Monster experience grows by this per zone level (mirrors MONSTER_RULES.xpPerLevel). */
+  xpPerLevel: 0.15,
   statPointsPerLevel: 5,
   skillPointsPerLevel: 1,
   passivePointsPerLevel: 1,
@@ -92,5 +104,21 @@ export const LEVELING = {
   pledgeLevel: 20,
   /** Player level at which each skill slot (after the basic attack) unlocks. */
   slotUnlockLevels: [1, 5, 10, 15, 20],
-  maxLevel: 70,
+  maxLevel: 100,
 };
+
+/** Experience a hero of this level is expected to earn per minute in a zone of its own level. */
+export function xpPerMinuteAt(level: number): number {
+  const l = Math.max(1, level) - 1;
+  return Math.min(LEVELING.xpRateCap, LEVELING.xpRateAtOne + LEVELING.xpRatePerLevel * l) * (1 + LEVELING.xpPerLevel * l);
+}
+
+/** How long a level is meant to take, in minutes of fighting. */
+export function minutesForLevel(level: number): number {
+  return LEVELING.minutesAtOne + LEVELING.minutesPerLevel * (Math.max(1, level) - 1);
+}
+
+/** Experience needed to leave the given level: the target minutes times the expected rate. */
+export function xpForLevel(level: number): number {
+  return Math.round(minutesForLevel(level) * xpPerMinuteAt(level));
+}

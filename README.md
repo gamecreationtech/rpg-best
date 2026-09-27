@@ -10,8 +10,9 @@ image, model or audio files.
 Playable pre-alpha. Three classes with nine pledges, 53 skills, passive trees,
 items with six rarities, an 18x14 bag, a stash, merchant, three crafting
 stations, consumables, synthesised sound and saves with a shareable code. Zones and
-monsters are first drafts: four zones and fifteen monsters, to be replaced by
-the producer's data. See
+monsters are first drafts: eleven zones from level 1 to 100 and forty-six
+monsters, to be replaced by the producer's data. Level cap 100, about twenty
+hours of fighting to reach it. See
 [systems-reference.md](docs/design/systems-reference.md) for what is implemented
 and [game-design-document.md](docs/design/game-design-document.md) for the design.
 The visual showcase is still available from the title screen.

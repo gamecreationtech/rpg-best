@@ -477,6 +477,8 @@ export class World {
 
   /** While true the hero attacks whatever is nearest (the touch attack button). */
   attackHeld = false;
+  /** Scratch result for wall sliding, reused every move to avoid allocation. */
+  private readonly slid = { x: 0, z: 0 };
   /** Ground point under the mouse; the hero faces it while standing still. */
   aimPoint: { x: number; z: number } | null = null;
 
@@ -929,8 +931,9 @@ export class World {
     this.pyaw = Math.atan2(dx, dz);
     const nx = this.px + dx * speed * dt;
     const nz = this.pz + dz * speed * dt;
-    if (!this.map.circleBlocked(nx, this.pz, PLAYER_RADIUS)) this.px = nx;
-    if (!this.map.circleBlocked(this.px, nz, PLAYER_RADIUS)) this.pz = nz;
+    this.map.slide(this.px, this.pz, nx, nz, PLAYER_RADIUS, this.slid);
+    this.px = this.slid.x;
+    this.pz = this.slid.z;
   }
 
   /** Turns the hero smoothly toward a point. */
@@ -959,7 +962,10 @@ export class World {
   }
 
   private inReach(t: Enemy): boolean {
-    if (this.dist(t.x, t.z) > this.attackReach(t)) return false;
+    const dist = this.dist(t.x, t.z);
+    if (dist > this.attackReach(t)) return false;
+    // Point blank always counts: a wall corner between two touching bodies is no cover
+    if (dist <= t.radius + PLAYER_RADIUS + 0.5) return true;
     return !(this.derived.isRanged && this.map.lineBlocked(this.px, this.pz, t.x, t.z));
   }
 
@@ -1227,8 +1233,9 @@ export class World {
         const len = Math.hypot(mx, mz) || 1;
         const nx = e.x + (mx / len) * speed * dt;
         const nz = e.z + (mz / len) * speed * dt;
-        if (!this.map.circleBlocked(nx, e.z, e.radius)) e.x = nx;
-        if (!this.map.circleBlocked(e.x, nz, e.radius)) e.z = nz;
+        this.map.slide(e.x, e.z, nx, nz, e.radius, this.slid);
+        e.x = this.slid.x;
+        e.z = this.slid.z;
         e.moving = true;
         e.yaw = Math.atan2(mx, mz);
       }
