@@ -502,3 +502,16 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 /* Other panels borrow the frame and the icons */
 .panel-overlay:not(.hero) { background: rgba(8, 9, 15, 0.6); }
 .panel-overlay:not(.hero) .panel-head, .panel-overlay:not(.hero) .panel-body { background: rgba(8, 9, 15, 0.92); }
+
+/* Development menu (temporary) */
+.dev-menu { position: absolute; left: 0; top: calc(60px + var(--safe-t)); bottom: 180px; width: 250px; display: flex; flex-direction: column; background: rgba(8, 9, 15, 0.92); border: 1px solid var(--line); border-left: 0; border-radius: 0 8px 8px 0; pointer-events: auto; font-family: ui-sans-serif, system-ui, sans-serif; z-index: 5; }
+.dev-head { padding: 6px 10px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--line); }
+.dev-body { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; }
+.dev-row { display: flex; flex-direction: column; gap: 2px; padding: 3px 4px; border-radius: 4px; }
+.dev-row.applied { background: var(--accent-dim); }
+.dev-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text); }
+.dev-value { color: var(--accent); font-family: ui-monospace, Menlo, monospace; }
+.dev-controls { display: flex; align-items: center; gap: 6px; }
+.dev-controls input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.dev-controls .btn.small { min-height: 24px; padding: 2px 8px; font-size: 11px; }
+.dev-actions { display: flex; gap: 6px; padding: 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }

@@ -86,6 +86,7 @@ export interface DerivedStats {
   fasterCast: number;
   cdr: number;
   magicFind: number;
+  goldFind: number;
   pierce: number;
   poisonChance: number;
   burnChance: number;
@@ -175,11 +176,12 @@ export function unlockedSlots(level: number): number {
  * Builds the numbers combat uses. `zoneMods` carries aura effects (Sanctuary, Wind)
  * the player currently stands in.
  */
-export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods): DerivedStats {
+/** `extra` is a stat source outside the character sheet, such as the development menu. */
+export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, extra: StatMap | null = null): DerivedStats {
   const cls = CLASSES[p.classId];
   const base = totalBaseStats(p);
   const gear = gearStats(p);
-  const g = (k: StatKey) => gear[k] ?? 0;
+  const g = (k: StatKey) => (gear[k] ?? 0) + (extra?.[k] ?? 0);
   const str = base.str + g('str');
   const dex = base.dex + g('dex');
   const int = base.int + g('int');
@@ -235,6 +237,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods): 
     fasterCast,
     cdr: Math.min(60, g('cdr')),
     magicFind: g('magicFind'),
+    goldFind: g('goldFind'),
     pierce: g('pierce'),
     poisonChance: g('poisonChance'),
     burnChance: g('burnChance'),

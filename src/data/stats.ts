@@ -16,7 +16,7 @@ export type StatKey =
   | 'atkSpd' | 'critChance' | 'critDamage' | 'dodge' | 'block'
   | 'moveSpeed' | 'range' | 'projSpeed' | 'pierce'
   | 'lifeOnHit' | 'manaOnHit' | 'lifeSteal' | 'hpRegen' | 'manaRegen'
-  | 'fasterCast' | 'cdr' | 'magicFind'
+  | 'fasterCast' | 'cdr' | 'magicFind' | 'goldFind'
   | 'fireRes' | 'coldRes' | 'lightningRes' | 'poisonRes' | 'allResists'
   | 'burnChance' | 'poisonChance';
 
@@ -53,6 +53,7 @@ export const STAT_DEFS: Record<StatKey, StatDef> = {
   fasterCast: { name: 'Faster Cast Rate', format: 'pct' },
   cdr: { name: 'Cooldown Reduction', format: 'pct' },
   magicFind: { name: 'Magic Find', format: 'pct' },
+  goldFind: { name: 'Gold Find', format: 'pct' },
   fireRes: { name: 'Fire Resistance', format: 'pct' },
   coldRes: { name: 'Cold Resistance', format: 'pct' },
   lightningRes: { name: 'Lightning Resistance', format: 'pct' },

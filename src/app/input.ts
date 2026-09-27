@@ -16,6 +16,8 @@ export interface InputHost {
   escape(): void;
   /** Tab: open the hero menu, or close whatever panel is open. */
   toggleHero(): void;
+  /** Backquote: show or hide the development menu. */
+  toggleDev(): void;
   interactNearby(): void;
 }
 
@@ -128,6 +130,10 @@ export class Input {
     if (k === 'tab') {
       e.preventDefault();
       this.host.toggleHero();
+      return;
+    }
+    if (k === '`' || k === '~') {
+      this.host.toggleDev();
       return;
     }
     if (!this.host.active()) {

@@ -3,7 +3,7 @@ import { DUMMIES, DUMMY_RULES } from '../data/dummies';
 import { PLACEHOLDER_ENEMIES, PROVING_GROUNDS, type EnemyDef } from '../data/placeholderEnemies';
 import { SKILLS, type BuffMods, type SkillDef } from '../data/skills';
 import { STATUS_RULES } from '../data/status';
-import { ELEMENT_COLORS, type Element } from '../data/stats';
+import { ELEMENT_COLORS, type Element, type StatMap } from '../data/stats';
 import { MS, PX } from '../data/units';
 import { Rng } from '../gen/rng';
 import { damagePlayer, hitEnemy, tickStatuses } from './combat';
@@ -719,9 +719,30 @@ export class World {
     this.tickSpawner(dt);
   }
 
+  /** Stat bonuses from the development menu; never saved. */
+  readonly devStats: StatMap = {};
+
+  gainXp(amount: number): void {
+    const res = addXp(this.player, amount);
+    if (res.levels > 0) {
+      this.markDirty();
+      this.recomputeStats();
+      this.player.hp = this.derived.maxHp;
+      this.player.mana = this.derived.maxMana;
+      this.emit({ type: 'level_up', level: this.player.level });
+      this.emit({ type: 'sound', id: 'levelUp' });
+      this.message(`Level ${this.player.level}!`, 0xffe066);
+    }
+  }
+
+  /** Development menu: one whole level, right now. */
+  devLevelUp(): void {
+    this.gainXp(Math.max(1, this.player.xpToNext - this.player.xp));
+  }
+
   recomputeStats(): void {
     const before = this.derived;
-    this.derived = deriveStats(this.player, this.buffs, this.zoneMods);
+    this.derived = deriveStats(this.player, this.buffs, this.zoneMods, this.devStats);
     this.statsDirty = false;
     if (before && this.derived.maxHp !== before.maxHp) this.player.hp = Math.min(this.player.hp, this.derived.maxHp);
     if (before && this.derived.maxMana !== before.maxMana) this.player.mana = Math.min(this.player.mana, this.derived.maxMana);
@@ -1065,18 +1086,9 @@ export class World {
     if (healOnKillPct) this.healPlayer(Math.round((this.derived.maxHp * healOnKillPct) / 100), false);
     this.player.kills++;
     rechargePotions(this.player, this.potionFraction);
-    const res = addXp(this.player, e.xp);
-    if (res.levels > 0) {
-      this.markDirty();
-      this.recomputeStats();
-      this.player.hp = this.derived.maxHp;
-      this.player.mana = this.derived.maxMana;
-      this.emit({ type: 'level_up', level: this.player.level });
-      this.emit({ type: 'sound', id: 'levelUp' });
-      this.message(`Level ${this.player.level}!`, 0xffe066);
-    }
+    this.gainXp(e.xp);
     if (e.def) {
-      const gold = this.rng.int(e.def.gold[0], e.def.gold[1]);
+      const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + this.derived.goldFind / 100));
       this.addDrop(e.x + this.rng.range(-0.4, 0.4), e.z + this.rng.range(-0.4, 0.4), null, gold);
       if (this.rng.next() * 100 < e.def.dropChance) {
         const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind });

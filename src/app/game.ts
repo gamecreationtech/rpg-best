@@ -12,6 +12,7 @@ import { Hud, type PanelKind } from '../ui/game/hud';
 import { Panels } from '../ui/game/panels';
 import { Screens } from '../ui/game/screens';
 import { GameCursor } from '../ui/game/cursor';
+import { DevMenu } from '../ui/game/devMenu';
 import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
 import { deleteSave, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
@@ -25,6 +26,7 @@ export class Game {
   private view: PixelView | null = null;
   private hud: Hud | null = null;
   private panels: Panels | null = null;
+  private dev: DevMenu | null = null;
   private readonly screens: Screens;
   private readonly input: Input;
   readonly sfx = new Sfx();
@@ -101,6 +103,7 @@ export class Game {
         if (this.panels?.isOpen) this.closePanel();
         else if (this.state === 'playing' && this.world && !this.world.playerDead) this.openPanel('inventory');
       },
+      toggleDev: () => this.dev?.toggle(),
       interactNearby: () => {
         if (this.world && !this.world.interactNearby()) this.hud?.message('Nothing to use here');
       },
@@ -172,6 +175,9 @@ export class Game {
     this.world = new World(player, seed);
     this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
     this.buildHud();
+    // Development menu: stat sliders and a level-up button, shown with ` or ?dev
+    this.dev = new DevMenu(this.gameUi, this.world, () => this.hud?.update(0));
+    if (location.search.includes('dev')) this.dev.toggle(true);
     this.panels = new Panels(this.gameUi, {
       world: this.world,
       settings: this.settings,
@@ -257,6 +263,7 @@ export class Game {
   private teardown(): void {
     this.world = null;
     this.view = null;
+    this.dev = null;
     this.hud?.destroy();
     this.hud = null;
     this.panels = null;
