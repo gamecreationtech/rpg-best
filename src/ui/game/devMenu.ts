@@ -33,8 +33,8 @@ const SLIDERS: DevSlider[] = [
 /**
  * The development menu: a strip on the left with a slider and an Apply button
  * per stat, plus a level-up button. Bonuses go into the world's dev stats,
- * which add to the character sheet and are never saved. Toggled with the
- * backquote key or `?dev` in the address. Meant to be deleted before release.
+ * which add to the character sheet and are never saved. Toggled with F4 or
+ * `?dev` in the address. Meant to be deleted before release.
  */
 export class DevMenu {
   readonly root: HTMLDivElement;
@@ -43,7 +43,7 @@ export class DevMenu {
 
   constructor(parent: HTMLElement, private readonly world: World, private readonly onChange: () => void) {
     this.body = h('div', { class: 'dev-body' });
-    this.root = h('div', { class: 'dev-menu' }, h('div', { class: 'dev-head' }, 'Dev menu', h('span', { class: 'dim' }, ' (` to hide)')), this.body);
+    this.root = h('div', { class: 'dev-menu' }, h('div', { class: 'dev-head' }, 'Dev menu', h('span', { class: 'dim' }, ' (F4 to hide)')), this.body);
     this.root.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.root.style.display = 'none';
     parent.appendChild(this.root);

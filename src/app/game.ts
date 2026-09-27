@@ -175,7 +175,7 @@ export class Game {
     this.world = new World(player, seed);
     this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
     this.buildHud();
-    // Development menu: stat sliders and a level-up button, shown with ` or ?dev
+    // Development menu: stat sliders and a level-up button, shown with F4 or ?dev
     this.dev = new DevMenu(this.gameUi, this.world, () => this.hud?.update(0));
     if (location.search.includes('dev')) this.dev.toggle(true);
     this.panels = new Panels(this.gameUi, {
