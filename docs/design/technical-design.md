@@ -89,16 +89,16 @@ screen in development builds and is checked on every version.
 
 ```
 src/
-  sim/        Pure game simulation: entities, combat, items, skills, levels.
-              No Three.js imports. Deterministic given a seed and inputs.
-  gen/        Procedural generators: meshes, palettes, animations, sounds,
-              level layouts. Pure functions, unit tested.
-  render/     Three.js scene, instanced renderers, shaders, particles,
-              post-processing. Reads sim state, never mutates it.
-  audio/      Web Audio synthesis and mixing.
-  ui/         HTML/CSS/SVG interface: HUD, inventory, skill trees, menus.
-  input/      Tap, click and keyboard mapped to sim commands.
-  app/        Boot, loop, save/load, PWA service worker, settings.
+  data/       Game data tables (classes, pledges, skills, passives, items,
+              crafting, consumables, status rules). Pixels, 32px tiles.
+  sim/        Pure game simulation: world, combat, skill execution, items,
+              maps, pathing, saves. No Three.js imports. Emits SimEvents.
+  gen/        Procedural generators: characters, weapons, props, ground.
+  render/     Three.js viewport, GPU-posed crowds, particles, effects, the
+              game view that draws a World. Reads sim state, never mutates it.
+  audio/      Web Audio synthesis: sound effects and generative music.
+  ui/         HTML/CSS/SVG interface: HUD, panels, screens, showcase panel.
+  app/        Game loop, input, storage, showcase orchestration.
 ```
 
 Rendering and UI observe the simulation. Input produces commands. The

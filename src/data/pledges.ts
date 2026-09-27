@@ -1,0 +1,64 @@
+import type { ClassId } from './classes';
+
+export interface PledgeDef {
+  id: string;
+  classId: ClassId;
+  name: string;
+  title: string;
+  color: number;
+  description: string;
+  /** Skill ids unlocked by this pledge. */
+  skills: string[];
+}
+
+export const PLEDGES: Record<string, PledgeDef> = {
+  paladin: {
+    id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a,
+    description: 'Blessed by the heavens, the Paladin wields divine power to smite evil and protect the innocent.',
+    skills: ['prayer', 'hammer_of_gods', 'sanctuary'],
+  },
+  titan: {
+    id: 'titan', classId: 'knight', name: 'Titan', title: 'God of Earth', color: 0xc8945a,
+    description: 'Born from stone and soil, the Titan is an immovable force of nature: raw, relentless, unbreakable.',
+    skills: ['rock_solid', 'boulder_toss', 'leap'],
+  },
+  nightlord: {
+    id: 'nightlord', classId: 'knight', name: 'Nightlord', title: 'Knight of Darkness', color: 0xaa66cc,
+    description: 'Sworn to the void, the Nightlord commands the shadows: feared, ruthless, and shrouded in darkness.',
+    skills: ['rite_of_blood', 'hemorrhage', 'void_slash'],
+  },
+  necromancer: {
+    id: 'necromancer', classId: 'sorcerer', name: 'Necromancer', title: 'Master of Death', color: 0xcc44ff,
+    description: 'A sorcerer who has gazed beyond the veil. Bends life and death itself: draining vitality, spreading plague, cursing enemies into oblivion.',
+    skills: ['death', 'poison_nova', 'life_touch'],
+  },
+  stormsinger: {
+    id: 'stormsinger', classId: 'sorcerer', name: 'Stormsinger', title: 'Voice of the Storm', color: 0x55bbff,
+    description: 'Where thunder breaks, the Stormsinger stands. A master of lightning and wind, calling down the fury of the sky.',
+    skills: ['call_of_the_wind', 'storm', 'lightning_strike'],
+  },
+  wintercaller: {
+    id: 'wintercaller', classId: 'sorcerer', name: 'Wintercaller', title: 'Herald of the Frost', color: 0x88eeff,
+    description: 'The Wintercaller commands the eternal freeze: encasing foes in ice, blanketing the battlefield in blizzard.',
+    skills: ['frozen_armor', 'frost_nova', 'blizzard'],
+  },
+  quiverbound: {
+    id: 'quiverbound', classId: 'rogue', name: 'Quiverbound', title: 'Master of the Hunt', color: 0x55cc33,
+    description: 'Eyes sharp as a hawk, bow always drawn: rains death from afar with unmatched precision.',
+    skills: ['arrow_of_beyond', 'arrow_storm', 'ricochet', 'autoaim', 'quickshot'],
+  },
+  impaler: {
+    id: 'impaler', classId: 'rogue', name: 'Impaler', title: 'Lance of the Wilds', color: 0xffcc22,
+    description: 'Where others dodge and weave, the Impaler charges forward: skewering foes on steel with reckless ferocity.',
+    skills: ['spear_wall', 'impale', 'reckless_charge'],
+  },
+  silverblade: {
+    id: 'silverblade', classId: 'rogue', name: 'Silverblade', title: 'Shadow of Daggers', color: 0xb0b0d0,
+    description: 'A ghost in the dark: closes in unseen, then ends the fight before it begins.',
+    skills: ['gods_hand', 'cutthroat', 'daggers_protection'],
+  },
+};
+
+export function pledgesFor(classId: ClassId): PledgeDef[] {
+  return Object.values(PLEDGES).filter((p) => p.classId === classId);
+}

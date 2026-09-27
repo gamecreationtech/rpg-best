@@ -1,0 +1,309 @@
+
+import type { ConsumableId } from '../data/consumables';
+import { PROVING_GROUNDS } from '../data/placeholderEnemies';
+import { Music } from '../audio/music';
+import { Sfx } from '../audio/sfx';
+import { GameView } from '../render/world/gameView';
+import { createPlayer, type PlayerState } from '../sim/player';
+import { decodeSave, deserialize, encodeSave, serialize } from '../sim/save';
+import type { SimEvent } from '../sim/types';
+import { SIM_DT, World } from '../sim/world';
+import { Hud, type PanelKind } from '../ui/game/hud';
+import { Panels } from '../ui/game/panels';
+import { Screens } from '../ui/game/screens';
+import { Input } from './input';
+import { deleteSave, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
+
+type State = 'title' | 'class' | 'pledge' | 'playing';
+
+/** Owns the world, the view, the interface and the loop. */
+export class Game {
+  private state: State = 'title';
+  private world: World | null = null;
+  private view: GameView | null = null;
+  private hud: Hud | null = null;
+  private panels: Panels | null = null;
+  private readonly screens: Screens;
+  private readonly input: Input;
+  readonly sfx = new Sfx();
+  readonly music = new Music();
+  readonly settings: Settings = loadSettings();
+  private seed = Math.floor(Math.random() * 1e9);
+  private hasSave = false;
+  private accumulator = 0;
+  private time = 0;
+  private autosaveTimer = 0;
+  private readonly mobile: boolean;
+  private readonly aim = { x: 0, z: 0 };
+  private readonly gameUi: HTMLDivElement;
+
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly ui: HTMLElement) {
+    this.mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || Math.min(window.innerWidth, window.innerHeight) < 600;
+    this.gameUi = document.createElement('div');
+    this.gameUi.className = 'game-ui';
+    ui.appendChild(this.gameUi);
+    this.screens = new Screens(ui, {
+      newGame: () => this.beginNewGame(),
+      continueGame: () => void this.continueGame(),
+      showcase: () => {
+        location.search = '?showcase';
+      },
+      chooseClass: (id) => this.screens.pledgeSelect(id),
+      choosePledge: (classId, pledgeId) => this.start(createPlayer(classId, pledgeId), Math.floor(Math.random() * 1e9), true),
+      respawn: () => this.respawn(),
+      cancelToTitle: () => this.showTitle(),
+    });
+    this.input = new Input(canvas, {
+      active: () => this.state === 'playing' && !!this.world && !this.panels?.isOpen && !this.world.playerDead,
+      tapEnemy: (sx, sy) => {
+        const e = this.view!.pickEnemy(sx, sy);
+        if (!e) return false;
+        this.world!.setTarget(e.id);
+        return true;
+      },
+      tapInteractable: (sx, sy) => {
+        const id = this.view!.pickInteractable(sx, sy);
+        if (id < 0) return false;
+        this.world!.interact(id);
+        return true;
+      },
+      tapGround: (sx, sy) => {
+        if (this.view!.view.unproject(sx, sy, this.aim)) this.world!.moveTo(this.aim.x, this.aim.z);
+      },
+      castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
+      usePotion: (id) => this.usePotion(id),
+      setMoveInput: (x, z) => this.world?.setMoveInput(x, z),
+      openPanel: (kind) => this.openPanel(kind),
+      escape: () => {
+        if (this.panels?.isOpen) this.closePanel();
+        else if (this.state === 'playing') this.openPanel('settings');
+      },
+      interactNearby: () => {
+        if (this.world && !this.world.interactNearby()) this.hud?.message('Nothing to use here');
+      },
+    });
+    // Audio can only start after a tap
+    const unlock = () => {
+      this.sfx.unlock();
+      this.sfx.setVolume(this.settings.sfx);
+      if (this.sfx.context) {
+        this.music.start(this.sfx.context);
+        this.music.setVolume(this.settings.music);
+      }
+    };
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) void this.autosave();
+    });
+  }
+
+  async init(): Promise<void> {
+    const save = await loadGame();
+    this.hasSave = !!save;
+    this.showTitle();
+  }
+
+  private showTitle(): void {
+    this.state = 'title';
+    this.screens.clearDead();
+    this.screens.hasSave = this.hasSave;
+    this.screens.splash();
+  }
+
+  private beginNewGame(): void {
+    this.state = 'class';
+    this.screens.classSelect();
+  }
+
+  private async continueGame(): Promise<void> {
+    const save = await loadGame();
+    if (!save) {
+      this.hasSave = false;
+      this.showTitle();
+      return;
+    }
+    this.start(save.player, save.seed, false);
+  }
+
+  private start(player: PlayerState, seed: number, fresh: boolean): void {
+    this.seed = seed;
+    this.teardown();
+    this.world = new World(player, seed);
+    this.view = new GameView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
+    this.hud = new Hud(this.gameUi, {
+      world: this.world,
+      openPanel: (kind) => this.openPanel(kind),
+      castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
+      usePotion: (id) => this.usePotion(id),
+    });
+    this.panels = new Panels(this.gameUi, {
+      world: this.world,
+      settings: this.settings,
+      applySettings: () => {
+        saveSettings(this.settings);
+        this.sfx.setVolume(this.settings.sfx);
+        this.music.setVolume(this.settings.music);
+      },
+      message: (t, c) => this.hud?.message(t, c),
+      close: () => this.closePanel(),
+      travel: (area) => {
+        this.closePanel();
+        this.world!.travel(area);
+      },
+      exportCode: () => encodeSave(serialize(this.world!.player, this.seed)),
+      importCode: async (code) => {
+        try {
+          const data = decodeSave(code);
+          const p = deserialize(data);
+          await saveGame(p, data.seed);
+          this.start(p, data.seed, false);
+          this.hud?.message('Hero imported', 0x9fe08f);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      saveNow: () => this.autosave(),
+      quitToTitle: () => {
+        void this.autosave().then(() => {
+          this.teardown();
+          this.hasSave = true;
+          this.showTitle();
+        });
+      },
+      deleteSave: async () => {
+        await deleteSave();
+        this.teardown();
+        this.hasSave = false;
+        this.showTitle();
+      },
+    });
+    this.state = 'playing';
+    this.screens.clearDead();
+    this.screens.hide();
+    this.hud.banner(fresh ? 'Falling Sky' : 'Welcome back');
+    this.hud.message(fresh ? 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.' : `Level ${player.level}, ${player.gold} gold.`);
+    this.hud.message(`${PROVING_GROUNDS.name} monsters are placeholders. Find the gold waypoint to travel.`, 0xa0a8c0);
+    this.drainEvents();
+    if (fresh) void this.autosave();
+  }
+
+  private teardown(): void {
+    this.world = null;
+    this.view = null;
+    this.hud = null;
+    this.panels = null;
+    while (this.gameUi.firstChild) this.gameUi.removeChild(this.gameUi.firstChild);
+    this.accumulator = 0;
+  }
+
+  private openPanel(kind: PanelKind): void {
+    if (!this.panels || !this.world || this.world.playerDead) return;
+    this.world.stop();
+    this.panels.open(kind);
+    this.hud?.root.classList.add('hidden');
+    this.sfx.play('uiClick');
+  }
+
+  private closePanel(): void {
+    this.panels?.close();
+    this.hud?.root.classList.remove('hidden');
+    this.sfx.play('uiClick');
+  }
+
+  private castSlot(slot: number, sx: number | null, sy: number | null): void {
+    if (!this.world || !this.view || this.panels?.isOpen || this.world.playerDead) return;
+    let aim: { x: number; z: number } | null = null;
+    if (sx !== null && sy !== null && this.view.view.unproject(sx, sy, this.aim)) aim = { x: this.aim.x, z: this.aim.z };
+    this.world.castSlot(slot, aim);
+  }
+
+  private usePotion(id: ConsumableId): void {
+    if (!this.world || this.panels?.isOpen) return;
+    this.world.useConsumable(id);
+  }
+
+  private respawn(): void {
+    if (!this.world) return;
+    this.screens.clearDead();
+    this.screens.hide();
+    this.world.respawn();
+    this.state = 'playing';
+  }
+
+  private async autosave(): Promise<void> {
+    if (!this.world) return;
+    await saveGame(this.world.player, this.seed);
+    this.hasSave = true;
+  }
+
+  private drainEvents(): void {
+    const w = this.world!;
+    const events = w.events.splice(0, w.events.length);
+    for (const ev of events) this.handleEvent(ev);
+  }
+
+  private handleEvent(ev: SimEvent): void {
+    this.view?.handleEvent(ev);
+    switch (ev.type) {
+      case 'sound':
+        this.sfx.play(ev.id);
+        break;
+      case 'message':
+        this.hud?.message(ev.text, ev.color);
+        break;
+      case 'open':
+        if (ev.panel === 'town_portal') {
+          this.world!.travel('town');
+        } else if (ev.panel === 'return_portal') {
+          this.world!.travel('arena');
+        } else {
+          this.openPanel(ev.panel);
+        }
+        break;
+      case 'area':
+        this.hud?.banner(ev.area === 'town' ? 'Town' : PROVING_GROUNDS.name);
+        this.sfx.play('portal');
+        void this.autosave();
+        break;
+      case 'level_up':
+        void this.autosave();
+        break;
+      case 'player_died':
+        this.screens.dead();
+        break;
+      case 'pickup':
+        if (ev.item) this.hud?.message(`Picked up ${ev.item.name}`);
+        break;
+      default:
+        break;
+    }
+  }
+
+  update(dt: number, render = true): void {
+    this.time += dt;
+    this.input.update(dt);
+    if (this.state !== 'playing' || !this.world || !this.view || !this.hud) return;
+    const paused = this.panels?.isOpen ?? false;
+    if (!paused) {
+      this.accumulator += dt;
+      let steps = 0;
+      while (this.accumulator >= SIM_DT && steps < 5) {
+        this.world.step(SIM_DT);
+        this.accumulator -= SIM_DT;
+        steps++;
+      }
+      if (steps === 5) this.accumulator = 0;
+      this.autosaveTimer += dt;
+      if (this.autosaveTimer > 45) {
+        this.autosaveTimer = 0;
+        void this.autosave();
+      }
+    }
+    this.drainEvents();
+    this.view.update(dt, this.time);
+    this.hud.update(dt);
+    if (render) this.view.render();
+  }
+}

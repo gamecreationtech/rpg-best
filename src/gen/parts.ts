@@ -152,7 +152,7 @@ export class PartBuilder {
   }
 
   /** A low-poly prism (octagon by default) standing on its base. */
-  prism(at: Vec3, radius: number, height: number, color: number | Color, part = Part.Extra, sides = 8, radiusTop = radius, pivot?: Vec3): void {
+  prism(at: Vec3, radius: number, height: number, color: number | Color, part: PartId = Part.Extra, sides = 8, radiusTop = radius, pivot?: Vec3): void {
     const rgb = toRgb(color);
     const pv: Vec3 = pivot ?? at;
     const [cx, cy, cz] = at;

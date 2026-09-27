@@ -54,15 +54,17 @@ Every feature must serve at least one of these. If it does not, cut it.
 
 ### 4.2 Heroes and progression
 
-- **First hero: the Sorcerer.** Ranged spellcaster with big visual effects.
-  Chosen first because it showcases the crowd-and-spells fantasy and stresses
-  the effects budget from day one. Working kit: fire (Fireball, Meteor), cold
-  (Frost Nova, Ice Bolt), lightning (Chain Lightning, Nova).
-- **Later heroes:** Warrior (melee, whirlwind, shouts) and Ranger (bows, traps).
-- **Skills:** Three skill trees per hero, Diablo 2 style. One skill point per
-  level, invested permanently. Respec is rare and costly.
-- **Stats:** Strength, Dexterity, Vitality, Energy, with attribute points on
-  level up. Exact formulas TBD.
+- **Three classes:** Knight (sword and shield, plate), Sorcerer (staff,
+  elemental spells) and Rogue (bow or daggers, traps and stealth).
+- **Pledges:** each class chooses one of three pledges at creation, which
+  unlocks its own skills: Paladin, Titan, Nightlord; Necromancer, Stormsinger,
+  Wintercaller; Quiverbound, Impaler, Silverblade.
+- **Skills:** base skills per class, pledge skills, and ultimates that replace
+  a rank-5 base skill using the ultimate point earned at level 20. One skill
+  point, one passive point and five attribute points per level.
+- **Passives:** a general tree plus one tree per class, with prerequisites.
+- **Stats:** Strength, Dexterity, Intelligence, Vitality. Full formulas are in
+  `docs/design/systems-reference.md` and the export they came from.
 
 ### 4.3 Combat
 
@@ -82,13 +84,15 @@ Every feature must serve at least one of these. If it does not, cut it.
 
 ### 4.5 Items
 
-- **Rarity tiers:** Normal, Magic, Rare and Unique.
-- **Random affixes:** Magic items roll one prefix or suffix, rares roll several.
-  Uniques have fixed named properties.
-- **Slots:** Weapon, off-hand, helmet, body armour, gloves, boots, belt, two
-  rings, amulet.
-- **Visible gear:** Equipped items change the hero's appearance.
-- **Later:** Sets, sockets, runes, gems, charms.
+- **Rarity tiers:** Common, Magic, Rare, Mythic, Set (from transmutation only)
+  and Divine, dropping 55/25/14/5/0/1 out of 100.
+- **Random affixes:** one for magic, two for rare, three for mythic and set,
+  four for divine, from a pool of eight, scaled by rarity and item level.
+- **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
+  rings, totem, relic, charm. A 12x12 bag and a three-page stash.
+- **Crafting:** Forge of Heaven, Blood Fountain and Arcana Oracle in town.
+- **Visible gear:** weapons and shields change the hero's appearance; other
+  slots later.
 
 ### 4.6 Death
 

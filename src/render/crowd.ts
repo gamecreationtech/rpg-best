@@ -102,6 +102,12 @@ export class Crowd {
     return actor;
   }
 
+  /** Frees one actor's slot. */
+  release(actor: Actor): void {
+    const i = this.actors.indexOf(actor);
+    if (i >= 0) this.actors.splice(i, 1);
+  }
+
   /** Removes every actor. */
   clear(): void {
     this.actors.length = 0;

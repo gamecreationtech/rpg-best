@@ -7,10 +7,13 @@ image, model or audio files.
 
 ## Status
 
-Pre-production. The design foundation is decided (see the design documents). The
-first code milestone is a **visual showcase**: the sorcerer, four monsters, their
-animations and four spells, all generated at runtime, on a lit stage with an
-optional horde of 200. No game systems yet.
+Playable pre-alpha. Three classes with nine pledges, 53 skills, passive trees,
+items with six rarities, a 12x12 inventory, stash, merchant, three crafting
+stations, consumables, synthesised sound and saves with a shareable code. Zones and
+monsters are placeholders until their data arrives. See
+[systems-reference.md](docs/design/systems-reference.md) for what is implemented
+and [game-design-document.md](docs/design/game-design-document.md) for the design.
+The visual showcase is still available from the title screen.
 
 ## Repository layout
 
@@ -19,10 +22,14 @@ optional horde of 200. No game systems yet.
 | `docs/design/game-design-document.md` | What the game is: pillars, systems, tone, milestones |
 | `docs/design/technical-design.md` | How it is built: stack, art-in-code rules, performance plan |
 | `CLAUDE.md` | Conventions for contributors and AI-assisted development |
-| `src/gen/` | Procedural generators: characters, ground, props, noise |
-| `src/render/` | Three.js stage, GPU-posed crowds, particles, spell effects, post-processing |
-| `src/ui/` | HTML overlay: button panel and readouts |
-| `src/app/` | Showcase orchestration and the frame loop |
+| `docs/design/systems-reference.md` | What is implemented, where each number lives, calls made |
+| `src/data/` | Game data: classes, pledges, skills, passives, items, crafting, consumables |
+| `src/sim/` | Pure simulation: world, combat, skills, items, maps, pathing, saves |
+| `src/gen/` | Procedural generators: characters, weapons, props, ground, noise |
+| `src/render/` | Three.js viewport, GPU-posed crowds, particles, effects, game view |
+| `src/ui/` | HTML overlay: HUD, panels, screens, showcase controls |
+| `src/audio/` | Synthesised sound effects and generative music |
+| `src/app/` | Game loop, input, storage, showcase |
 | `.github/workflows/` | Checks on every push; deploy to GitHub Pages from the default branch |
 
 ## Getting started

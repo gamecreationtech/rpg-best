@@ -334,6 +334,108 @@ export class Effects {
     this.ring(target[0], 0.08, target[2], 2.4, 0.85, 1.4, 0.45, 0.1);
   }
 
+  // ---------- Game effects ----------
+
+  /** A quick arc of sparks in front of a melee swing. */
+  slash(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: Vec3): void {
+    const base = Math.atan2(dirX, dirZ);
+    const half = (arcDeg * Math.PI) / 360;
+    const n = Math.max(8, Math.round(arcDeg / 8));
+    for (let i = 0; i < n; i++) {
+      const a = base - half + (2 * half * i) / (n - 1);
+      const r = range * this.rng.range(0.55, 0.95);
+      this.particles.spawn({
+        x: x + Math.sin(a) * r, y: 1.0 + this.rng.range(-0.2, 0.3), z: z + Math.cos(a) * r,
+        vx: Math.sin(a) * 2, vy: 0.5, vz: Math.cos(a) * 2,
+        life: 0.22, r: color[0], g: color[1], b: color[2], alpha: 0.9, size: 0.28, sizeEnd: 0.05, drag: 6,
+      }, 0.9);
+    }
+  }
+
+  /** Sparks where a projectile or blow lands. */
+  impact(x: number, y: number, z: number, color: Vec3, size = 1): void {
+    this.flash(x, y, z, 0.45 * size, 0.14, color[0], color[1], color[2]);
+    this.burst(x, y, z, Math.round(12 * size), 3.5 * size, color, 0.35, 0.14 * size, { gravity: 6, drag: 1.5, priority: 0.9 });
+  }
+
+  /** A bolt from the sky onto a point. */
+  lightningStrike(x: number, z: number): void {
+    const top: Vec3 = [x + this.rng.range(-1.5, 1.5), 9, z + this.rng.range(-1.5, 1.5)];
+    const mid: Vec3 = [x + this.rng.range(-0.6, 0.6), 4.5, z + this.rng.range(-0.6, 0.6)];
+    this.chainLightning([top, mid, [x, 0.9, z]]);
+    this.ring(x, 0.08, z, 1.6, 0.3, 0.9, 1.2, 2.2);
+  }
+
+  /** Dust ring for stomps and landings. */
+  stomp(x: number, z: number, radius: number, color: Vec3): void {
+    this.ring(x, 0.08, z, radius, 0.35, color[0], color[1], color[2]);
+    this.burst(x, 0.2, z, 50, radius * 1.6, [0.5, 0.42, 0.34], 0.7, 0.5, { drag: 3, up: 1.2, alpha: 0.5, spread: 0.3, priority: 0.8 });
+  }
+
+  /** Green plague burst. */
+  poisonNova(x: number, z: number, radius: number): void {
+    this.flash(x, 0.8, z, 1.0, 0.25, 0.5, 1.8, 0.6);
+    this.ring(x, 0.1, z, radius, 0.5, 0.35, 1.3, 0.4);
+    this.burst(x, 0.5, z, 120, radius * 1.4, [0.4, 1.4, 0.45], 0.8, 0.35, { drag: 3.5, up: 0.8, alpha: 0.7, spread: 0.4, priority: 0.9 });
+  }
+
+  /** Arrows falling on an area. */
+  arrowRain(x: number, z: number, radius: number): void {
+    for (let i = 0; i < 60; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const r = Math.sqrt(this.rng.next()) * radius;
+      this.particles.spawn({
+        x: x + Math.cos(a) * r, y: 7 + this.rng.range(0, 3), z: z + Math.sin(a) * r,
+        vx: 0, vy: -16, vz: 0, life: 0.55, r: 1.4, g: 1.3, b: 1.1, alpha: 0.9, size: 0.12, sizeEnd: 0.12,
+      }, 0.8);
+    }
+    this.emitter(0.7, 80, (p) => {
+      const a = this.rng.range(0, Math.PI * 2);
+      const r = Math.sqrt(this.rng.next()) * radius;
+      p.spawn({ x: x + Math.cos(a) * r, y: 0.15, z: z + Math.sin(a) * r, vx: 0, vy: 1.5, vz: 0, life: 0.3, r: 0.9, g: 0.8, b: 0.6, alpha: 0.6, size: 0.2, sizeEnd: 0.02 }, 0.6);
+    });
+  }
+
+  iceImpact(x: number, z: number): void {
+    this.burst(x, 0.3, z, 8, 2.2, [0.5, 1.2, 2.0], 0.4, 0.12, { gravity: 5, drag: 1, priority: 0.6 });
+    this.flash(x, 0.3, z, 0.4, 0.12, 0.6, 1.3, 2.2);
+  }
+
+  curse(x: number, z: number, radius: number): void {
+    this.ring(x, 0.1, z, radius, 0.6, 1.2, 0.3, 1.8);
+    this.burst(x, 0.3, z, 40, 1.5, [0.9, 0.25, 1.4], 1.2, 0.3, { up: 1.5, drag: 1.5, alpha: 0.6, priority: 0.7 });
+  }
+
+  teleportPuff(x: number, z: number, color: Vec3): void {
+    this.flash(x, 1.0, z, 0.8, 0.2, color[0], color[1], color[2]);
+    this.burst(x, 1.0, z, 30, 3, color, 0.5, 0.2, { drag: 3, priority: 0.8 });
+  }
+
+  levelUp(x: number, z: number): void {
+    this.ring(x, 0.1, z, 3, 0.8, 2.2, 1.6, 0.5);
+    this.flash(x, 1.2, z, 1.4, 0.4, 2.4, 1.8, 0.6);
+    this.burst(x, 0.3, z, 90, 4, [2.2, 1.6, 0.5], 1.2, 0.2, { up: 5, gravity: 4, drag: 0.5, priority: 1 });
+    this.onKick?.(0.2);
+  }
+
+  /** Straight beam between two points, kept alive by calling `beamSet` each frame. */
+  beamSet(from: Vec3, to: Vec3, color: Vec3): void {
+    const b = this.bolts[3]!;
+    b.active = true;
+    b.t = 0;
+    b.duration = 0.2;
+    b.points = [from, to];
+    b.core.visible = b.glow.visible = true;
+    (b.core.material as MeshBasicMaterial).color.setRGB(color[0], color[1], color[2]);
+    (b.glow.material as MeshBasicMaterial).color.setRGB(color[0] * 0.3, color[1] * 0.3, color[2] * 0.3);
+    if (b.jitterTimer <= 0) {
+      b.jitterTimer = 0.06;
+      b.seed++;
+      this.buildBolt(b);
+    }
+    this.burst(to[0], to[1], to[2], 2, 1.5, color, 0.4, 0.15, { drag: 2, priority: 0.5 });
+  }
+
   // ---------- Per-frame update ----------
 
   update(dt: number, camera: Camera): void {

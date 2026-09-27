@@ -29,17 +29,21 @@ branch. Saves in IndexedDB with an export code (not built yet).
 
 ## Current state
 
-The repo holds the visual showcase (`src/app/showcase.ts`): characters from
-`src/gen/characters/`, GPU rigid-part animation in `src/render/characterMaterial.ts`,
-instanced crowds in `src/render/crowd.ts`, GPU particles and spell effects in
-`src/render/`. There is no `src/sim/` yet; game systems come after the look is
-approved. `npm run check` must pass before every push.
+Playable pre-alpha. Read `docs/design/systems-reference.md` for what exists and
+where every number lives. Game data is in `src/data/` (transcribed from the
+producer's export, in pixels with 32px tiles; multiply by `PX` in the sim). The
+simulation is `src/sim/world.ts` plus `combat.ts` and `skills/cast.ts`; it emits
+`SimEvent`s that `src/render/world/gameView.ts`, the HUD and audio consume.
+Zones and real monsters are intentionally absent; `src/data/placeholderEnemies.ts`
+stands in and should be deleted when their data arrives. `npm run check` must
+pass before every push.
 
 ## Verifying visuals
 
-The page exposes `window.fs` with `showcase`, `paused` and `step(seconds)` for
-automated screenshots. Headless Chromium with SwiftShader renders it; pause the
-loop first and use `step` so only the final frame renders.
+The page exposes `window.fs` with `game` (or `showcase` at `?showcase`), `paused`,
+`step(seconds)` and `data` for automated screenshots. Headless Chromium with
+SwiftShader renders it; pause the loop first and use `step` so only the final
+frame renders. The capture script lives in the session scratchpad, not the repo.
 
 ## Conventions
 
