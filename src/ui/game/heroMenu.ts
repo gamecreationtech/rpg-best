@@ -63,7 +63,7 @@ const DOLL: (EquipKey | null)[][] = [
   [null, 'helmet', 'amulet'],
   ['weapon', 'chest', 'shield'],
   ['ring1', 'belt', 'ring2'],
-  [null, 'gloves', 'boots'],
+  ['gloves', 'boots'],
 ];
 const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
 
