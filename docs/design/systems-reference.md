@@ -48,7 +48,18 @@ Proving Grounds.
 
 ## Controls
 
-Tap to move, hold to keep walking, tap an enemy to attack it, tap an item label to pick it up, tap a station or the merchant to walk there and open it. Tap a skill button to cast it at the nearest enemy, or drag from the button to aim. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot, space to attack, 1-4 potions, I C K P for panels, F to interact, Escape for the menu.
+Phones and tablets get the layout mobile action RPGs use: a floating joystick
+appears wherever the left thumb lands on the ground, and the right thumb has a
+big Attack button with the five skill buttons on an arc around it. Holding
+Attack keeps hitting the nearest enemy; tapping a skill casts it at the nearest
+enemy; holding a skill repeats it; dragging from a skill aims it. Enemies,
+loot labels, the merchant and the stations can still be tapped directly.
+Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
+
+Desktop keeps tap-to-move: tap to move, hold to keep walking, tap an enemy to
+attack it. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
+space to attack, 1-4 potions, I C K P for panels, F to interact, Escape for the
+menu. The menu has a control switch: Automatic, Joystick and buttons, or Tap.
 
 ## Known gaps
 

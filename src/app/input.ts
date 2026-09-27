@@ -1,5 +1,7 @@
 import type { ConsumableId } from '../data/consumables';
 
+export type ControlMode = 'tap' | 'touch';
+
 export interface InputHost {
   /** True while the world should react to input. */
   active(): boolean;
@@ -9,26 +11,33 @@ export interface InputHost {
   castSlot(slot: number, sx: number | null, sy: number | null): void;
   usePotion(id: ConsumableId): void;
   setMoveInput(x: number, z: number): void;
+  joystick(active: boolean, x: number, y: number, dx: number, dy: number): void;
   openPanel(kind: 'inventory' | 'character' | 'skills' | 'passives' | 'settings'): void;
   escape(): void;
   interactNearby(): void;
 }
 
-/** Pointer and keyboard input. Tap to move and attack; hold to keep walking; keys for desktop. */
+const JOY_RADIUS = 56;
+const JOY_DEAD = 8;
+
+/**
+ * Pointer and keyboard input. In `tap` mode: tap to move, hold to keep walking.
+ * In `touch` mode: a floating joystick appears wherever the thumb lands on empty
+ * ground; tapping an enemy, a merchant or a station still works.
+ */
 export class Input {
+  mode: ControlMode = 'tap';
   private readonly keys = new Set<string>();
   private mouseX = 0;
   private mouseY = 0;
   private holding = false;
   private holdTimer = 0;
   private pointerId = -1;
+  private joy: { x: number; y: number; moved: boolean } | null = null;
 
   constructor(private readonly canvas: HTMLCanvasElement, private readonly host: InputHost) {
     canvas.addEventListener('pointerdown', (e) => this.onDown(e));
-    canvas.addEventListener('pointermove', (e) => {
-      this.mouseX = e.clientX;
-      this.mouseY = e.clientY;
-    });
+    canvas.addEventListener('pointermove', (e) => this.onMove(e));
     canvas.addEventListener('pointerup', (e) => this.onUp(e));
     canvas.addEventListener('pointercancel', (e) => this.onUp(e));
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -39,6 +48,7 @@ export class Input {
 
   private onDown(e: PointerEvent): void {
     if (!this.host.active()) return;
+    if (this.pointerId !== -1 && this.mode === 'touch') return; // one thumb steers at a time
     this.canvas.setPointerCapture(e.pointerId);
     this.pointerId = e.pointerId;
     this.mouseX = e.clientX;
@@ -49,13 +59,52 @@ export class Input {
     }
     if (this.host.tapEnemy(e.clientX, e.clientY)) return;
     if (this.host.tapInteractable(e.clientX, e.clientY)) return;
+    if (this.mode === 'touch') {
+      this.joy = { x: e.clientX, y: e.clientY, moved: false };
+      this.host.joystick(true, e.clientX, e.clientY, 0, 0);
+      return;
+    }
     this.host.tapGround(e.clientX, e.clientY);
     this.holding = true;
     this.holdTimer = 0;
   }
 
+  private onMove(e: PointerEvent): void {
+    if (e.pointerId === this.pointerId || this.pointerId === -1) {
+      this.mouseX = e.clientX;
+      this.mouseY = e.clientY;
+    }
+    if (this.joy && e.pointerId === this.pointerId) {
+      let dx = e.clientX - this.joy.x;
+      let dy = e.clientY - this.joy.y;
+      const len = Math.hypot(dx, dy);
+      if (len > JOY_RADIUS) {
+        dx = (dx / len) * JOY_RADIUS;
+        dy = (dy / len) * JOY_RADIUS;
+      }
+      this.host.joystick(true, this.joy.x, this.joy.y, dx, dy);
+      if (len > JOY_DEAD) {
+        this.joy.moved = true;
+        const k = Math.min(1, len / JOY_RADIUS);
+        // Screen right is world +x, screen down is world +z
+        this.host.setMoveInput((dx / (len || 1)) * k, (dy / (len || 1)) * k);
+      } else {
+        this.host.setMoveInput(0, 0);
+      }
+    }
+  }
+
   private onUp(e: PointerEvent): void {
-    if (e.pointerId === this.pointerId) this.holding = false;
+    if (e.pointerId !== this.pointerId) return;
+    this.pointerId = -1;
+    this.holding = false;
+    if (this.joy) {
+      const tapped = !this.joy.moved;
+      this.joy = null;
+      this.host.joystick(false, 0, 0, 0, 0);
+      this.host.setMoveInput(0, 0);
+      if (tapped) this.host.tapGround(e.clientX, e.clientY);
+    }
   }
 
   private onKey(e: KeyboardEvent, down: boolean): void {
@@ -87,12 +136,17 @@ export class Input {
     else if (k === 'f') this.host.interactNearby();
   }
 
-  /** Called every frame: continuous keyboard movement and hold-to-walk. */
+  /** Called every frame: keyboard movement and hold-to-walk. */
   update(dt: number): void {
     if (!this.host.active()) {
+      if (this.joy) {
+        this.joy = null;
+        this.host.joystick(false, 0, 0, 0, 0);
+      }
       this.host.setMoveInput(0, 0);
       return;
     }
+    if (this.joy) return; // the joystick owns movement while held
     let x = 0;
     let z = 0;
     if (this.keys.has('w') || this.keys.has('arrowup')) z -= 1;

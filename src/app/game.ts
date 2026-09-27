@@ -73,6 +73,7 @@ export class Game {
       castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
       usePotion: (id) => this.usePotion(id),
       setMoveInput: (x, z) => this.world?.setMoveInput(x, z),
+      joystick: (active, x, y, dx, dy) => this.hud?.setJoystick(active, x, y, dx, dy),
       openPanel: (kind) => this.openPanel(kind),
       escape: () => {
         if (this.panels?.isOpen) this.closePanel();
@@ -131,12 +132,7 @@ export class Game {
     this.teardown();
     this.world = new World(player, seed);
     this.view = new GameView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
-    this.hud = new Hud(this.gameUi, {
-      world: this.world,
-      openPanel: (kind) => this.openPanel(kind),
-      castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
-      usePotion: (id) => this.usePotion(id),
-    });
+    this.buildHud();
     this.panels = new Panels(this.gameUi, {
       world: this.world,
       settings: this.settings,
@@ -144,6 +140,7 @@ export class Game {
         saveSettings(this.settings);
         this.sfx.setVolume(this.settings.sfx);
         this.music.setVolume(this.settings.music);
+        if (this.hud && this.hud.touch !== this.touchControls) this.buildHud();
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),
@@ -182,16 +179,42 @@ export class Game {
     this.state = 'playing';
     this.screens.clearDead();
     this.screens.hide();
-    this.hud.banner(fresh ? 'Falling Sky' : 'Welcome back');
-    this.hud.message(fresh ? 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.' : `Level ${player.level}, ${player.gold} gold.`);
-    this.hud.message(`${PROVING_GROUNDS.name} monsters are placeholders. Find the gold waypoint to travel.`, 0xa0a8c0);
+    this.hud!.banner(fresh ? 'Falling Sky' : 'Welcome back');
+    this.hud!.message(fresh ? (this.touchControls ? 'Drag on the ground to move. Hold the big button to attack. Tap skills to cast.' : 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.') : `Level ${player.level}, ${player.gold} gold.`);
+    this.hud!.message(`${PROVING_GROUNDS.name} monsters are placeholders. Find the gold waypoint to travel.`, 0xa0a8c0);
     this.drainEvents();
     if (fresh) void this.autosave();
+  }
+
+  /** Joystick and button cluster on touch devices unless the menu says otherwise. */
+  private get touchControls(): boolean {
+    const c = this.settings.controls;
+    if (c === 'touch') return true;
+    if (c === 'tap') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  }
+
+  private buildHud(): void {
+    if (!this.world) return;
+    const touch = this.touchControls;
+    this.hud?.destroy();
+    this.hud = new Hud(this.gameUi, {
+      world: this.world,
+      openPanel: (kind) => this.openPanel(kind),
+      castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
+      usePotion: (id) => this.usePotion(id),
+      attackHeld: (on) => {
+        if (this.world) this.world.attackHeld = on;
+      },
+    }, touch);
+    this.input.mode = touch ? 'touch' : 'tap';
+    if (this.panels?.isOpen) this.hud.root.classList.add('hidden');
   }
 
   private teardown(): void {
     this.world = null;
     this.view = null;
+    this.hud?.destroy();
     this.hud = null;
     this.panels = null;
     while (this.gameUi.firstChild) this.gameUi.removeChild(this.gameUi.firstChild);

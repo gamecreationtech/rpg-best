@@ -90,16 +90,18 @@ export interface Settings {
   music: number;
   sfx: number;
   showDamage: boolean;
+  /** auto: joystick on touch devices, tap elsewhere. */
+  controls: 'auto' | 'touch' | 'tap';
 }
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', ...(JSON.parse(raw) as Partial<Settings>) };
   } catch {
     // ignore
   }
-  return { music: 0.4, sfx: 0.7, showDamage: true };
+  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto' };
 }
 
 export function saveSettings(s: Settings): void {

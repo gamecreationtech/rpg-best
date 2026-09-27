@@ -6,6 +6,7 @@ import { ATTACK_SLOT, resolveSlotSkill, unlockedSlots } from '../../sim/player';
 import { castReady, skillCooldown } from '../../sim/skills/cast';
 import type { World } from '../../sim/world';
 import { button, clear, h, hex } from '../dom';
+import { CLUSTER, skillPosition } from './touchLayout';
 
 export type PanelKind = 'inventory' | 'character' | 'skills' | 'passives' | 'stash' | 'vendor' | 'waypoint' | 'forge' | 'bloodfountain' | 'arcana' | 'professions' | 'settings';
 
@@ -14,6 +15,8 @@ export interface HudHost {
   openPanel(kind: PanelKind): void;
   castSlot(slot: number, sx: number | null, sy: number | null): void;
   usePotion(id: (typeof CONSUMABLES)[number]['id']): void;
+  /** Touch attack button held down: keep attacking the nearest enemy. */
+  attackHeld(on: boolean): void;
 }
 
 interface Message {
@@ -21,7 +24,14 @@ interface Message {
   until: number;
 }
 
-/** Bars, buffs, skill bar, potions, menu buttons and the message log. */
+const KEYS = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
+const SLOT_LEVELS = [1, 1, 5, 10, 15, 20];
+
+/**
+ * Bars, buffs, potions, skill buttons, menu buttons and the message log.
+ * Two layouts: a desktop bar, or a touch layout with a left-thumb joystick and a
+ * right-thumb cluster of round buttons.
+ */
 export class Hud {
   readonly root: HTMLDivElement;
   private readonly hpBar: HTMLDivElement;
@@ -38,14 +48,15 @@ export class Hud {
   private readonly potions: HTMLButtonElement[] = [];
   private readonly log: HTMLDivElement;
   private readonly messages: Message[] = [];
-  private readonly hint: HTMLDivElement;
   private readonly areaBanner: HTMLDivElement;
-  private time = 0;
-  private drag: { slot: number; x: number; y: number; moved: boolean } | null = null;
   private readonly aimMarker: HTMLDivElement;
+  private readonly joyBase: HTMLDivElement;
+  private readonly joyKnob: HTMLDivElement;
+  private time = 0;
+  private drag: { slot: number; x: number; y: number; moved: boolean; repeat: number | null } | null = null;
 
-  constructor(parent: HTMLElement, private readonly host: HudHost) {
-    this.root = h('div', { class: 'hud-root' });
+  constructor(parent: HTMLElement, private readonly host: HudHost, readonly touch: boolean) {
+    this.root = h('div', { class: 'hud-root' + (touch ? ' touch' : '') });
     parent.appendChild(this.root);
 
     const status = h('div', { class: 'status' });
@@ -56,91 +67,115 @@ export class Hud {
     this.hpText = h('div', { class: 'bar-text' });
     this.mpText = h('div', { class: 'bar-text' });
     this.goldText = h('div', { class: 'gold' });
-    status.append(
-      this.levelText,
-      h('div', { class: 'bar' }, this.hpBar, this.hpText),
-      h('div', { class: 'bar' }, this.mpBar, this.mpText),
-      h('div', { class: 'bar thin' }, this.xpBar),
-      this.goldText,
-    );
+    status.append(this.levelText, h('div', { class: 'bar' }, this.hpBar, this.hpText), h('div', { class: 'bar' }, this.mpBar, this.mpText), h('div', { class: 'bar thin' }, this.xpBar), this.goldText);
     this.buffBar = h('div', { class: 'buff-bar' });
-    this.root.append(status, this.buffBar);
-
     this.areaBanner = h('div', { class: 'area-banner' });
-    this.root.appendChild(this.areaBanner);
     this.aimMarker = h('div', { class: 'aim-marker' });
-    this.root.appendChild(this.aimMarker);
-
-    const bottom = h('div', { class: 'bottom' });
+    this.joyBase = h('div', { class: 'joy-base' }, (this.joyKnob = h('div', { class: 'joy-knob' })));
     this.log = h('div', { class: 'log' });
-    const row1 = h('div', { class: 'row-top' });
+    this.root.append(status, this.buffBar, this.areaBanner, this.aimMarker, this.joyBase);
+
     const potionRow = h('div', { class: 'potions' });
     for (const c of CONSUMABLES) {
       const b = button('', () => host.usePotion(c.id), 'potion');
       b.style.setProperty('--c', hex(c.color));
-      b.appendChild(h('span', { class: 'potion-key' }, c.key));
-      b.appendChild(h('span', { class: 'potion-count' }, '0'));
+      b.append(h('span', { class: 'potion-key' }, c.key), h('span', { class: 'potion-count' }, '0'));
       b.title = c.name;
       potionRow.appendChild(b);
       this.potions.push(b);
     }
     const menu = h('div', { class: 'menu-row' });
-    const menuButtons: [string, PanelKind, string][] = [
-      ['Bag', 'inventory', 'I'],
-      ['Hero', 'character', 'C'],
-      ['Skills', 'skills', 'K'],
-      ['Passives', 'passives', 'P'],
-      ['Menu', 'settings', 'Esc'],
-    ];
+    const menuButtons: [string, PanelKind, string][] = [['Bag', 'inventory', 'I'], ['Hero', 'character', 'C'], ['Skills', 'skills', 'K'], ['Passives', 'passives', 'P'], ['Menu', 'settings', 'Esc']];
     for (const [label, kind, key] of menuButtons) {
       const b = button(label, () => host.openPanel(kind), 'menu-btn');
       b.appendChild(h('span', { class: 'key' }, key));
       menu.appendChild(b);
     }
-    row1.append(potionRow, menu);
-    const skillRow = h('div', { class: 'skills' });
-    const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
-    for (let i = 0; i < 6; i++) {
-      const b = h('button', { class: 'slot' });
-      const wipe = h('div', { class: 'wipe' });
-      const label = h('div', { class: 'slot-label' });
-      b.append(wipe, label, h('span', { class: 'key' }, keys[i]!));
-      b.addEventListener('pointerdown', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        b.setPointerCapture(e.pointerId);
-        this.drag = { slot: i, x: e.clientX, y: e.clientY, moved: false };
-      });
-      b.addEventListener('pointermove', (e) => {
-        if (!this.drag || this.drag.slot !== i) return;
-        if (Math.hypot(e.clientX - this.drag.x, e.clientY - this.drag.y) > 28) {
-          this.drag.moved = true;
-          this.aimMarker.style.display = 'block';
-          this.aimMarker.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    for (let i = 0; i < 6; i++) this.makeSlot(i);
+
+    if (touch) {
+      const cluster = h('div', { class: 'cluster' });
+      cluster.style.width = `${CLUSTER.size}px`;
+      cluster.style.height = `${CLUSTER.size}px`;
+      for (let i = 0; i < 6; i++) {
+        const b = this.slots[i]!;
+        if (i === 0) {
+          b.classList.add('attack');
+          b.style.right = '6px';
+          b.style.bottom = '6px';
+        } else {
+          const p = skillPosition(i - 1);
+          b.style.right = `${p.right}px`;
+          b.style.bottom = `${p.bottom}px`;
         }
-      });
-      const finish = (e: PointerEvent) => {
-        if (!this.drag || this.drag.slot !== i) return;
-        const d = this.drag;
-        this.drag = null;
-        this.aimMarker.style.display = 'none';
-        if (d.moved) host.castSlot(i, e.clientX, e.clientY);
-        else host.castSlot(i, null, null);
-      };
-      b.addEventListener('pointerup', finish);
-      b.addEventListener('pointercancel', () => {
-        this.drag = null;
-        this.aimMarker.style.display = 'none';
-      });
-      skillRow.appendChild(b);
-      this.slots.push(b);
-      this.slotWipes.push(wipe);
-      this.slotLabels.push(label);
+        cluster.appendChild(b);
+      }
+      this.root.append(h('div', { class: 'bottom-left' }, this.log, potionRow), menu, cluster);
+    } else {
+      const bottom = h('div', { class: 'bottom' });
+      const row1 = h('div', { class: 'row-top' }, potionRow, menu);
+      const skillRow = h('div', { class: 'skills' }, ...this.slots);
+      bottom.append(this.log, row1, skillRow);
+      this.root.appendChild(bottom);
     }
-    bottom.append(this.log, row1, skillRow);
-    this.root.appendChild(bottom);
-    this.hint = h('div', { class: 'hint-line' });
-    this.root.appendChild(this.hint);
+  }
+
+  private makeSlot(i: number): void {
+    const b = h('button', { class: 'slot' });
+    const wipe = h('div', { class: 'wipe' });
+    const label = h('div', { class: 'slot-label' });
+    b.append(wipe, label, h('span', { class: 'key' }, KEYS[i]!));
+    b.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      b.setPointerCapture(e.pointerId);
+      const drag = { slot: i, x: e.clientX, y: e.clientY, moved: false, repeat: null as number | null };
+      this.drag = drag;
+      if (i === 0) {
+        this.host.attackHeld(true);
+        this.host.castSlot(0, null, null);
+      } else {
+        // Hold to keep casting (fire bolt style); a drag switches to aiming
+        drag.repeat = window.setInterval(() => {
+          if (!drag.moved) this.host.castSlot(i, null, null);
+        }, 130);
+      }
+    });
+    b.addEventListener('pointermove', (e) => {
+      if (!this.drag || this.drag.slot !== i || i === 0) return;
+      if (Math.hypot(e.clientX - this.drag.x, e.clientY - this.drag.y) > 28) {
+        this.drag.moved = true;
+        this.aimMarker.style.display = 'block';
+        this.aimMarker.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+      }
+    });
+    const finish = (e: PointerEvent, cancelled: boolean) => {
+      if (!this.drag || this.drag.slot !== i) return;
+      const d = this.drag;
+      this.drag = null;
+      if (d.repeat !== null) window.clearInterval(d.repeat);
+      this.aimMarker.style.display = 'none';
+      if (i === 0) {
+        this.host.attackHeld(false);
+        return;
+      }
+      if (cancelled) return;
+      if (d.moved) this.host.castSlot(i, e.clientX, e.clientY);
+      else this.host.castSlot(i, null, null);
+    };
+    b.addEventListener('pointerup', (e) => finish(e, false));
+    b.addEventListener('pointercancel', (e) => finish(e, true));
+    this.slots.push(b);
+    this.slotWipes.push(wipe);
+    this.slotLabels.push(label);
+  }
+
+  /** Draws the floating joystick. */
+  setJoystick(active: boolean, x: number, y: number, dx: number, dy: number): void {
+    this.joyBase.style.display = active ? 'block' : 'none';
+    if (!active) return;
+    this.joyBase.style.transform = `translate(${x}px, ${y}px)`;
+    this.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
   }
 
   message(text: string, color?: number): void {
@@ -158,10 +193,6 @@ export class Hud {
     this.areaBanner.classList.add('show');
   }
 
-  setHint(text: string): void {
-    this.hint.textContent = text;
-  }
-
   update(dt: number): void {
     this.time += dt;
     const w = this.host.world;
@@ -177,7 +208,6 @@ export class Hud {
     this.mpText.textContent = `${Math.floor(p.mana)} / ${d.maxMana}`;
     this.goldText.textContent = `${p.gold} gold`;
 
-    // Buffs
     clear(this.buffBar);
     for (const b of w.buffs) {
       const chip = h('div', { class: 'buff' }, h('span', {}, b.name), h('div', { class: 'buff-time' }));
@@ -189,7 +219,6 @@ export class Hud {
       if (z.type === 'sanctuary' && w.dist(z.x, z.z) <= z.radius) this.buffBar.appendChild(h('div', { class: 'buff', style: 'border-color:#ffe87a' }, 'Sanctuary'));
     }
 
-    // Skill slots
     const unlocked = unlockedSlots(p.level);
     for (let i = 0; i < 6; i++) {
       const b = this.slots[i]!;
@@ -197,9 +226,9 @@ export class Hud {
       const locked = i >= unlocked;
       b.classList.toggle('locked', locked);
       if (locked) {
-        this.slotLabels[i]!.textContent = `Lv ${[1, 1, 5, 10, 15, 20][i]}`;
+        this.slotLabels[i]!.textContent = `Lv ${SLOT_LEVELS[i]}`;
         this.slotWipes[i]!.style.setProperty('--p', '0');
-        b.classList.remove('nomana');
+        b.classList.remove('nomana', 'noweapon');
         continue;
       }
       if (!id) {
@@ -210,13 +239,14 @@ export class Hud {
       if (id === ATTACK_SLOT) {
         this.slotLabels[i]!.textContent = 'Attack';
         this.slotWipes[i]!.style.setProperty('--p', String(Math.min(1, w.attackTimer * d.atkSpd) * 100));
-        b.classList.remove('nomana');
+        b.classList.remove('nomana', 'noweapon');
         continue;
       }
       const def = SKILLS[id]!;
       this.slotLabels[i]!.textContent = def.name;
-      const total = skillCooldown(w, def) || (def.effect.kind === 'projectile' && def.effect.rateLimited === 'cast' ? d.castInterval : 1 / d.atkSpd);
-      const left = w.cooldowns[id] ?? (def.effect.kind === 'projectile' && def.effect.rateLimited === 'cast' ? w.castTimer : def.effect.kind === 'projectile' && def.effect.rateLimited === 'attack' ? w.attackTimer : 0);
+      const rate = def.effect.kind === 'projectile' ? def.effect.rateLimited : undefined;
+      const total = skillCooldown(w, def) || (rate === 'cast' ? d.castInterval : 1 / d.atkSpd);
+      const left = w.cooldowns[id] ?? (rate === 'cast' ? w.castTimer : rate === 'attack' ? w.attackTimer : 0);
       this.slotWipes[i]!.style.setProperty('--p', String(Math.min(1, left / Math.max(total, 0.001)) * 100));
       const ready = castReady(w, id);
       b.classList.toggle('nomana', !ready.ok && ready.reason === 'Not enough mana');
@@ -239,5 +269,10 @@ export class Hud {
         m.el.style.opacity = String(m.until - this.time);
       }
     }
+  }
+
+  destroy(): void {
+    if (this.drag?.repeat !== null && this.drag?.repeat !== undefined) window.clearInterval(this.drag.repeat);
+    this.root.remove();
   }
 }

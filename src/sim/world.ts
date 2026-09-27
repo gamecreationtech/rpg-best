@@ -448,16 +448,22 @@ export class World {
     this.path = path ?? [];
   }
 
-  /** Continuous input (keyboard). Clears any tap destination. */
+  /** Continuous input (keyboard or joystick). Clears any tap destination but keeps the target. */
   setMoveInput(x: number, z: number): void {
     if (x || z) {
       this.path.length = 0;
-      this.targetId = -1;
-      this.pendingCast = null;
       this.pendingInteract = null;
+      this.pendingPickup = -1;
     }
     this.moveInput.x = x;
     this.moveInput.z = z;
+  }
+
+  /** While true the hero attacks whatever is nearest (the touch attack button). */
+  attackHeld = false;
+
+  get movingByInput(): boolean {
+    return this.moveInput.x !== 0 || this.moveInput.z !== 0;
   }
 
   stop(): void {
@@ -848,7 +854,14 @@ export class World {
   }
 
   private tickAutoAttack(dt: number): void {
-    const t = this.targetEnemy();
+    let t = this.targetEnemy();
+    if (!t && this.attackHeld) {
+      const near = this.nearestEnemy(this.px, this.pz, 12);
+      if (near) {
+        this.targetId = near.id;
+        t = near;
+      }
+    }
     if (!t) {
       if (this.targetId >= 0) this.targetId = -1;
       return;
@@ -858,7 +871,8 @@ export class World {
     const reach = (d.isRanged ? (this.player.equipment.get('weapon')?.weapon?.range ?? 300) + d.range : d.meleeRange) * PX + t.radius;
     const dist = this.dist(t.x, t.z);
     if (dist > reach || (d.isRanged && this.map.lineBlocked(this.px, this.pz, t.x, t.z))) {
-      this.approach(t, dt);
+      // With a joystick the player steers; only path when nothing else moves the hero
+      if (!this.movingByInput) this.approach(t, dt);
       return;
     }
     this.path.length = 0;
