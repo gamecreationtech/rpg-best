@@ -17,7 +17,7 @@ export interface PledgeDef {
 
 export const PLEDGES: Record<string, PledgeDef> = {
   paladin: {
-    id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a, armor: { plate: 0xc8a040, dark: 0x2a4a9a, trim: 0x4a8aff },
+    id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a, armor: { plate: 0xc8a040, dark: 0x8a6a20, trim: 0xffe87a },
     description: 'Blessed by the heavens, the Paladin wields divine power to smite evil and protect the innocent.',
     skills: ['prayer', 'hammer_of_gods', 'sanctuary'],
   },
