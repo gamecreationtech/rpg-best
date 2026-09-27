@@ -19,7 +19,7 @@ arrives.
 | Passive trees (general + 3 class) | `src/data/passives.ts` | Ranks, per-rank stat, prerequisites |
 | Stats and formulas | `src/sim/player.ts`, `src/sim/combat.ts` | Max life and mana, move speed, attack speed, cast rate, crit, armour, resistances, dodge, block, shields, life steal, cooldown reduction |
 | Status effects | `src/data/status.ts`, `src/sim/combat.ts` | Stun, freeze, slow, poison, burn, bleed, death curse, shock, electrocute, with the export's proc chances |
-| Items | `src/data/items.ts`, `src/sim/items/` | 10 weapons, 5 armours, 8 accessories, 4 divine specials, 6 starters; six rarities with the export's weights, multipliers and value formula; random affixes |
+| Items | `src/data/items.ts`, `src/sim/items/` | 13 weapons (incl. bardiche, spellbook, warpike), 5 armours, 8 accessories, 4 divine specials, 6 starters; six rarities with the export's weights, multipliers and value formula; random affixes |
 | Inventory and stash | `src/sim/items/inventory.ts` | 18x14 bag (`ITEM_RULES.inventoryCols/Rows`), three 12x12 stash pages, sized items |
 | Equipment | `src/sim/items/equipment.ts` | 13 slots, two rings, two-handed weapons block the shield, level requirements |
 | Vendor | `src/sim/items/vendor.ts` | Stock capped at magic, item level 65/20/10/5 spread, sells at 40% |
@@ -76,8 +76,9 @@ Automatic, Joystick and buttons, or Tap.
 For development only: F4 (or `?dev` in the address) opens a
 strip on the left (`src/ui/game/devMenu.ts`) with a slider and Apply button
 for movement speed, cooldown reduction, cast rate, crit, resistances, armour,
-block, evasion, range, projectile speed, gold find and magic find, plus a
-Level up button. The bonuses live in `World.devStats`, add to the character
+block, evasion, range, projectile speed, gold find and magic find, a
+Give weapon row (a common Spear, Mace, Bardiche, Wand, Staff, Dagger, Bow,
+Spellbook or Warpike dropped into the bag) and a Level up button. The bonuses live in `World.devStats`, add to the character
 sheet and are never saved. Delete the file and the key before release.
 
 ## Known gaps

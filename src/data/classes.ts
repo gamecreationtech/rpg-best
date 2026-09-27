@@ -43,7 +43,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     manaPerInt: 10,
     startingGear: ['wooden_sword', 'wooden_shield'],
     pledges: ['paladin', 'titan', 'nightlord'],
-    preferredWeapons: ['sword', 'axe', 'mace', 'spear'],
+    preferredWeapons: ['sword', 'axe', 'mace', 'spear', 'bardiche', 'warpike'],
   },
   sorcerer: {
     id: 'sorcerer',
@@ -58,7 +58,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     manaPerInt: 10,
     startingGear: ['wooden_staff'],
     pledges: ['necromancer', 'stormsinger', 'wintercaller'],
-    preferredWeapons: ['staff', 'wand'],
+    preferredWeapons: ['staff', 'wand', 'spellbook'],
   },
   rogue: {
     id: 'rogue',
@@ -74,7 +74,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     startingGear: ['wooden_bow'],
     startingBag: ['starter_dagger'],
     pledges: ['quiverbound', 'impaler', 'silverblade'],
-    preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear'],
+    preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear', 'warpike'],
   },
 };
 

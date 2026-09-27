@@ -20,7 +20,7 @@ export const EQUIP_SLOTS: { id: EquipSlot; label: string; count: number }[] = [
   { id: 'charm', label: 'Charm', count: 1 },
 ];
 
-export type WeaponType = 'sword' | 'dagger' | 'axe' | 'mace' | 'spear' | 'bow' | 'crossbow' | 'wand' | 'staff' | 'blowgun';
+export type WeaponType = 'sword' | 'dagger' | 'axe' | 'mace' | 'spear' | 'bow' | 'crossbow' | 'wand' | 'staff' | 'blowgun' | 'bardiche' | 'spellbook' | 'warpike';
 
 export type Rarity = 'common' | 'magic' | 'rare' | 'mythic' | 'set' | 'divine';
 
@@ -85,6 +85,9 @@ export const WEAPON_BASES: BaseItem[] = [
   { id: 'wand', name: 'Wand', slot: 'weapon', size: [1, 2], stats: { int: 12 }, weapon: { type: 'wand', dmgMin: 6, dmgMax: 12, atkSpd: 1.6, ranged: true, magic: true, twoHanded: false, range: 320 } },
   { id: 'staff', name: 'Staff', slot: 'weapon', size: [1, 4], stats: { int: 18 }, weapon: { type: 'staff', dmgMin: 14, dmgMax: 22, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 340 } },
   { id: 'blowgun', name: 'Blowgun', slot: 'weapon', size: [1, 4], stats: { dex: 12 }, weapon: { type: 'blowgun', dmgMin: 3, dmgMax: 7, atkSpd: 1.9, ranged: true, magic: false, twoHanded: true, range: 300 } },
+  { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 9 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 100 } },
+  { id: 'spellbook', name: 'Spellbook', slot: 'weapon', size: [2, 2], stats: { int: 10, mana: 20 }, weapon: { type: 'spellbook', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: true, magic: true, twoHanded: false, range: 300 } },
+  { id: 'warpike', name: 'Warpike', slot: 'weapon', size: [1, 4], stats: { str: 5, dex: 3 }, weapon: { type: 'warpike', dmgMin: 12, dmgMax: 20, atkSpd: 1.0, ranged: false, magic: false, twoHanded: true, range: 130 } },
 ];
 
 export const ARMOR_BASES: BaseItem[] = [

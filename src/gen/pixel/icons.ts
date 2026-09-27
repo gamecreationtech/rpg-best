@@ -176,5 +176,24 @@ function drawWeapon(b: PixelBuffer, type: WeaponType, r: Ramp, steel: Ramp, wood
       diag(o + 2, o + 12, o + 12, o + 2, wood[1], 2);
       b.set(o + 12, o + 2, r[1]);
       break;
+    case 'bardiche':
+      diag(o + 1, o + 13, o + 9, o + 5, wood[1], 2);
+      b.rect(o + 9, o + 1, 2, 9, steel[1]);
+      b.rect(o + 11, o + 2, 2, 7, steel[2]);
+      b.rect(o + 9, o + 4, 1, 3, r[1]);
+      break;
+    case 'spellbook':
+      b.rect(o + 2, o + 2, 10, 11, r[1]);
+      b.rect(o + 3, o + 3, 8, 9, steel[3]);
+      b.rect(o + 7, o + 3, 1, 9, r[0]);
+      b.rect(o + 5, o + 6, 4, 3, r[2]);
+      break;
+    case 'warpike':
+      diag(o + 1, o + 13, o + 9, o + 5, wood[1], 2);
+      diag(o + 13, o + 1, o + 8, o + 6, steel[2], 2);
+      b.rect(o + 6, o + 6, 2, 1, steel[1]);
+      b.rect(o + 9, o + 8, 1, 2, steel[1]);
+      b.set(o + 9, o + 5, r[1]);
+      break;
   }
 }

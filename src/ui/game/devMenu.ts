@@ -1,4 +1,6 @@
+import { WEAPON_BASES } from '../../data/items';
 import type { StatKey } from '../../data/stats';
+import { makeItem } from '../../sim/items/item';
 import type { World } from '../../sim/world';
 import { button, clear, h } from '../dom';
 
@@ -30,9 +32,13 @@ const SLIDERS: DevSlider[] = [
   { key: 'magicFind', label: 'Magic find', min: 0, max: 500, step: 5, unit: '%' },
 ];
 
+/** Weapons the dev menu can hand out, one button each, in this order. */
+const GIVE_WEAPONS = ['spear', 'mace', 'bardiche', 'wand', 'staff', 'dagger', 'bow', 'spellbook', 'warpike'];
+
 /**
  * The development menu: a strip on the left with a slider and an Apply button
- * per stat, plus a level-up button. Bonuses go into the world's dev stats,
+ * per stat, a level-up button and a row of buttons that drop a common weapon
+ * of each kind into the bag. Bonuses go into the world's dev stats,
  * which add to the character sheet and are never saved. Toggled with F4 or
  * `?dev` in the address. Meant to be deleted before release.
  */
@@ -81,7 +87,23 @@ export class DevMenu {
       const row = h('div', { class: 'dev-row' }, h('div', { class: 'dev-label' }, s.label, value), h('div', { class: 'dev-controls' }, range, apply));
       this.body.appendChild(row);
     }
+    const note = h('div', { class: 'dev-note' });
+    const give = h('div', { class: 'dev-give' });
+    for (const id of GIVE_WEAPONS) {
+      const base = WEAPON_BASES.find((b) => b.id === id);
+      if (!base) continue;
+      give.appendChild(button(base.name, () => {
+        const item = makeItem(base, 'common', w.player.level, w.rng);
+        const ok = w.player.inventory.add(item);
+        note.textContent = ok ? `${base.name} added to the bag` : 'Bag is full';
+        if (ok) w.markDirty();
+        this.onChange();
+      }, 'btn small'));
+    }
     this.body.append(
+      h('div', { class: 'dev-section' }, 'Give weapon'),
+      give,
+      note,
       h('div', { class: 'dev-actions' },
         button('Level up', () => {
           w.devLevelUp();

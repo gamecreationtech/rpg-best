@@ -64,6 +64,19 @@ export function addWeapon(b: PartBuilder, type: WeaponType, hand: Vec3, pivot: V
     case 'blowgun':
       b.box({ at: [hx, hy + 0.05, fz + 0.3], size: [0.05, 0.05, 0.95], color: 0x6a5a3a, part, pivot });
       break;
+    case 'bardiche':
+      b.box({ at: [hx, hy + 0.5, fz], size: [0.07, 2.0, 0.07], color: WOOD, part, pivot });
+      b.box({ at: [hx + 0.18, hy + 1.2, fz], size: [0.3, 0.6, 0.05], taper: [0.6, 0.6], color: STEEL, part, pivot });
+      break;
+    case 'spellbook':
+      b.box({ at: [hx, hy + 0.05, fz + 0.1], size: [0.34, 0.42, 0.1], color: 0x5a2a2a, part, pivot });
+      b.box({ at: [hx, hy + 0.05, fz + 0.16], size: [0.28, 0.34, 0.02], color: BONE, part, pivot });
+      break;
+    case 'warpike':
+      b.box({ at: [hx, hy + 0.6, fz], size: [0.06, 2.4, 0.06], color: WOOD, part, pivot });
+      b.box({ at: [hx, hy + 1.95, fz], size: [0.1, 0.5, 0.06], taper: [0.2, 0.2], color: STEEL, part, pivot });
+      b.box({ at: [hx, hy + 1.65, fz], size: [0.28, 0.05, 0.06], color: STEEL_DARK, part, pivot });
+      break;
   }
 }
 
