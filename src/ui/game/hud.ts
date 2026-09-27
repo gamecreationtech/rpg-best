@@ -87,7 +87,7 @@ export class Hud {
       this.potions.push(b);
     }
     const menu = h('div', { class: 'menu-row' });
-    const menuButtons: [string, PanelKind, string][] = [['Bag', 'inventory', 'I'], ['Hero', 'character', 'C'], ['Skills', 'skills', 'K'], ['Passives', 'passives', 'P'], ['Menu', 'settings', 'Esc']];
+    const menuButtons: [string, PanelKind, string][] = [['Hero', 'inventory', 'Tab'], ['Skills', 'skills', 'K'], ['Menu', 'settings', 'Esc']];
     for (const [label, kind, key] of menuButtons) {
       const b = button(label, () => host.openPanel(kind), 'menu-btn');
       b.appendChild(h('span', { class: 'key' }, key));

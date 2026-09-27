@@ -14,6 +14,8 @@ export interface InputHost {
   joystick(active: boolean, x: number, y: number, dx: number, dy: number): void;
   openPanel(kind: 'inventory' | 'character' | 'skills' | 'passives' | 'settings'): void;
   escape(): void;
+  /** Tab: open the hero menu, or close whatever panel is open. */
+  toggleHero(): void;
   interactNearby(): void;
 }
 
@@ -121,6 +123,11 @@ export class Input {
     if (!down) return;
     if (k === 'escape') {
       this.host.escape();
+      return;
+    }
+    if (k === 'tab') {
+      e.preventDefault();
+      this.host.toggleHero();
       return;
     }
     if (!this.host.active()) {

@@ -31,6 +31,7 @@ uniform vec3 uAmbient;
 uniform float uDither;
 uniform float uLevels;
 uniform float uTint;
+uniform float uDim;
 in vec2 vUv;
 out vec4 outColor;
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
@@ -50,7 +51,7 @@ void main() {
     tint += f * uColors[i];
   }
   float l = min(1.0, lit);
-  float b = (1.0 - uDarkness) + uDarkness * l;
+  float b = ((1.0 - uDarkness) + uDarkness * l) * mix(1.0, 0.4, uDim);
   vec3 t = lit > 0.0 ? mix(vec3(1.0), tint / lit, l * uTint) : vec3(1.0);
   vec3 amb = mix(uAmbient, vec3(1.0), l);
   if (uDither > 0.5) {
@@ -82,6 +83,7 @@ export class Compositor {
   dither = true;
   levels = 6;
   tint = 0.6;
+  dim = 0;
   background: [number, number, number] = [0, 0, 0];
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -109,7 +111,7 @@ export class Compositor {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'link');
     this.program = program;
     gl.useProgram(program);
-    for (const name of ['uScene', 'uSize', 'uCount', 'uLights', 'uColors', 'uDarkness', 'uAmbient', 'uDither', 'uLevels', 'uTint']) this.uniforms.set(name, gl.getUniformLocation(program, name));
+    for (const name of ['uScene', 'uSize', 'uCount', 'uLights', 'uColors', 'uDarkness', 'uAmbient', 'uDither', 'uLevels', 'uTint', 'uDim']) this.uniforms.set(name, gl.getUniformLocation(program, name));
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -170,6 +172,7 @@ export class Compositor {
     gl.uniform1f(this.uniforms.get('uDither')!, this.dither ? 1 : 0);
     gl.uniform1f(this.uniforms.get('uLevels')!, this.levels);
     gl.uniform1f(this.uniforms.get('uTint')!, this.tint);
+    gl.uniform1f(this.uniforms.get('uDim')!, this.dim);
     // The frame fills its scaled rectangle; the rest of the window keeps the clear colour
     gl.viewport(offsetX, H - offsetY - frame.height * scale, frame.width * scale, frame.height * scale);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

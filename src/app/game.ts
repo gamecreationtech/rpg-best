@@ -97,6 +97,10 @@ export class Game {
         if (this.panels?.isOpen) this.closePanel();
         else if (this.state === 'playing') this.openPanel('settings');
       },
+      toggleHero: () => {
+        if (this.panels?.isOpen) this.closePanel();
+        else if (this.state === 'playing' && this.world && !this.world.playerDead) this.openPanel('inventory');
+      },
       interactNearby: () => {
         if (this.world && !this.world.interactNearby()) this.hud?.message('Nothing to use here');
       },
@@ -389,6 +393,7 @@ export class Game {
     }
     this.drainEvents();
     this.updateHover();
+    this.view.dim = paused ? 1 : 0;
     this.view.update(dt, this.time);
     this.hud.update(dt);
     if (render) this.view.render();

@@ -1,0 +1,372 @@
+import { CLASSES } from '../../data/classes';
+import { RARITIES } from '../../data/items';
+import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
+import { PLEDGES } from '../../data/pledges';
+import { SKILLS, skillsFor } from '../../data/skills';
+import { formatStat, type StatKey } from '../../data/stats';
+import { itemIconSprite } from '../../gen/pixel/icons';
+import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
+import { describeItem, type Item } from '../../sim/items/item';
+import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { skillCooldown } from '../../sim/skills/cast';
+import type { World } from '../../sim/world';
+import { clear, h, hex } from '../dom';
+import { pxText } from '../pixelFont';
+
+export type HeroTab = 'inventory' | 'skills';
+
+export interface HeroMenuHost {
+  world: World;
+  message(text: string, color?: number): void;
+  close(): void;
+}
+
+const MUTED = '#8b93a8';
+const TEXT = '#d9dce6';
+const GOLD = '#e8b45a';
+const GREEN = '#6ae06a';
+const RED = '#ff6a6a';
+const BLUE = '#8fb8ff';
+
+/** A pixel-framed button with pixel text. */
+function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 'red' | 'on' | 'dim' = 'btn', color = TEXT): HTMLButtonElement {
+  const b = h('button', { class: `pxb ${kind}`, onclick: () => onClick() }, pxText(label, { color: kind === 'dim' ? MUTED : color }));
+  b.addEventListener('pointerdown', (e) => e.stopPropagation());
+  return b;
+}
+
+function label(text: string, color = MUTED): HTMLCanvasElement {
+  return pxText(text, { color });
+}
+
+/** The paper-doll layout: three columns, slots in the order a body wears them. */
+const DOLL: (EquipKey | null)[][] = [
+  [null, 'helmet', 'amulet'],
+  ['weapon', 'chest', 'shield'],
+  ['ring1', 'belt', 'ring2'],
+  ['gloves', 'boots', null],
+  ['totem', 'relic', 'charm'],
+];
+
+/**
+ * The hero menu: one pixel-art window with Inventory and Skills tabs. Inventory
+ * shows the worn gear as a paper doll, the whole stat sheet under it and the bag
+ * beside it. Skills holds the skill list, the slot bar and the passive trees.
+ */
+export class HeroMenu {
+  tab: HeroTab = 'inventory';
+  private selected: Item | null = null;
+  private selectedFrom: 'bag' | 'equip' | null = null;
+  private cell = 30;
+  /** Scroll the skills tab to the passives on the next render. */
+  scrollToPassives = false;
+
+  constructor(private readonly host: HeroMenuHost) {}
+
+  reset(): void {
+    this.selected = null;
+    this.selectedFrom = null;
+  }
+
+  render(body: HTMLElement): void {
+    clear(body);
+    const w = this.host.world;
+    const p = w.player;
+    const cls = CLASSES[p.classId];
+    const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
+    this.cell = Math.max(22, Math.min(30, Math.floor((Math.min(window.innerWidth, 1400) * 0.34) / 12)));
+    const tabs = h(
+      'div',
+      { class: 'px-tabs' },
+      ...(['inventory', 'skills'] as HeroTab[]).map((t) => {
+        const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : 'Skills', { color: t === this.tab ? GOLD : MUTED }));
+        b.addEventListener('pointerdown', (e) => e.stopPropagation());
+        return b;
+      }),
+      h('div', { class: 'px-tabs-title' }, pxText(`${pledge ? pledge.name + ' ' : ''}${cls.name}  Lv ${p.level}`, { color: hex(pledge ? pledge.color : cls.color) })),
+      pbtn('X', () => this.host.close(), 'btn'),
+    );
+    const content = h('div', { class: 'px-content' });
+    if (this.tab === 'inventory') this.renderInventory(w, content);
+    else this.renderSkills(w, content);
+    body.append(h('div', { class: 'px-window' }, tabs, content));
+    if (this.scrollToPassives) {
+      this.scrollToPassives = false;
+      content.querySelector('.px-passives')?.scrollIntoView({ block: 'start' });
+    }
+  }
+
+  // ---------------------------------------------------------------- inventory
+
+  private renderInventory(w: World, content: HTMLElement): void {
+    const p = w.player;
+    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const left = h('div', { class: 'px-col gear' }, h('div', { class: 'px-inset doll' }, ...DOLL.map((row) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender))))), this.statSheet(w, rerender));
+    const bagGrid = this.bagGrid(w, rerender);
+    const right = h(
+      'div',
+      { class: 'px-col bagcol' },
+      h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)),
+      bagGrid,
+      this.itemPanel(w, rerender),
+    );
+    content.append(h('div', { class: 'px-inventory' }, left, right));
+  }
+
+  private dollSlot(w: World, key: EquipKey | null, rerender: () => void): HTMLElement {
+    if (!key) return h('div', { class: 'doll-slot empty-space' });
+    const item = w.player.equipment.get(key);
+    const on = !!item && item === this.selected;
+    const el = h('button', { class: 'doll-slot' + (on ? ' on' : '') + (item ? '' : ' empty') });
+    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    if (item) {
+      const icon = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+      const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
+      c.width = icon.width;
+      c.height = icon.height;
+      c.getContext('2d')!.drawImage(icon, 0, 0);
+      el.appendChild(c);
+      el.onclick = () => {
+        this.selected = item;
+        this.selectedFrom = 'equip';
+        rerender();
+      };
+    } else {
+      el.appendChild(pxText(keyLabel(key), { color: '#3a3c48', scale: 1 }));
+    }
+    el.title = keyLabel(key);
+    return el;
+  }
+
+  private bagGrid(w: World, rerender: () => void): HTMLElement {
+    const inv = w.player.inventory;
+    const cell = this.cell;
+    const grid = h('div', { class: 'px-inset px-grid' });
+    grid.style.width = `${inv.cols * cell + 16}px`;
+    grid.style.height = `${inv.rows * cell + 16}px`;
+    const inner = h('div', { class: 'px-grid-inner' });
+    inner.style.width = `${inv.cols * cell}px`;
+    inner.style.height = `${inv.rows * cell}px`;
+    inner.style.backgroundSize = `${cell}px ${cell}px`;
+    inner.addEventListener('pointerdown', (e) => e.stopPropagation());
+    inner.onclick = (e) => {
+      const rect = inner.getBoundingClientRect();
+      const col = Math.floor((e.clientX - rect.left) / cell);
+      const row = Math.floor((e.clientY - rect.top) / cell);
+      const item = inv.itemAt(col, row);
+      if (item) {
+        this.selected = item;
+        this.selectedFrom = 'bag';
+      } else if (this.selected && this.selectedFrom === 'bag') {
+        if (!inv.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
+      }
+      rerender();
+    };
+    for (const item of inv.items) {
+      const el = h('div', { class: 'px-item' + (item === this.selected ? ' on' : '') });
+      el.style.left = `${item.col * cell}px`;
+      el.style.top = `${item.row * cell}px`;
+      el.style.width = `${item.size[0] * cell}px`;
+      el.style.height = `${item.size[1] * cell}px`;
+      el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
+      const icon = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+      const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
+      c.width = icon.width;
+      c.height = icon.height;
+      c.getContext('2d')!.drawImage(icon, 0, 0);
+      const s = Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / icon.width));
+      c.style.width = `${icon.width * s}px`;
+      c.style.height = `${icon.height * s}px`;
+      el.appendChild(c);
+      inner.appendChild(el);
+    }
+    grid.appendChild(inner);
+    return grid;
+  }
+
+  private itemPanel(w: World, rerender: () => void): HTMLElement {
+    const sel = this.selected;
+    const box = h('div', { class: 'px-inset px-itembox' });
+    if (!sel) {
+      box.append(pxText('Click an item to see it. Click an empty cell to move it there.', { color: MUTED, maxChars: 44 }));
+      return box;
+    }
+    const compare = this.selectedFrom === 'bag' ? w.player.equipment.get(w.player.equipment.targetKey(sel)) : null;
+    const color = hex(RARITIES[sel.rarity].color);
+    box.append(pxText(sel.name, { color }), pxText(`${RARITIES[sel.rarity].name} ${sel.slot}, level ${sel.reqLevel}, ${sel.value} gold`, { color: MUTED, maxChars: 44 }));
+    for (const line of describeItem(sel)) box.append(pxText(line, { color: TEXT, maxChars: 44 }));
+    const stats = Object.entries(sel.stats).filter(([, v]) => v) as [StatKey, number][];
+    for (const [k, v] of stats) {
+      const delta = compare && compare !== sel ? v - (compare.stats[k] ?? 0) : 0;
+      const row = h('div', { class: 'px-row' }, pxText(formatStat(k, v), { color: BLUE }));
+      if (delta !== 0) row.append(pxText(`(${delta > 0 ? '+' : ''}${Math.round(delta * 100) / 100})`, { color: delta > 0 ? GREEN : RED }));
+      box.append(row);
+    }
+    if (sel.affixes.length > 1) box.append(pxText(sel.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
+    const actions = h('div', { class: 'px-row actions' });
+    if (this.selectedFrom === 'bag') {
+      actions.append(
+        pbtn('Equip', () => {
+          const r = w.equipItem(sel);
+          if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
+          this.reset();
+          rerender();
+        }, 'gold'),
+      );
+      if (sel.slot === 'ring') {
+        actions.append(pbtn('Equip as Ring 2', () => {
+          const r = w.equipItem(sel, 'ring2');
+          if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
+          this.reset();
+          rerender();
+        }));
+      }
+      actions.append(pbtn('Drop', () => { w.dropItem(sel); this.reset(); rerender(); }, 'red'));
+    } else {
+      const key = EQUIP_KEYS.find((k) => w.player.equipment.get(k) === sel)!;
+      actions.append(pbtn('Unequip', () => {
+        const r = w.unequipItem(key);
+        if (!r.ok) this.host.message(r.reason ?? 'Cannot unequip', 0xff8080);
+        this.reset();
+        rerender();
+      }, 'gold'));
+    }
+    box.append(actions);
+    return box;
+  }
+
+  private statSheet(w: World, rerender: () => void): HTMLElement {
+    const p = w.player;
+    const d = w.derived;
+    const sheet = h('div', { class: 'px-inset px-stats' });
+    const head = (text: string) => sheet.append(h('div', { class: 'px-stat-head' }, pxText(text, { color: GOLD })));
+    const row = (name: string, value: string, extra?: HTMLElement) => sheet.append(h('div', { class: 'px-stat' }, pxText(name, { color: MUTED }), h('span', { class: 'grow' }), pxText(value, { color: TEXT }), extra ?? null));
+    const plus = (key: 'str' | 'dex' | 'int' | 'vit') =>
+      p.statPoints > 0
+        ? pbtn('+', () => { allocateStat(p, key); w.markDirty(); w.recomputeStats(); rerender(); }, 'gold')
+        : undefined;
+    head(`Level ${p.level}`);
+    row('Experience', `${p.xp} / ${p.xpToNext}`);
+    row('Kills', String(p.kills));
+    head('Attributes');
+    if (p.statPoints > 0) row('Points to spend', String(p.statPoints));
+    row('Strength', String(d.str), plus('str'));
+    row('Dexterity', String(d.dex), plus('dex'));
+    row('Intelligence', String(d.int), plus('int'));
+    row('Vitality', String(d.vit), plus('vit'));
+    head('Offense');
+    row('Weapon damage', `${d.dmgMin} - ${d.dmgMax}`);
+    row('Bonus damage', `+${Math.round(d.bonusDamage)}`);
+    row('Spell damage', `+${Math.round(d.spellDmg)}`);
+    row('Attack speed', d.atkSpd.toFixed(2));
+    row('Cast rate', `${(1 / d.castInterval).toFixed(1)} /s`);
+    row('Critical chance', `${d.critChance.toFixed(1)}%`);
+    row('Critical damage', `${Math.round(d.critDamage)}%`);
+    row('Cooldown reduction', `${d.cdr}%`);
+    row('Pierce', String(d.pierce));
+    row('Poison / burn chance', `${d.poisonChance}% / ${d.burnChance}%`);
+    row('Magic find', `${d.magicFind}%`);
+    head('Defense');
+    row('Life', `${Math.ceil(p.hp)} / ${d.maxHp}`);
+    row('Mana', `${Math.floor(p.mana)} / ${d.maxMana}`);
+    row('Armor', `${Math.round(d.armor)}  (${Math.round((d.armor / (d.armor + 650)) * 100)}% less)`);
+    row('Dodge', `${d.dodge.toFixed(1)}%`);
+    row('Block', `${d.block}%`);
+    row('Life regen', `${d.hpRegen.toFixed(1)} /s`);
+    row('Mana regen', `${d.manaRegen.toFixed(1)} /s`);
+    row('Life on hit', String(d.lifeOnHit));
+    row('Mana on hit', String(d.manaOnHit));
+    row('Life steal', `${d.lifeSteal}%`);
+    row('Move speed', `${Math.round(d.moveSpeed * 32)} px/s`);
+    head('Resistances');
+    row('Fire', `${d.res.fire}%`);
+    row('Cold', `${d.res.cold}%`);
+    row('Lightning', `${d.res.lightning}%`);
+    row('Poison', `${d.res.poison}%`);
+    return sheet;
+  }
+
+  // ---------------------------------------------------------------- skills
+
+  private renderSkills(w: World, content: HTMLElement): void {
+    const p = w.player;
+    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const list = skillsFor(p.classId, p.pledgeId).filter((s) => s.tier !== 'ultimate').sort((a, b) => (a.reqLevel ?? 1) - (b.reqLevel ?? 1));
+    const slotsUnlocked = unlockedSlots(p.level);
+    const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
+    const wrap = h('div', { class: 'px-skills' });
+    wrap.append(pxText(`${p.skillPoints} skill points, ${p.ultimatePoints} ultimate points. Click a key to put a skill on the bar. LMB can hold Attack or a skill.`, { color: MUTED, maxChars: 90 }));
+    const slotBar = h('div', { class: 'px-row slotbar' });
+    for (let i = 0; i < 6; i++) {
+      const id = p.slots[i];
+      const locked = i >= slotsUnlocked;
+      const name = locked ? `Lv ${[1, 1, 5, 10, 15, 20][i]}` : id === ATTACK_SLOT ? 'Attack' : id ? SKILLS[id]!.name : 'empty';
+      slotBar.append(h('div', { class: 'px-inset px-chip' + (locked ? ' locked' : '') }, pxText(keys[i]!, { color: GOLD }), pxText(name, { color: locked ? MUTED : TEXT })));
+    }
+    wrap.append(slotBar);
+    for (const s of list) {
+      const rank = p.skillRanks[s.id] ?? 0;
+      const ult = s.upgradesTo ? SKILLS[s.upgradesTo] : null;
+      const ultOn = !!ult && p.unlockedUltimates.includes(ult.id);
+      const active = ultOn ? ult! : s;
+      const eff = active.effect;
+      const cd = skillCooldown(w, active);
+      const color = hex(s.pledgeId ? PLEDGES[s.pledgeId]!.color : CLASSES[p.classId].color);
+      const learn = canLearnSkill(p, s.id);
+      const meta = `${active.manaCost} mana, ${cd > 0 ? cd.toFixed(1) + 's cooldown' : eff.kind === 'projectile' && eff.rateLimited ? 'no cooldown' : 'instant'}${(s.reqLevel ?? 1) > 1 ? `, level ${s.reqLevel}` : ''}${s.requires ? `, needs ${s.requires}` : ''}${'damageMult' in eff && eff.damageMult ? `, ${eff.damageMult}x damage` : ''}`;
+      const row = h('div', { class: 'px-inset px-skill' + (rank ? '' : ' unlearned') });
+      row.style.setProperty('--c', color);
+      row.append(
+        h('div', { class: 'px-row' }, pxText(active.name, { color }), ultOn ? pxText('ULTIMATE', { color: '#ffdd44', scale: 1 }) : null, s.tier === 'pledge' ? pxText(PLEDGES[s.pledgeId!]!.name, { color: MUTED, scale: 1 }) : null, h('span', { class: 'grow' }), pxText(`Rank ${rank}/5`, { color: MUTED })),
+        pxText(active.description, { color: TEXT, maxChars: 80 }),
+        pxText(meta, { color: MUTED, maxChars: 80 }),
+      );
+      const actions = h('div', { class: 'px-row actions' });
+      actions.append(pbtn(rank ? `Rank up (${p.skillPoints})` : `Learn (${p.skillPoints})`, () => {
+        if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
+        rerender();
+      }, learn.ok ? 'gold' : 'dim'));
+      if (rank > 0) {
+        for (let i = 0; i < 6; i++) {
+          if (i >= slotsUnlocked) continue;
+          const here = p.slots[i] === s.id;
+          actions.append(pbtn(keys[i]!, () => {
+            for (let k = 0; k < 6; k++) if (p.slots[k] === s.id) p.slots[k] = k === 0 ? ATTACK_SLOT : null;
+            p.slots[i] = here ? (i === 0 ? ATTACK_SLOT : null) : s.id;
+            rerender();
+          }, here ? 'on' : 'btn'));
+        }
+        if (p.slots[0] !== ATTACK_SLOT) actions.append(pbtn('Attack on LMB', () => { p.slots[0] = ATTACK_SLOT; rerender(); }));
+      }
+      if (ult && !ultOn) {
+        const can = canUnlockUltimate(p, s.id);
+        actions.append(pbtn('Unlock Ultimate', () => {
+          if (!unlockUltimate(p, s.id)) this.host.message(canUnlockUltimate(p, s.id).reason ?? 'Cannot unlock', 0xff8080);
+          else this.host.message(`${ult.name} unlocked as an ultimate`, 0xffe066);
+          rerender();
+        }, can.ok ? 'gold' : 'dim'));
+      }
+      if (ult && ultOn) actions.append(pbtn('Undo Ultimate', () => { revokeUltimate(p, ult.id); rerender(); }, 'dim'));
+      row.append(actions);
+      wrap.append(row);
+    }
+
+    // Passives
+    const passives = h('div', { class: 'px-passives' });
+    passives.append(h('div', { class: 'px-row' }, pxText('Passives', { color: GOLD }), pxText(`${p.passivePoints} points`, { color: MUTED })));
+    const tree = (title: string, defs: typeof GENERAL_TREE) =>
+      h('div', { class: 'px-tree' }, pxText(title, { color: MUTED }), ...defs.map((d) => {
+        const rank = p.passiveRanks[d.id] ?? 0;
+        const can = canLearnPassive(p, d.id);
+        const req = d.requires ? defs.find((x) => x.id === d.requires)?.name : null;
+        return h('div', { class: 'px-inset px-passive' + (rank ? ' learned' : '') },
+          h('div', { class: 'px-col' }, h('div', { class: 'px-row' }, pxText(d.name, { color: rank ? TEXT : MUTED }), pxText(`${rank}/${d.maxRank}`, { color: MUTED })), pxText(`+${d.perRank} ${d.stat} per rank${req ? `, needs ${req}` : ''}`, { color: MUTED, scale: 1 })),
+          h('span', { class: 'grow' }),
+          pbtn('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else { w.markDirty(); w.recomputeStats(); } rerender(); }, can.ok ? 'gold' : 'dim'),
+        );
+      }));
+    passives.append(h('div', { class: 'px-trees' }, tree('General', GENERAL_TREE), tree(CLASSES[p.classId].name, CLASS_TREES[p.classId])));
+    wrap.append(passives);
+    content.append(wrap);
+  }
+}

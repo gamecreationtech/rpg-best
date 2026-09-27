@@ -1,4 +1,5 @@
 import { RARITIES } from '../../data/items';
+import { itemIconSprite } from '../../gen/pixel/icons';
 import { formatStat, type StatKey } from '../../data/stats';
 import type { Inventory } from '../../sim/items/inventory';
 import { describeItem, type Item } from '../../sim/items/item';
@@ -51,34 +52,18 @@ export class ItemGrid {
   }
 }
 
-/** A code-drawn glyph for an item: a simple SVG silhouette by slot, tinted by rarity. */
-export function itemIcon(item: Item, size: number): SVGSVGElement {
-  const color = hex(RARITIES[item.rarity].color);
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('width', String(size));
-  svg.setAttribute('height', String(size));
-  const shapes: Record<string, string> = {
-    weapon: 'M12 2 L14 4 L14 16 L12 22 L10 16 L10 4 Z',
-    shield: 'M12 2 L21 5 L20 13 C19 18 15 21 12 22 C9 21 5 18 4 13 L3 5 Z',
-    helmet: 'M12 3 C6 3 4 8 4 12 L4 16 L8 16 L8 12 L16 12 L16 16 L20 16 L20 12 C20 8 18 3 12 3 Z',
-    chest: 'M6 3 L9 5 L15 5 L18 3 L21 6 L18 9 L18 21 L6 21 L6 9 L3 6 Z',
-    gloves: 'M7 3 L10 3 L10 9 L14 9 L14 3 L17 3 L17 13 L20 14 L19 21 L7 21 L5 13 Z',
-    boots: 'M8 2 L15 2 L15 12 L20 16 L20 21 L4 21 L4 14 L8 12 Z',
-    ring: 'M12 4 A8 8 0 1 0 12 20 A8 8 0 1 0 12 4 Z M12 8 A4 4 0 1 1 12 16 A4 4 0 1 1 12 8 Z',
-    belt: 'M2 9 L22 9 L22 15 L2 15 Z M9 7 L15 7 L15 17 L9 17 Z',
-    amulet: 'M12 3 L14 8 L19 9 L15 13 L16 18 L12 15 L8 18 L9 13 L5 9 L10 8 Z',
-    totem: 'M9 2 L15 2 L15 22 L9 22 Z M6 6 L18 6 L18 9 L6 9 Z',
-    relic: 'M12 2 L20 8 L16 22 L8 22 L4 8 Z',
-    charm: 'M12 3 C8 3 4 7 4 11 C4 16 12 21 12 21 C12 21 20 16 20 11 C20 7 16 3 12 3 Z',
-  };
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', shapes[item.slot] ?? shapes.charm!);
-  path.setAttribute('fill', color);
-  path.setAttribute('fill-rule', 'evenodd');
-  path.setAttribute('opacity', '0.9');
-  svg.appendChild(path);
-  return svg;
+/** The item's pixel icon, scaled by a whole number to roughly `size` pixels. */
+export function itemIcon(item: Item, size: number): HTMLCanvasElement {
+  const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+  const c = document.createElement('canvas');
+  c.className = 'px-icon';
+  c.width = sprite.width;
+  c.height = sprite.height;
+  c.getContext('2d')!.drawImage(sprite, 0, 0);
+  const s = Math.max(1, Math.floor(size / sprite.width));
+  c.style.width = `${sprite.width * s}px`;
+  c.style.height = `${sprite.height * s}px`;
+  return c;
 }
 
 /** Tooltip body for an item. */

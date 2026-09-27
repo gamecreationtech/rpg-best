@@ -84,6 +84,8 @@ export class PixelView {
   readonly effects = new Effects2D();
   /** Interactable under the mouse, set by the game each frame. */
   hoverInteractable = -1;
+  /** 1 while a menu covers the game: the frame darkens in dithered bands behind it. */
+  dim = 0;
   readonly stats = { drawn: 0 };
 
   private readonly frame: HTMLCanvasElement;
@@ -808,6 +810,8 @@ export class PixelView {
       this.lights.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) / a.intensity - Math.hypot(b.x - cx, b.y - cy) / b.intensity);
       this.lights.length = 48;
     }
+    this.compositor.dim += (this.dim - this.compositor.dim) * 0.25;
+    if (Math.abs(this.compositor.dim - this.dim) < 0.01) this.compositor.dim = this.dim;
     this.compositor.lights.length = 0;
     for (const l of this.lights) this.compositor.lights.push(l);
     this.compositor.present(this.frame, cam.scale, cam.offsetX, cam.offsetY);

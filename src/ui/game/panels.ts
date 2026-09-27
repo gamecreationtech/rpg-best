@@ -1,21 +1,18 @@
-import { CLASSES } from '../../data/classes';
 import { ARCANA_OPS, BLOOD_OPS, FORGE_OPS, STATIONS } from '../../data/crafting';
-import { PLEDGES } from '../../data/pledges';
-import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PROFESSIONS, PROFESSION_PERKS } from '../../data/professions';
-import { SKILLS, skillsFor } from '../../data/skills';
 import { RARITIES } from '../../data/items';
 import { PROVING_GROUNDS } from '../../data/placeholderEnemies';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
 import { buyPrice, sellPrice } from '../../sim/items/vendor';
-import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, professionXpToNext, revokeUltimate, unlockUltimate, unlockedSlots } from '../../sim/player';
-import { skillCooldown } from '../../sim/skills/cast';
+import { professionXpToNext } from '../../sim/player';
 import type { World } from '../../sim/world';
 import type { Settings } from '../../app/storage';
 import { button, clear, h, hex } from '../dom';
 import { ItemGrid, itemCard, itemIcon } from './itemGrid';
+import { HeroMenu } from './heroMenu';
+import { installPixelChrome } from '../pixelChrome';
 import type { PanelKind } from './hud';
 
 export interface PanelHost {
@@ -54,6 +51,7 @@ export class Panels {
   private readonly body: HTMLDivElement;
   private readonly titleEl: HTMLDivElement;
   kind: PanelKind | null = null;
+  private readonly hero: HeroMenu;
   private selected: Item | null = null;
   private selectedFrom: 'bag' | 'equip' | 'stash' | 'vendor' | null = null;
   private stashPage = 0;
@@ -67,6 +65,13 @@ export class Panels {
     this.root.addEventListener('pointerdown', (e) => e.stopPropagation());
     this.root.style.display = 'none';
     parent.appendChild(this.root);
+    installPixelChrome();
+    this.hero = new HeroMenu({ world: host.world, message: (t, c) => host.message(t, c), close: () => host.close() });
+  }
+
+  /** The hero menu (Tab): inventory, gear and stats on one tab, skills and passives on the other. */
+  get isHero(): boolean {
+    return this.kind === 'inventory' || this.kind === 'character' || this.kind === 'skills' || this.kind === 'passives';
   }
 
   get isOpen(): boolean {
@@ -80,6 +85,12 @@ export class Panels {
     this.root.style.display = 'flex';
     this.titleEl.textContent = TITLES[kind];
     this.cellSize = Math.max(22, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / 12)));
+    if (this.isHero) {
+      this.hero.reset();
+      this.hero.tab = kind === 'skills' || kind === 'passives' ? 'skills' : 'inventory';
+      this.hero.scrollToPassives = kind === 'passives';
+    }
+    this.root.classList.toggle('hero', this.isHero);
     this.render();
   }
 
@@ -93,11 +104,11 @@ export class Panels {
     if (!this.kind) return;
     clear(this.body);
     const w = this.host.world;
+    if (this.isHero) {
+      this.hero.render(this.body);
+      return;
+    }
     switch (this.kind) {
-      case 'inventory': this.renderInventory(w); break;
-      case 'character': this.renderCharacter(w); break;
-      case 'skills': this.renderSkills(w); break;
-      case 'passives': this.renderPassives(w); break;
       case 'stash': this.renderStash(w); break;
       case 'vendor': this.renderVendor(w); break;
       case 'waypoint': this.renderWaypoint(w); break;
@@ -147,176 +158,6 @@ export class Panels {
     this.selected = item;
     this.selectedFrom = from;
     this.render();
-  }
-
-  // ---------------------------------------------------------------- inventory
-
-  private renderInventory(w: World): void {
-    const actions: HTMLElement[] = [];
-    const sel = this.selected;
-    if (sel && this.selectedFrom === 'bag') {
-      actions.push(
-        button('Equip', () => {
-          const r = w.equipItem(sel);
-          if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
-          this.selected = null;
-          this.render();
-        }, 'btn primary'),
-        button('Drop', () => {
-          w.dropItem(sel);
-          this.selected = null;
-          this.render();
-        }, 'btn danger'),
-      );
-      if (sel.slot === 'ring') {
-        actions.push(button('Equip as Ring 2', () => {
-          const r = w.equipItem(sel, 'ring2');
-          if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
-          this.selected = null;
-          this.render();
-        }, 'btn'));
-      }
-    } else if (sel && this.selectedFrom === 'equip') {
-      const key = EQUIP_KEYS.find((k) => w.player.equipment.get(k) === sel)!;
-      actions.push(button('Unequip', () => {
-        const r = w.unequipItem(key);
-        if (!r.ok) this.host.message(r.reason ?? 'Cannot unequip', 0xff8080);
-        this.selected = null;
-        this.render();
-      }, 'btn primary'));
-    }
-    this.body.append(
-      h('div', { class: 'two-col' },
-        this.equipList(w, (item) => this.select(item, 'equip')),
-        this.bagGrid(w, (item) => this.select(item, 'bag'), (col, row) => {
-          if (this.selected && this.selectedFrom === 'bag') {
-            if (!w.player.inventory.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
-            this.render();
-          }
-        }),
-      ),
-      this.selectedCard(w, actions)!,
-    );
-  }
-
-  // ---------------------------------------------------------------- character
-
-  private renderCharacter(w: World): void {
-    const p = w.player;
-    const d = w.derived;
-    const cls = CLASSES[p.classId];
-    const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
-    const statRow = (label: string, value: string) => h('div', { class: 'stat-row' }, h('span', {}, label), h('span', { class: 'stat-val' }, value));
-    const alloc = (key: 'str' | 'dex' | 'int' | 'vit', label: string, value: number) =>
-      h('div', { class: 'stat-row' }, h('span', {}, label), h('span', { class: 'stat-val' }, String(value)), p.statPoints > 0 ? button('+', () => {
-        allocateStat(p, key);
-        w.markDirty();
-        w.recomputeStats();
-        this.render();
-      }, 'btn small') : h('span', { class: 'btn small ghost-space' }, ''));
-    this.body.append(
-      h('div', { class: 'char-head' }, h('div', { class: 'char-name', style: `color:${hex(pledge ? pledge.color : cls.color)}` }, `${pledge ? pledge.name : ''} ${cls.name}`), h('div', { class: 'dim' }, `Level ${p.level}, ${p.xp} / ${p.xpToNext} experience, ${p.kills} kills`)),
-      h('div', { class: 'two-col' },
-        h('div', { class: 'stat-block' },
-          h('div', { class: 'section-label' }, `Attributes  (${p.statPoints} points to spend)`),
-          alloc('str', 'Strength', d.str), alloc('dex', 'Dexterity', d.dex), alloc('int', 'Intelligence', d.int), alloc('vit', 'Vitality', d.vit),
-          h('div', { class: 'section-label' }, 'Offense'),
-          statRow('Weapon damage', `${d.dmgMin} - ${d.dmgMax}`), statRow('Bonus damage', `+${Math.round(d.bonusDamage)}`), statRow('Spell damage', `+${Math.round(d.spellDmg)}`),
-          statRow('Attack speed', d.atkSpd.toFixed(2)), statRow('Cast rate', `${(1 / d.castInterval).toFixed(1)} per second`),
-          statRow('Critical chance', `${d.critChance.toFixed(1)}%`), statRow('Critical damage', `${Math.round(d.critDamage)}%`),
-          statRow('Cooldown reduction', `${d.cdr}%`), statRow('Magic find', `${d.magicFind}%`),
-        ),
-        h('div', { class: 'stat-block' },
-          h('div', { class: 'section-label' }, 'Defense'),
-          statRow('Life', `${Math.ceil(p.hp)} / ${d.maxHp}`), statRow('Mana', `${Math.floor(p.mana)} / ${d.maxMana}`),
-          statRow('Armor', `${Math.round(d.armor)} (${Math.round((d.armor / (d.armor + 650)) * 100)}% physical reduction)`),
-          statRow('Dodge', `${d.dodge.toFixed(1)}%`), statRow('Block', `${d.block}%`),
-          statRow('Fire / Cold', `${d.res.fire}% / ${d.res.cold}%`), statRow('Lightning / Poison', `${d.res.lightning}% / ${d.res.poison}%`),
-          statRow('Life regen', `${d.hpRegen.toFixed(1)} per second`), statRow('Mana regen', `${d.manaRegen.toFixed(1)} per second`),
-          statRow('Life on hit', `${d.lifeOnHit}`), statRow('Life steal', `${d.lifeSteal}%`), statRow('Move speed', `${Math.round(d.moveSpeed * 32)} px/s`),
-        ),
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------- skills
-
-  private renderSkills(w: World): void {
-    const p = w.player;
-    const list = skillsFor(p.classId, p.pledgeId).filter((s) => s.tier !== 'ultimate').sort((a, b) => (a.reqLevel ?? 1) - (b.reqLevel ?? 1));
-    const slotsUnlocked = unlockedSlots(p.level);
-    this.body.append(h('div', { class: 'dim pad' }, `${p.skillPoints} skill points, ${p.ultimatePoints} ultimate points. Tap a slot number to place a skill on the bar. Slot 1 (LMB) can hold Attack or a skill.`));
-    const slotBar = h('div', { class: 'slot-assign' });
-    for (let i = 0; i < 6; i++) {
-      const id = p.slots[i];
-      const name = i >= slotsUnlocked ? `Lv ${[1, 1, 5, 10, 15, 20][i]}` : id === ATTACK_SLOT ? 'Attack' : id ? SKILLS[id]!.name : 'empty';
-      slotBar.appendChild(h('div', { class: 'slot-chip' + (i >= slotsUnlocked ? ' locked' : '') }, h('span', { class: 'key' }, ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'][i]!), name));
-    }
-    this.body.appendChild(slotBar);
-    for (const s of list) {
-      const rank = p.skillRanks[s.id] ?? 0;
-      const ult = s.upgradesTo ? SKILLS[s.upgradesTo] : null;
-      const ultOn = !!ult && p.unlockedUltimates.includes(ult.id);
-      const active = ultOn ? ult! : s;
-      const eff = active.effect;
-      const cd = skillCooldown(w, active);
-      const color = s.pledgeId ? PLEDGES[s.pledgeId]!.color : CLASSES[p.classId].color;
-      const learn = canLearnSkill(p, s.id);
-      const row = h('div', { class: 'skill-row' + (rank ? '' : ' unlearned'), style: `--c:${hex(color)}` },
-        h('div', { class: 'skill-head' },
-          h('span', { class: 'skill-name' }, active.name, ultOn ? h('span', { class: 'tag ult' }, 'Ultimate') : null, s.tier === 'pledge' ? h('span', { class: 'tag' }, PLEDGES[s.pledgeId!]!.name) : null),
-          h('span', { class: 'skill-rank' }, `Rank ${rank}/5`),
-        ),
-        h('div', { class: 'skill-desc' }, active.description),
-        h('div', { class: 'skill-meta dim' }, `${active.manaCost} mana, ${cd > 0 ? cd.toFixed(1) + 's cooldown' : eff.kind === 'projectile' && eff.rateLimited ? 'no cooldown' : 'instant'}${(s.reqLevel ?? 1) > 1 ? `, level ${s.reqLevel}` : ''}${s.requires ? `, needs ${s.requires}` : ''}${'damageMult' in eff && eff.damageMult ? `, ${eff.damageMult}x damage` : ''}`),
-      );
-      const actions = h('div', { class: 'actions' });
-      actions.appendChild(button(rank ? `Rank up (${p.skillPoints})` : `Learn (${p.skillPoints})`, () => {
-        if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
-        this.render();
-      }, 'btn small' + (learn.ok ? ' primary' : ' disabled')));
-      if (rank > 0) {
-        for (let i = 0; i < 6; i++) {
-          if (i >= slotsUnlocked) continue;
-          const here = p.slots[i] === s.id;
-          actions.appendChild(button(['LMB', 'Q', 'E', 'R', 'Y', 'RMB'][i]!, () => {
-            for (let k = 0; k < 6; k++) if (p.slots[k] === s.id) p.slots[k] = k === 0 ? ATTACK_SLOT : null;
-            p.slots[i] = here ? (i === 0 ? ATTACK_SLOT : null) : s.id;
-            this.render();
-          }, 'btn small' + (here ? ' on' : '')));
-        }
-        if (p.slots[0] !== ATTACK_SLOT) actions.appendChild(button('Attack on LMB', () => { p.slots[0] = ATTACK_SLOT; this.render(); }, 'btn small'));
-      }
-      if (ult && !ultOn) {
-        const can = canUnlockUltimate(p, s.id);
-        actions.appendChild(button('Unlock Ultimate', () => {
-          if (!unlockUltimate(p, s.id)) this.host.message(canUnlockUltimate(p, s.id).reason ?? 'Cannot unlock', 0xff8080);
-          else this.host.message(`${ult.name} unlocked as an ultimate`, 0xffe066);
-          this.render();
-        }, 'btn small' + (can.ok ? ' gold' : ' disabled')));
-      }
-      if (ult && ultOn) actions.appendChild(button('Undo Ultimate', () => { revokeUltimate(p, ult.id); this.render(); }, 'btn small ghost'));
-      row.appendChild(actions);
-      this.body.appendChild(row);
-    }
-  }
-
-  // ---------------------------------------------------------------- passives
-
-  private renderPassives(w: World): void {
-    const p = w.player;
-    this.body.appendChild(h('div', { class: 'dim pad' }, `${p.passivePoints} passive points`));
-    const tree = (title: string, defs: typeof GENERAL_TREE) =>
-      h('div', { class: 'tree' }, h('div', { class: 'section-label' }, title), ...defs.map((d) => {
-        const rank = p.passiveRanks[d.id] ?? 0;
-        const can = canLearnPassive(p, d.id);
-        const req = d.requires ? defs.find((x) => x.id === d.requires)?.name : null;
-        return h('div', { class: 'passive-row' + (rank ? ' learned' : '') },
-          h('div', { class: 'passive-main' }, h('span', { class: 'passive-name' }, d.name), h('span', { class: 'dim' }, ` ${rank}/${d.maxRank}`), h('div', { class: 'dim small' }, `+${d.perRank} ${d.stat} per rank${req ? `, needs ${req}` : ''}`)),
-          button('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else { w.markDirty(); w.recomputeStats(); } this.render(); }, 'btn small' + (can.ok ? ' primary' : ' disabled')),
-        );
-      }));
-    this.body.appendChild(h('div', { class: 'two-col' }, tree('General', GENERAL_TREE), tree(CLASSES[p.classId].name, CLASS_TREES[p.classId])));
   }
 
   // ---------------------------------------------------------------- stash

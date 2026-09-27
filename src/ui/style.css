@@ -413,3 +413,78 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .lab-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .lab-blurb { font-size: 13px; color: var(--text); max-width: 900px; }
 .lab-stats { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--muted); }
+
+/* ------------------------------------------------------------------ pixel menu */
+
+/* Pixel text and icons: canvases scaled by whole numbers, never smoothed */
+.px, .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
+.px-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.px-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.grow { flex: 1; }
+
+/* Nine-slice frames drawn by code (see pixelChrome.ts); a 4-dot border shown at 2x */
+.px-frame, .px-inset, .pxb, .px-tab, .doll-slot, .px-item {
+  border: 8px solid transparent; border-image-slice: 4; border-image-width: 8px; border-image-repeat: repeat; image-rendering: pixelated;
+}
+.px-frame { border-image-source: var(--px-panel); border-image-slice: 4 fill; }
+.px-inset { border-image-source: var(--px-inset); border-image-slice: 4 fill; padding: 4px 6px; }
+.pxb { border-image-source: var(--px-btn); border-image-slice: 4 fill; background: none; padding: 2px 8px; cursor: pointer; font: inherit; color: var(--text); display: inline-flex; align-items: center; min-height: 30px; }
+.pxb.on { border-image-source: var(--px-btnOn); }
+.pxb.gold { border-image-source: var(--px-btnGold); }
+.pxb.red { border-image-source: var(--px-btnRed); }
+.pxb.dim { border-image-source: var(--px-btnDim); }
+.pxb:active { transform: translateY(2px); }
+
+/* The hero window: fills the screen over the dimmed game */
+.panel-overlay.hero { background: transparent; }
+.panel-overlay.hero .panel-head { display: none; }
+.panel-overlay.hero .panel-body { padding: calc(10px + var(--safe-t)) 12px calc(12px + var(--safe-b)); align-items: center; }
+.px-window { border: 8px solid transparent; border-image: var(--px-panel) 4 fill repeat; border-image-width: 8px; image-rendering: pixelated; width: min(100%, 1180px); display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.px-tabs { display: flex; align-items: flex-end; gap: 4px; padding: 6px 10px 0; border-bottom: 4px solid #26262e; }
+.px-tab { border-image-source: var(--px-tab); border-image-slice: 4 fill; background: none; padding: 4px 14px 2px; cursor: pointer; margin-bottom: -4px; }
+.px-tab.on { border-image-source: var(--px-tabOn); }
+.px-tabs-title { flex: 1; text-align: center; padding-bottom: 8px; }
+.px-content { flex: 1; overflow-y: auto; padding: 12px 10px; min-height: 0; }
+.px-inventory { display: flex; gap: 16px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.px-col.gear { flex: 0 0 auto; width: 320px; }
+.px-col.bagcol { flex: 0 0 auto; }
+
+/* Paper doll */
+.doll { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; align-items: center; }
+.doll-row { display: flex; gap: 6px; }
+.doll-slot { width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
+.doll-slot.on { border-image-source: var(--px-slotOn); }
+.doll-slot.empty { cursor: default; }
+.doll-slot.empty-space { border: 0; visibility: hidden; }
+.doll-slot .px-icon { width: 48px; height: 48px; }
+
+/* Stat sheet */
+.px-stats { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; }
+.px-stat-head { padding: 8px 0 2px; }
+.px-stat { display: flex; align-items: center; gap: 8px; padding: 1px 0; border-bottom: 1px solid #1e1e28; min-height: 20px; }
+.px-stat .pxb { min-height: 22px; padding: 0 6px; }
+
+/* Bag */
+.px-grid { padding: 0; }
+.px-grid-inner { position: relative; background-color: #0c0c13; background-image: linear-gradient(#1c1c26 1px, transparent 1px), linear-gradient(90deg, #1c1c26 1px, transparent 1px); }
+.px-item { position: absolute; display: flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; pointer-events: none; box-shadow: inset 0 0 0 2px var(--rc); }
+.px-item.on { border-image-source: var(--px-slotOn); }
+.px-itembox { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; min-height: 120px; }
+.px-itembox .actions { margin-top: 6px; }
+
+/* Skills tab */
+.px-skills { display: flex; flex-direction: column; gap: 8px; max-width: 1000px; margin: 0 auto; }
+.slotbar { gap: 6px; }
+.px-chip { display: flex; gap: 8px; align-items: center; padding: 2px 8px; }
+.px-chip.locked { opacity: 0.5; }
+.px-skill { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; box-shadow: inset 6px 0 0 var(--c); }
+.px-skill.unlearned { opacity: 0.8; }
+.px-passives { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.px-trees { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
+.px-tree { flex: 1 1 380px; display: flex; flex-direction: column; gap: 6px; }
+.px-passive { display: flex; align-items: center; gap: 8px; padding: 4px 8px; }
+.px-passive.learned { box-shadow: inset 4px 0 0 var(--accent); }
+
+/* Other panels borrow the frame and the icons */
+.panel-overlay:not(.hero) { background: rgba(8, 9, 15, 0.6); }
+.panel-overlay:not(.hero) .panel-head, .panel-overlay:not(.hero) .panel-body { background: rgba(8, 9, 15, 0.92); }

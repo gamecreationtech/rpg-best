@@ -33,7 +33,7 @@ Proving Grounds.
 | Save | `src/sim/save.ts`, `src/app/storage.ts` | IndexedDB with a localStorage fallback, autosave on level up, travel and every 45 seconds, and a copyable save code |
 | Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
 | Rendering | `src/render2d/pixelView.ts`, `src/gen/pixel/` | Isometric pixel art: 32x16 tiles, 22px hero, Grim palette, dithered torchlight; sprites for heroes (class, pledge colour, weapon, shield), four placeholder monsters, dummies, the merchant, stations, projectiles, loot and spell effects, all generated at start-up |
-| Interface | `src/ui/game/` | HUD, bag, character, skills, passives, stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
+| Interface | `src/ui/game/` | HUD, hero menu (inventory, gear, stats, skills, passives), stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
 
 ## Calls made where the export was unclear
 
@@ -62,8 +62,14 @@ Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
 
 Desktop keeps tap-to-move: tap to move, hold to keep walking, tap an enemy to
 attack it. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
-space to attack, 1-4 potions, I C K P for panels, F to interact, Escape for the
-menu. The menu has a control switch: Automatic, Joystick and buttons, or Tap.
+space to attack, 1-4 potions, Tab for the hero menu (Inventory tab: worn gear
+as a paper doll, the full stat sheet and the bag; Skills tab: skills, the slot
+bar and the passive trees), K straight to Skills, F to interact, Escape for the
+menu. I, C and P still open the matching tab. The hero menu is drawn as pixel
+art: a code-drawn 5x7 font, nine-slice frames and item icons from
+`src/ui/pixelFont.ts`, `src/ui/pixelChrome.ts` and `src/gen/pixel/icons.ts`,
+over the game dimmed in dithered bands. The menu has a control switch:
+Automatic, Joystick and buttons, or Tap.
 
 ## Known gaps
 
