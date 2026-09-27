@@ -1,5 +1,5 @@
 import { CLASSES } from '../../data/classes';
-import { RARITIES } from '../../data/items';
+import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor } from '../../data/skills';
@@ -252,41 +252,49 @@ export class HeroMenu {
   }
 
   /**
-   * The lines of an item card: "Name [Rarity]" in the rarity colour, the level
-   * requirement in grey, then the weapon's damage and speed (or the armour),
-   * then every other stat with the difference against what is worn.
+   * The lines of an item card, top to bottom: the name with the rarity at the far
+   * right, what kind of thing it is, the level it needs, a rule, the weapon's
+   * damage and speed (or the armour), a rule, then every other stat with its
+   * difference against what is worn.
    */
   private itemLines(w: World, item: Item, from: 'bag' | 'equip'): HTMLElement[] {
     const compare = from === 'bag' ? w.player.equipment.get(w.player.equipment.targetKey(item)) : null;
     const color = hex(RARITIES[item.rarity].color);
-    const gap = () => h('div', { class: 'px-gap' });
+    const rule = () => h('div', { class: 'px-rule' });
+    const kind = item.weapon
+      ? `${item.weapon.twoHanded ? 'Two-handed' : 'One-handed'} ${item.weapon.ranged ? 'ranged ' : ''}weapon`
+      : EQUIP_SLOTS.find((e) => e.id === item.slot)?.label ?? item.slot;
     const out: HTMLElement[] = [
-      h('div', { class: 'px-row tight' }, pxText(item.name, { color }), pxText(`[${RARITIES[item.rarity].name}]`, { color })),
-      pxText(`Required Level : ${item.reqLevel}`, { color: '#a8aec0' }),
-      gap(),
+      h('div', { class: 'px-row between' }, pxText(item.name, { color }), pxText(`[${RARITIES[item.rarity].name}]`, { color })),
+      pxText(kind, { color: MUTED }),
+      pxText(`Required level ${item.reqLevel}`, { color: '#a8aec0' }),
     ];
+    const diff = (d: number) => (d !== 0 ? pxText(`(${d > 0 ? '+' : ''}${Math.round(d * 100) / 100})`, { color: d > 0 ? GREEN : RED }) : null);
     const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
-    const delta = (k: StatKey, v: number) => {
-      const d = compare && compare !== item ? v - (compare.stats[k] ?? 0) : 0;
-      return d !== 0 ? pxText(`(${d > 0 ? '+' : ''}${Math.round(d * 100) / 100})`, { color: d > 0 ? GREEN : RED }) : null;
-    };
     if (item.weapon) {
       const wp = item.weapon;
       const cw = compare?.weapon;
       const dmgDelta = cw ? Math.round(((wp.dmgMin + wp.dmgMax) / 2 - (cw.dmgMin + cw.dmgMax) / 2) * 10) / 10 : 0;
-      out.push(h('div', { class: 'px-row tight' }, pxText(`Damage ${wp.dmgMin} to ${wp.dmgMax}`, { color: TEXT }), dmgDelta ? pxText(`(${dmgDelta > 0 ? '+' : ''}${dmgDelta})`, { color: dmgDelta > 0 ? GREEN : RED }) : null));
-      out.push(pxText(`Weapon Speed ${wp.atkSpd.toFixed(2)}`, { color: TEXT }));
-      const tags = [wp.type, wp.ranged ? 'ranged' : 'melee', wp.magic ? 'magic' : '', wp.twoHanded ? 'two-handed' : ''].filter(Boolean).join(', ');
-      out.push(pxText(tags[0]!.toUpperCase() + tags.slice(1), { color: MUTED }));
+      out.push(rule());
+      out.push(h('div', { class: 'px-row tight' }, pxText(`${wp.dmgMin} to ${wp.dmgMax} ${wp.magic ? 'Magic' : 'Physical'} Damage`, { color: TEXT }), diff(dmgDelta)));
+      out.push(h('div', { class: 'px-row tight' }, pxText(`${wp.atkSpd.toFixed(2)} Attacks per second`, { color: TEXT }), diff(cw ? Math.round((wp.atkSpd - cw.atkSpd) * 100) / 100 : 0)));
     } else if (item.stats.armor) {
-      out.push(h('div', { class: 'px-row tight' }, pxText(`Armor ${Math.round(item.stats.armor)}`, { color: TEXT }), delta('armor', item.stats.armor)));
+      out.push(rule());
+      out.push(h('div', { class: 'px-row tight' }, pxText(`${Math.round(item.stats.armor)} Armor`, { color: TEXT }), diff(compare && compare !== item ? item.stats.armor - (compare.stats.armor ?? 0) : 0)));
     }
     const rest = stats.filter(([k]) => !(k === 'armor' && !item.weapon));
-    if (rest.length && (item.weapon || item.stats.armor)) out.push(gap());
-    for (const [k, v] of rest) out.push(h('div', { class: 'px-row tight' }, pxText(formatStat(k, v), { color: BLUE }), delta(k, v)));
+    if (rest.length) {
+      out.push(rule());
+      for (const [k, v] of rest) {
+        // "+8 Intelligence" reads better as "+8 to Intelligence"
+        const text = formatStat(k, v).replace(/^(\S+)\s/, '$1 to ');
+        const d = compare && compare !== item ? v - (compare.stats[k] ?? 0) : 0;
+        out.push(h('div', { class: 'px-row tight' }, pxText(text, { color: BLUE }), diff(d)));
+      }
+    }
     if (item.affixes.length > 1) out.push(pxText(item.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
     if (compare && compare !== item) {
-      out.push(gap());
+      out.push(rule());
       out.push(pxText(`Worn: ${compare.name}`, { color: MUTED, maxChars: 44 }));
     }
     return out;

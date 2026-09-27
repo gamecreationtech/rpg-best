@@ -420,6 +420,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px, .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
 .px-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .px-row.tight { gap: 6px; }
+.px-row.between { justify-content: space-between; gap: 24px; flex-wrap: nowrap; }
+.px-rule { height: 2px; background: #44444f; margin: 2px 0; }
 .px-gap { height: 6px; }
 .px-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .grow { flex: 1; }
@@ -466,7 +468,7 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .doll-slot.empty { cursor: default; }
 .doll-slot.empty-space { border: 0; visibility: hidden; }
 .doll-slot .px-icon { width: 32px; height: 32px; }
-.px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; max-width: 420px; }
+.px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 300px; max-width: 460px; }
 .px-itembox.howto { min-height: 0; }
 .px-grid-inner.dragging { cursor: grabbing; }
 
