@@ -39,13 +39,11 @@ function label(text: string, color = MUTED): HTMLCanvasElement {
   return pxText(text, { color });
 }
 
-/** The paper-doll layout: three columns, slots in the order a body wears them. */
+/** The gear layout: head and trinkets on top, arms and hands in the middle, legs below. */
 const DOLL: (EquipKey | null)[][] = [
-  [null, 'helmet', 'amulet'],
-  ['weapon', 'chest', 'shield'],
-  ['ring1', 'belt', 'ring2'],
-  ['gloves', 'boots', null],
-  ['totem', 'relic', 'charm'],
+  ['helmet', 'amulet', 'totem', 'relic', 'charm'],
+  ['weapon', 'chest', 'shield', 'ring1', 'ring2'],
+  ['gloves', 'belt', 'boots', null, null],
 ];
 
 /**
@@ -66,6 +64,7 @@ export class HeroMenu {
   reset(): void {
     this.selected = null;
     this.selectedFrom = null;
+    this.hideTip();
   }
 
   render(body: HTMLElement): void {
@@ -89,9 +88,10 @@ export class HeroMenu {
       pbtn('X', () => this.host.close(), 'btn'),
     );
     const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : '') });
+    // The window goes into the page first so the inventory can measure the room it has
+    body.append(h('div', { class: 'px-window' }, tabs, content));
     if (this.tab === 'inventory') this.renderInventory(w, content);
     else this.renderSkills(w, content);
-    body.append(h('div', { class: 'px-window' }, tabs, content));
     if (this.scrollToPassives) {
       this.scrollToPassives = false;
       content.querySelector('.px-passives')?.scrollIntoView({ block: 'start' });
@@ -107,14 +107,24 @@ export class HeroMenu {
     // the right two thirds hold the worn gear on top and the bag underneath
     const stats = h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender));
     const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map((row) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)))));
-    const top = h('div', { class: 'px-row gear-row' }, h('div', { class: 'px-col' }, label('Equipped'), doll), h('div', { class: 'px-col item-col' }, label('Item'), this.itemPanel(w, rerender)));
-    const bottom = h(
-      'div',
-      { class: 'px-col bag-block' },
-      h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)),
-      this.bagGrid(w, rerender),
-    );
-    content.append(h('div', { class: 'px-inventory' }, stats, h('div', { class: 'px-col gear-col' }, top, bottom)));
+    const side = this.mouse
+      ? h('div', { class: 'px-inset px-itembox howto' }, pxText('Hover an item for its stats.\nClick to equip or take off.\nRight-click to drop.\nDrag to move it in the bag.', { color: MUTED }))
+      : this.itemPanel(w, rerender);
+    const top = h('div', { class: 'px-row gear-row' }, h('div', { class: 'px-col' }, label('Equipped'), doll), h('div', { class: 'px-col item-col' }, label(this.mouse ? 'How to' : 'Item'), side));
+    const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
+    const gearCol = h('div', { class: 'px-col gear-col' }, top, bagBlock);
+    content.append(h('div', { class: 'px-inventory' }, stats, gearCol));
+    // Now that the column has its size, the bag fills whatever is left
+    const inv = p.inventory;
+    const width = gearCol.clientWidth || 700;
+    const height = Math.max(120, bagBlock.clientHeight - 30);
+    this.cell = Math.max(18, Math.min(40, Math.floor((width - 16) / inv.cols), Math.floor((height - 16) / inv.rows)));
+    bagBlock.append(this.bagGrid(w, rerender));
+  }
+
+  /** Mouse users hover for stats and click to act; touch users tap to select. */
+  private get mouse(): boolean {
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   }
 
   private dollSlot(w: World, key: EquipKey | null, rerender: () => void): HTMLElement {
@@ -124,22 +134,38 @@ export class HeroMenu {
     const el = h('button', { class: 'doll-slot' + (on ? ' on' : '') + (item ? '' : ' empty') });
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
-      const icon = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
-      const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
-      c.width = icon.width;
-      c.height = icon.height;
-      c.getContext('2d')!.drawImage(icon, 0, 0);
-      el.appendChild(c);
+      el.appendChild(this.icon(item, 2));
       el.onclick = () => {
-        this.selected = item;
-        this.selectedFrom = 'equip';
+        if (this.mouse) {
+          const r = w.unequipItem(key);
+          if (!r.ok) this.host.message(r.reason ?? 'Cannot unequip', 0xff8080);
+          this.hideTip();
+          this.reset();
+        } else {
+          this.selected = item;
+          this.selectedFrom = 'equip';
+        }
         rerender();
       };
+      el.onmouseenter = (e) => this.showTip(w, item, 'equip', e.clientX, e.clientY);
+      el.onmousemove = (e) => this.moveTip(e.clientX, e.clientY);
+      el.onmouseleave = () => this.hideTip();
     } else {
       el.appendChild(pxText(key.startsWith('ring') ? 'Ring' : keyLabel(key), { color: '#3a3c48', scale: 1 }));
     }
-    el.title = keyLabel(key);
+    el.title = this.mouse ? '' : keyLabel(key);
     return el;
+  }
+
+  private icon(item: Item, scale: number): HTMLCanvasElement {
+    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+    const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
+    c.width = sprite.width;
+    c.height = sprite.height;
+    c.getContext('2d')!.drawImage(sprite, 0, 0);
+    c.style.width = `${sprite.width * scale}px`;
+    c.style.height = `${sprite.height * scale}px`;
+    return c;
   }
 
   private bagGrid(w: World, rerender: () => void): HTMLElement {
@@ -152,20 +178,64 @@ export class HeroMenu {
     inner.style.width = `${inv.cols * cell}px`;
     inner.style.height = `${inv.rows * cell}px`;
     inner.style.backgroundSize = `${cell}px ${cell}px`;
-    inner.addEventListener('pointerdown', (e) => e.stopPropagation());
-    inner.onclick = (e) => {
+    const cellAt = (e: MouseEvent) => {
       const rect = inner.getBoundingClientRect();
-      const col = Math.floor((e.clientX - rect.left) / cell);
-      const row = Math.floor((e.clientY - rect.top) / cell);
+      return { col: Math.floor((e.clientX - rect.left) / cell), row: Math.floor((e.clientY - rect.top) / cell) };
+    };
+    // Press on an item, release elsewhere: a move. Release in place: a click.
+    let drag: { item: Item; x: number; y: number; moved: boolean } | null = null;
+    inner.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      const { col, row } = cellAt(e);
       const item = inv.itemAt(col, row);
       if (item) {
-        this.selected = item;
-        this.selectedFrom = 'bag';
-      } else if (this.selected && this.selectedFrom === 'bag') {
+        drag = { item, x: e.clientX, y: e.clientY, moved: false };
+        inner.setPointerCapture(e.pointerId);
+      } else if (this.selected && this.selectedFrom === 'bag' && !this.mouse) {
         if (!inv.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
+        rerender();
+      }
+    });
+    inner.addEventListener('pointermove', (e) => {
+      if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
+        drag.moved = true;
+        this.hideTip();
+        inner.classList.add('dragging');
+      }
+      if (!drag && e.pointerType === 'mouse') {
+        const { col, row } = cellAt(e);
+        const item = inv.itemAt(col, row);
+        if (item) this.showTip(w, item, 'bag', e.clientX, e.clientY);
+        else this.hideTip();
+      }
+    });
+    inner.addEventListener('pointerleave', () => this.hideTip());
+    inner.addEventListener('contextmenu', (e) => e.preventDefault());
+    inner.addEventListener('pointerup', (e) => {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      inner.classList.remove('dragging');
+      const { col, row } = cellAt(e);
+      if (d.moved) {
+        if (inv.itemAt(col, row) !== d.item && !inv.place(d.item, col, row)) this.host.message('Does not fit there', 0xff8080);
+        rerender();
+        return;
+      }
+      if (e.pointerType === 'mouse') {
+        if (e.button === 2) w.dropItem(d.item);
+        else {
+          const r = w.equipItem(d.item);
+          if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
+        }
+        this.hideTip();
+        this.reset();
+      } else {
+        this.selected = d.item;
+        this.selectedFrom = 'bag';
       }
       rerender();
-    };
+    });
     for (const item of inv.items) {
       const el = h('div', { class: 'px-item' + (item === this.selected ? ' on' : '') });
       el.style.left = `${item.col * cell}px`;
@@ -173,40 +243,76 @@ export class HeroMenu {
       el.style.width = `${item.size[0] * cell}px`;
       el.style.height = `${item.size[1] * cell}px`;
       el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
-      const icon = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
-      const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
-      c.width = icon.width;
-      c.height = icon.height;
-      c.getContext('2d')!.drawImage(icon, 0, 0);
-      const s = Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / icon.width));
-      c.style.width = `${icon.width * s}px`;
-      c.style.height = `${icon.height * s}px`;
-      el.appendChild(c);
+      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+      el.appendChild(this.icon(item, Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / sprite.width))));
       inner.appendChild(el);
     }
     grid.appendChild(inner);
     return grid;
   }
 
+  /** The lines of an item card: name, kind, stats with the difference to what is worn. */
+  private itemLines(w: World, item: Item, from: 'bag' | 'equip'): HTMLElement[] {
+    const compare = from === 'bag' ? w.player.equipment.get(w.player.equipment.targetKey(item)) : null;
+    const color = hex(RARITIES[item.rarity].color);
+    const out: HTMLElement[] = [pxText(item.name, { color }), pxText(`${RARITIES[item.rarity].name} ${item.slot}, level ${item.reqLevel}, ${item.value} gold`, { color: MUTED, maxChars: 44 })];
+    for (const line of describeItem(item)) out.push(pxText(line, { color: TEXT, maxChars: 44 }));
+    const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
+    for (const [k, v] of stats) {
+      const delta = compare && compare !== item ? v - (compare.stats[k] ?? 0) : 0;
+      const row = h('div', { class: 'px-row' }, pxText(formatStat(k, v), { color: BLUE }));
+      if (delta !== 0) row.append(pxText(`(${delta > 0 ? '+' : ''}${Math.round(delta * 100) / 100})`, { color: delta > 0 ? GREEN : RED }));
+      out.push(row);
+    }
+    if (item.affixes.length > 1) out.push(pxText(item.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
+    if (compare && compare !== item) out.push(pxText(`Worn: ${compare.name}`, { color: MUTED, maxChars: 44 }));
+    return out;
+  }
+
+  // ---- hover tooltip (mouse only)
+
+  private tip: HTMLDivElement | null = null;
+  private tipItem: Item | null = null;
+
+  private showTip(w: World, item: Item, from: 'bag' | 'equip', x: number, y: number): void {
+    if (this.tipItem === item && this.tip) {
+      this.moveTip(x, y);
+      return;
+    }
+    this.hideTip();
+    const tip = h('div', { class: 'px-inset px-tip' }, ...this.itemLines(w, item, from));
+    document.body.appendChild(tip);
+    this.tip = tip;
+    this.tipItem = item;
+    this.moveTip(x, y);
+  }
+
+  private moveTip(x: number, y: number): void {
+    if (!this.tip) return;
+    const r = this.tip.getBoundingClientRect();
+    let left = x + 18;
+    let top = y + 18;
+    if (left + r.width > window.innerWidth - 8) left = x - r.width - 12;
+    if (top + r.height > window.innerHeight - 8) top = window.innerHeight - r.height - 8;
+    this.tip.style.left = `${Math.max(4, left)}px`;
+    this.tip.style.top = `${Math.max(4, top)}px`;
+  }
+
+  hideTip(): void {
+    this.tip?.remove();
+    this.tip = null;
+    this.tipItem = null;
+  }
+
+  /** Touch users: the selected item's card with its actions. */
   private itemPanel(w: World, rerender: () => void): HTMLElement {
     const sel = this.selected;
     const box = h('div', { class: 'px-inset px-itembox' });
     if (!sel) {
-      box.append(pxText('Click an item to see it. Click an empty cell to move it there.', { color: MUTED, maxChars: 44 }));
+      box.append(pxText('Tap an item to see it. Tap an empty cell to move it there.', { color: MUTED, maxChars: 44 }));
       return box;
     }
-    const compare = this.selectedFrom === 'bag' ? w.player.equipment.get(w.player.equipment.targetKey(sel)) : null;
-    const color = hex(RARITIES[sel.rarity].color);
-    box.append(pxText(sel.name, { color }), pxText(`${RARITIES[sel.rarity].name} ${sel.slot}, level ${sel.reqLevel}, ${sel.value} gold`, { color: MUTED, maxChars: 44 }));
-    for (const line of describeItem(sel)) box.append(pxText(line, { color: TEXT, maxChars: 44 }));
-    const stats = Object.entries(sel.stats).filter(([, v]) => v) as [StatKey, number][];
-    for (const [k, v] of stats) {
-      const delta = compare && compare !== sel ? v - (compare.stats[k] ?? 0) : 0;
-      const row = h('div', { class: 'px-row' }, pxText(formatStat(k, v), { color: BLUE }));
-      if (delta !== 0) row.append(pxText(`(${delta > 0 ? '+' : ''}${Math.round(delta * 100) / 100})`, { color: delta > 0 ? GREEN : RED }));
-      box.append(row);
-    }
-    if (sel.affixes.length > 1) box.append(pxText(sel.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
+    box.append(...this.itemLines(w, sel, this.selectedFrom === 'equip' ? 'equip' : 'bag'));
     const actions = h('div', { class: 'px-row actions' });
     if (this.selectedFrom === 'bag') {
       actions.append(

@@ -95,6 +95,7 @@ export class Panels {
   }
 
   close(): void {
+    this.hero.hideTip();
     this.kind = null;
     this.root.style.display = 'none';
     clear(this.body);
