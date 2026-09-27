@@ -467,15 +467,26 @@ const WEAPONS: Record<WeaponType, WeaponDrawer> = {
   },
   blowgun: (d, hx, hy, raise, facing) => pole(d, hx, hy, raise, facing, px(d.H * 0.4), 'wood'),
   bardiche: (d, hx, hy, raise, facing) => {
-    // Long pole with a tall curved axe head on one side
+    // Long pole whose butt rests on the floor, with a tall curved axe head on one side
     const len = px(d.H * 0.7);
     pole(d, hx, hy, raise, facing, len, 'wood');
     const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
+    const wood = base(d, 'wood');
+    const floor = d.top + d.H + 1;
+    if (ty < hy && floor > hy) {
+      // Continue the shaft past the hand along the same line until it meets the floor
+      const t = Math.min(1, (floor - hy) / (hy - ty));
+      const bx = Math.round(hx - (tx - hx) * t);
+      const by = Math.round(hy + (hy - ty) * t);
+      d.buf.line(hx, hy, bx, by, wood);
+      if (facing !== 'side') d.buf.line(hx + 1, hy, bx + 1, by, wood);
+    }
     const s = base(d, 'steel');
     const side = facing === 'back' ? -1 : 1;
-    d.buf.rect(tx, ty - 1, 1, 6, s);
-    d.buf.rect(tx + side, ty - 2, 2, 7, s);
-    d.buf.rect(tx + side * 3, ty - 1, 1, 5, s);
+    d.buf.rect(tx, ty - 2, 1, 8, s);
+    d.buf.rect(tx + side, ty - 3, 2, 10, s);
+    d.buf.rect(tx + side * 3, ty - 2, 2, 8, s);
+    d.buf.rect(tx + side * 5, ty, 1, 4, s);
   },
   spellbook: (d, hx, hy, _raise, facing) => {
     // A small tome held open in front of the hand
