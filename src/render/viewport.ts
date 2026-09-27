@@ -6,6 +6,7 @@ import {
   HalfFloatType,
   HemisphereLight,
   PCFShadowMap,
+  PCFSoftShadowMap,
   PerspectiveCamera,
   Scene,
   Vector2,
@@ -70,7 +71,8 @@ export class Viewport {
     this.renderer.toneMappingExposure = 1.1;
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = PCFShadowMap;
+    // Desktop: soft, high-resolution shadows and the most anti-aliasing the card offers
+    this.renderer.shadowMap.type = opts.mobile ? PCFShadowMap : PCFSoftShadowMap;
     this.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
     this.scene.background = new Color(BACKDROP);
@@ -83,7 +85,8 @@ export class Viewport {
     const sc = this.sun.shadow.camera;
     sc.left = -20; sc.right = 20; sc.top = 20; sc.bottom = -20; sc.near = 4; sc.far = 60;
     sc.updateProjectionMatrix();
-    this.sun.shadow.mapSize.set(opts.mobile ? 1024 : 2048, opts.mobile ? 1024 : 2048);
+    const shadowSize = opts.mobile ? 1024 : 4096;
+    this.sun.shadow.mapSize.set(shadowSize, shadowSize);
     this.sun.shadow.bias = -0.0006;
     this.sun.shadow.normalBias = 0.03;
     this.scene.add(this.sun, this.sun.target);
@@ -92,7 +95,8 @@ export class Viewport {
 
     const size = new Vector2();
     this.renderer.getSize(size);
-    const target = new WebGLRenderTarget(size.x, size.y, { type: HalfFloatType, samples: opts.mobile ? 2 : 4 });
+    const maxSamples = this.renderer.capabilities.maxSamples;
+    const target = new WebGLRenderTarget(size.x, size.y, { type: HalfFloatType, samples: opts.mobile ? Math.min(2, maxSamples) : Math.min(8, maxSamples) });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.composer.addPass(new ShaderPass(SanitizeShader));
@@ -100,6 +104,8 @@ export class Viewport {
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);
     if (opts.vignette !== undefined) this.grade.uniforms.uVignette!.value = opts.vignette;
+    // Film grain reads as noise on a sharp monitor; keep only a trace there
+    this.grade.uniforms.uGrain!.value = opts.mobile ? 0.03 : 0.008;
     this.composer.addPass(this.grade);
     this.resize();
     window.addEventListener('resize', () => this.resize());
