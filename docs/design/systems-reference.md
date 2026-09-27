@@ -31,6 +31,7 @@ Proving Grounds.
 | Placeholder enemies | `src/data/placeholderEnemies.ts` | Four kinds borrowed from the showcase, scaled to player level. Delete this file when the real monster data arrives |
 | Audio | `src/audio/` | Sixteen synthesised effects from the export table plus a generative drone score |
 | Save | `src/sim/save.ts`, `src/app/storage.ts` | IndexedDB with a localStorage fallback, autosave on level up, travel and every 45 seconds, and a copyable save code |
+| Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
 | Interface | `src/ui/game/` | HUD, bag, character, skills, passives, stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
 
 ## Calls made where the export was unclear
@@ -66,6 +67,5 @@ menu. The menu has a control switch: Automatic, Joystick and buttons, or Tap.
 ## Known gaps
 
 - No zones or real monsters, by request.
-- Not yet installable as a home-screen app (no manifest or offline cache).
 - Performance on real phones has not been measured; the target remains 60 fps.
 - Equipment other than weapons and shields does not change the hero's appearance yet.

@@ -28,6 +28,11 @@ declare global {
   }
 }
 
+// Offline cache and home-screen install, production builds only
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined));
+}
+
 if (location.search.includes('showcase')) {
   const showcase = new Showcase(canvas, ui);
   startLoop((dt) => {

@@ -92,16 +92,18 @@ export interface Settings {
   showDamage: boolean;
   /** auto: joystick on touch devices, tap elsewhere. */
   controls: 'auto' | 'touch' | 'tap';
+  /** Ask phones for full screen when play starts. */
+  fullscreen: boolean;
 }
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, ...(JSON.parse(raw) as Partial<Settings>) };
   } catch {
     // ignore
   }
-  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto' };
+  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true };
 }
 
 export function saveSettings(s: Settings): void {

@@ -22,6 +22,7 @@ export interface PanelHost {
   world: World;
   settings: Settings;
   applySettings(): void;
+  fullscreen: { supported: boolean; active(): boolean; toggle(): void; hint: string | null };
   message(text: string, color?: number): void;
   close(): void;
   travel(area: 'town' | 'arena'): void;
@@ -444,6 +445,12 @@ export class Panels {
       h('div', { class: 'section-label' }, 'Volume'),
       slider('Music', s.music, (v) => { s.music = v; this.host.applySettings(); }),
       slider('Sound effects', s.sfx, (v) => { s.sfx = v; this.host.applySettings(); }),
+      h('div', { class: 'section-label' }, 'Screen'),
+      h('div', { class: 'actions' },
+        this.host.fullscreen.supported ? button(this.host.fullscreen.active() ? 'Leave full screen' : 'Full screen', () => { this.host.fullscreen.toggle(); window.setTimeout(() => this.render(), 300); }, 'btn small') : null,
+        button(s.fullscreen ? 'Full screen on play: on' : 'Full screen on play: off', () => { s.fullscreen = !s.fullscreen; this.host.applySettings(); this.render(); }, 'btn small' + (s.fullscreen ? ' on' : '')),
+      ),
+      h('div', { class: 'dim small' }, this.host.fullscreen.hint ?? 'Installed to the home screen: the game already runs full screen.'),
       h('div', { class: 'section-label' }, 'Controls'),
       h('div', { class: 'actions' }, ...(['auto', 'touch', 'tap'] as const).map((c) => button(c === 'auto' ? 'Automatic' : c === 'touch' ? 'Joystick and buttons' : 'Tap to move', () => { s.controls = c; this.host.applySettings(); this.render(); }, 'btn small' + (s.controls === c ? ' on' : '')))),
       h('div', { class: 'dim small' }, 'Automatic picks the joystick on phones and tablets, tap to move elsewhere.'),

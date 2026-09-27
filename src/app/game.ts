@@ -11,6 +11,7 @@ import { SIM_DT, World } from '../sim/world';
 import { Hud, type PanelKind } from '../ui/game/hud';
 import { Panels } from '../ui/game/panels';
 import { Screens } from '../ui/game/screens';
+import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
 import { deleteSave, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
 
@@ -43,8 +44,14 @@ export class Game {
     this.gameUi.className = 'game-ui';
     ui.appendChild(this.gameUi);
     this.screens = new Screens(ui, {
-      newGame: () => this.beginNewGame(),
-      continueGame: () => void this.continueGame(),
+      newGame: () => {
+        this.goFullscreenOnPhones();
+        this.beginNewGame();
+      },
+      continueGame: () => {
+        this.goFullscreenOnPhones();
+        void this.continueGame();
+      },
       showcase: () => {
         location.search = '?showcase';
       },
@@ -109,7 +116,18 @@ export class Game {
     this.state = 'title';
     this.screens.clearDead();
     this.screens.hasSave = this.hasSave;
+    this.screens.installHint = installHint();
     this.screens.splash();
+  }
+
+  /** Phones in a browser tab: ask for full screen on the first tap. iPhones ignore this and need the home-screen install. */
+  private goFullscreenOnPhones(): void {
+    if (isTouchDevice() && !isStandalone() && this.settings.fullscreen) void enterFullscreen();
+  }
+
+  toggleFullscreen(): void {
+    if (isFullscreen()) void exitFullscreen();
+    else void enterFullscreen();
   }
 
   private beginNewGame(): void {
@@ -136,6 +154,7 @@ export class Game {
     this.panels = new Panels(this.gameUi, {
       world: this.world,
       settings: this.settings,
+      fullscreen: { supported: canFullscreen(), active: () => isFullscreen(), toggle: () => this.toggleFullscreen(), hint: installHint() },
       applySettings: () => {
         saveSettings(this.settings);
         this.sfx.setVolume(this.settings.sfx);

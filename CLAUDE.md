@@ -25,7 +25,9 @@ before making changes. They hold the decisions; do not relitigate them in code.
 ## Stack
 
 TypeScript, Three.js, Vite, Vitest. Static deploy on every push to the default
-branch. Saves in IndexedDB with an export code (not built yet).
+branch. Saves in IndexedDB with an export code. `tools/pwa.ts` draws the app
+icons per pixel and emits the manifest and service worker at build time; that
+is the one place generated images are allowed, and only into `dist/`.
 
 ## Current state
 

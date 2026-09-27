@@ -17,6 +17,7 @@ export interface ScreenHost {
 export class Screens {
   readonly root: HTMLDivElement;
   hasSave = false;
+  installHint: string | null = null;
 
   constructor(parent: HTMLElement, private readonly host: ScreenHost) {
     this.root = h('div', { class: 'screen' });
@@ -29,10 +30,10 @@ export class Screens {
     clear(this.root);
   }
 
-  private show(...children: HTMLElement[]): void {
+  private show(...children: (HTMLElement | null)[]): void {
     clear(this.root);
     this.root.style.display = 'flex';
-    this.root.append(...children);
+    this.root.append(...children.filter((c): c is HTMLElement => !!c));
   }
 
   splash(): void {
@@ -46,6 +47,7 @@ export class Screens {
         button('Visual Showcase', () => this.host.showcase(), 'btn'),
       ),
       h('div', { class: 'title-note' }, 'Monsters and the Proving Grounds are placeholders until the real monster and zone data arrives.'),
+      this.installHint ? h('div', { class: 'title-note install' }, this.installHint) : null,
     );
   }
 
