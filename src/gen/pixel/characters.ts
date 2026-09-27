@@ -35,6 +35,8 @@ type Doll = {
   buf: PixelBuffer;
   ramps: Map<string, Ramp>;
   outline: boolean;
+  /** Extra rows above the head, for tall hats. */
+  top: number;
 };
 
 interface Look {
@@ -48,6 +50,8 @@ interface Look {
   hood?: boolean;
   helm?: boolean;
   hat?: boolean;
+  /** A tall pointed hat with a brim, in the `head` colour with a `trim` band. */
+  wizardHat?: boolean;
   apron?: string;
   cape?: string;
   /** Glowing eye colour; default is a dark dot. */
@@ -96,10 +100,10 @@ function px(v: number): number {
   return Math.round(v);
 }
 
-function doll(H: number, W: number, pal: Palette, outline: boolean, materials: Record<string, number>): Doll {
+function doll(H: number, W: number, pal: Palette, outline: boolean, materials: Record<string, number>, top = 0): Doll {
   const ramps = new Map<string, Ramp>();
   for (const [k, v] of Object.entries(materials)) ramps.set(k, ramp(v, pal.contrast));
-  return { H, W, buf: new PixelBuffer(W + 4, H + 3), ramps, outline };
+  return { H, W, buf: new PixelBuffer(W + 4, H + 3 + top), ramps, outline, top };
 }
 
 function base(d: Doll, key: string): Rgb {
@@ -130,7 +134,7 @@ type WeaponDrawer = (d: Doll, hx: number, hy: number, raise: number, facing: Fac
 function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null): void {
   const { H, W } = d;
   const ox = 2;
-  const oy = 1 + pose.bob;
+  const oy = 1 + pose.bob + d.top;
   const hw = W / 2;
   const lean = pose.lean + (look.hunch ?? 0);
   const legW = Math.max(2, px(W * 0.2));
@@ -219,7 +223,11 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
 
 function sideHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, headR: number): void {
   const eye = look.eyes ?? hex(pal.outline);
-  if (look.hood) {
+  if (look.wizardHat) {
+    d.buf.ellipse(hx, hy, headR, headR, base(d, look.skin));
+    d.buf.set(hx + Math.max(1, px(headR * 0.5)), hy, eye);
+    wizardHat(d, look, hx, hy - headR + 1, headR, 'side');
+  } else if (look.hood) {
     d.buf.ellipse(hx - 1, hy, headR + 1, headR + 1, base(d, look.head));
     d.buf.rect(hx, hy - px(headR * 0.4), headR, px(headR * 1.1), base(d, look.skin));
     d.buf.set(hx + 1, hy - 1, look.eyes ?? hex(pal.eyeGlow));
@@ -249,7 +257,7 @@ function sideHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, hea
 function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null, back: boolean): void {
   const { H, W } = d;
   const ox = 2;
-  const oy = 1 + pose.bob;
+  const oy = 1 + pose.bob + d.top;
   const cx = ox + W / 2;
   const legW = Math.max(2, px(W * 0.2));
   const legTop = px(H * 0.6);
@@ -349,7 +357,14 @@ function frontHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, he
   const glow = look.eyes ?? hex(pal.eyeGlow);
   const eyeY = hy - 1;
   const eyeDx = Math.max(1, px(headR * 0.5));
-  if (look.hood) {
+  if (look.wizardHat) {
+    d.buf.ellipse(hx, hy, headR, headR, base(d, look.skin));
+    if (!back) {
+      d.buf.set(hx - eyeDx, eyeY, eye);
+      d.buf.set(hx + eyeDx, eyeY, eye);
+    }
+    wizardHat(d, look, hx, hy - headR + 1, headR, back ? 'back' : 'front');
+  } else if (look.hood) {
     d.buf.ellipse(hx, hy, headR + 1, headR + 1, base(d, look.head));
     if (!back) {
       d.buf.rect(hx - px(headR * 0.6), hy - px(headR * 0.3), px(headR * 1.2) + 1, px(headR * 1.0), base(d, look.skin));
@@ -387,6 +402,25 @@ function frontHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, he
         d.buf.set(hx + 1, hy + headR - 1, base(d, 'bone'));
       }
     }
+  }
+}
+
+/** A pointed hat: a wide brim at `brimY`, a cone above it whose tip bends over. */
+function wizardHat(d: Doll, look: Look, hx: number, brimY: number, headR: number, facing: Facing): void {
+  const c = base(d, look.head);
+  const band = base(d, look.trim ?? look.head);
+  const brimHalf = headR + 3;
+  const cone = d.top;
+  // Brim, and the band where the cone meets it
+  d.buf.rect(hx - brimHalf, brimY, brimHalf * 2 + 1, 2, c);
+  d.buf.rect(hx - headR, brimY - 1, headR * 2 + 1, 1, band);
+  // Cone: each row narrower than the one below, tip leaning back (side) or to one side (front)
+  const lean = facing === 'side' ? -1 : 1;
+  for (let i = 1; i <= cone; i++) {
+    const t = i / cone;
+    const half = Math.max(0, Math.round(headR * (1 - t) - (t > 0.85 ? 1 : 0)));
+    const shift = Math.round(lean * t * t * headR * 0.9);
+    d.buf.rect(hx - half + shift, brimY - 1 - i, half * 2 + 1, 1, c);
   }
 }
 
@@ -483,20 +517,21 @@ function bowShape(d: Doll, hx: number, hy: number, facing: Facing, pal: Palette,
 // ---------------------------------------------------------------- sheets
 
 function sheet(pal: Palette, H: number, W: number, outline: boolean, materials: Record<string, number>, look: Look, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null, extra?: (d: Doll, facing: Facing, frame: number) => void, speed = 1): CharacterSheet {
+  const top = look.wizardHat ? Math.round(H * 0.32) : 0;
   const make = (facing: Facing, poses: Pose[]) =>
     poses.map((p, i) => {
-      const d = doll(H, W, pal, outline, materials);
+      const d = doll(H, W, pal, outline, materials, top);
       if (facing === 'side') sideBody(d, pal, look, p, weapon, shield);
       else frontBody(d, pal, look, p, weapon, shield, facing === 'back');
       extra?.(d, facing, i);
       return finish(d, hex(pal.outline));
     });
   const set = (facing: Facing): AnimSet => ({
-    idle: anim(make(facing, POSES.idle), W, H, 0.5),
-    walk: anim(make(facing, POSES.walk), W, H, 0.12 / speed),
-    attack: anim(make(facing, POSES.attack), W, H, 0.08),
+    idle: anim(make(facing, POSES.idle), W, H + top, 0.5),
+    walk: anim(make(facing, POSES.walk), W, H + top, 0.12 / speed),
+    attack: anim(make(facing, POSES.attack), W, H + top, 0.08),
   });
-  return { side: set('side'), front: set('front'), back: set('back'), height: H };
+  return { side: set('side'), front: set('front'), back: set('back'), height: H + top };
 }
 
 export interface HeroLook {
@@ -523,7 +558,7 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
   const W = Math.round(H * 0.7);
   const pledge = look.pledgeId ? PLEDGES[look.pledgeId] : null;
   const bright = pledge?.color ?? (look.classId === 'knight' ? 0x3858c8 : look.classId === 'sorcerer' ? 0x5a3a8a : 0x4a6a3a);
-  const cloth = pledge ? darken(pledge.color, 0.55) : bright;
+  const cloth = pledge ? (pledge.cloth ?? darken(pledge.color, 0.55)) : bright;
   const materials = {
     skin: pal.skin,
     cloth,
@@ -539,7 +574,7 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     look.classId === 'knight'
       ? { skin: 'skin', body: 'cloth', head: 'steel', legs: 'leather', arms: 'steel', trim: 'trim', helm: true, cape: 'cape' }
       : look.classId === 'sorcerer'
-        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', hood: true, robe: true, robeFold: 'hood' }
+        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leather', arms: 'skin', trim: 'trim', hood: true };
   const weapon = look.weapon ? WEAPONS[look.weapon] : look.classId === 'knight' ? WEAPONS.sword : look.classId === 'sorcerer' ? WEAPONS.staff : WEAPONS.bow;
   return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);

@@ -6,6 +6,8 @@ export interface PledgeDef {
   name: string;
   title: string;
   color: number;
+  /** Robe or tabard colour when it should not be the pledge colour darkened. */
+  cloth?: number;
   description: string;
   /** Skill ids unlocked by this pledge. */
   skills: string[];
@@ -28,17 +30,17 @@ export const PLEDGES: Record<string, PledgeDef> = {
     skills: ['rite_of_blood', 'hemorrhage', 'void_slash'],
   },
   necromancer: {
-    id: 'necromancer', classId: 'sorcerer', name: 'Necromancer', title: 'Master of Death', color: 0xcc44ff,
+    id: 'necromancer', classId: 'sorcerer', name: 'Necromancer', title: 'Master of Death', color: 0xb090c8, cloth: 0x1a1620,
     description: 'A sorcerer who has gazed beyond the veil. Bends life and death itself: draining vitality, spreading plague, cursing enemies into oblivion.',
     skills: ['death', 'poison_nova', 'life_touch'],
   },
   stormsinger: {
-    id: 'stormsinger', classId: 'sorcerer', name: 'Stormsinger', title: 'Voice of the Storm', color: 0x55bbff,
+    id: 'stormsinger', classId: 'sorcerer', name: 'Stormsinger', title: 'Voice of the Storm', color: 0xffd83a, cloth: 0x8a6a14,
     description: 'Where thunder breaks, the Stormsinger stands. A master of lightning and wind, calling down the fury of the sky.',
     skills: ['call_of_the_wind', 'storm', 'lightning_strike'],
   },
   wintercaller: {
-    id: 'wintercaller', classId: 'sorcerer', name: 'Wintercaller', title: 'Herald of the Frost', color: 0x88eeff,
+    id: 'wintercaller', classId: 'sorcerer', name: 'Wintercaller', title: 'Herald of the Frost', color: 0x6aa8ff, cloth: 0x2a4a9a,
     description: 'The Wintercaller commands the eternal freeze: encasing foes in ice, blanketing the battlefield in blizzard.',
     skills: ['frozen_armor', 'frost_nova', 'blizzard'],
   },
