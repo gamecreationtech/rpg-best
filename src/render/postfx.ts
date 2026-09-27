@@ -1,6 +1,33 @@
 import { Vector2 } from 'three';
 
 /**
+ * Runs right after the scene render: replaces any not-a-number or infinite pixel
+ * with black and caps brightness, so one bad pixel can never spread through the
+ * bloom blur and black out the screen.
+ */
+export const SanitizeShader = {
+  name: 'SanitizeShader',
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      bvec3 bad = bvec3(isnan(c.r) || isinf(c.r), isnan(c.g) || isinf(c.g), isnan(c.b) || isinf(c.b));
+      vec3 safe = mix(clamp(c.rgb, 0.0, 48.0), vec3(0.0), vec3(bad));
+      gl_FragColor = vec4(safe, 1.0);
+    }
+  `,
+};
+
+/**
  * Final colour grade, applied after tone mapping: split toning (cool shadows, warm
  * highlights), a touch of contrast, a heavy vignette and fine film grain.
  */
@@ -36,6 +63,8 @@ export const GradeShader = {
 
     void main() {
       vec3 c = texture2D(tDiffuse, vUv).rgb;
+      if (isnan(c.r) || isnan(c.g) || isnan(c.b) || isinf(c.r) || isinf(c.g) || isinf(c.b)) c = vec3(0.0);
+      c = clamp(c, 0.0, 1.0);
       float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
       c = mix(vec3(l), c, uSaturation);
       c = (c - 0.5) * uContrast + 0.5;

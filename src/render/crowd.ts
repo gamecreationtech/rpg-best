@@ -120,6 +120,7 @@ export class Crowd {
     let count = 0;
     for (const a of this.actors) {
       a.update(dt);
+      if (!Number.isFinite(a.x + a.z + a.yaw + a.scale)) continue;
       const hover = this.recipe.hover ? Math.sin(time * 1.7 + a.phaseOffset * 6.28) * 0.08 : 0;
       pos.set(a.x, a.y + hoverLift + hover, a.z);
       quat.setFromAxisAngle(dummy.up, a.yaw);

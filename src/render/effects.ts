@@ -596,7 +596,9 @@ export class Effects {
       // Ribbon faces the camera: offset = normalize(segment x toCamera)
       this.tmp.set(c[0] - a[0], c[1] - a[1], c[2] - a[2]);
       this.tmp2.set(this.camPos.x - a[0], this.camPos.y - a[1], this.camPos.z - a[2]);
-      this.tmp.cross(this.tmp2).normalize().multiplyScalar(halfWidth);
+      this.tmp.cross(this.tmp2);
+      if (this.tmp.lengthSq() < 1e-8) this.tmp.set(0, 1, 0);
+      this.tmp.normalize().multiplyScalar(halfWidth);
       const ox = this.tmp.x, oy = this.tmp.y, oz = this.tmp.z;
       write(a[0] - ox, a[1] - oy, a[2] - oz);
       write(a[0] + ox, a[1] + oy, a[2] + oz);

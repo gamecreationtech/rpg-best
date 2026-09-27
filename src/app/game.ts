@@ -106,6 +106,12 @@ export class Game {
     });
   }
 
+  /** Shows an error in the message log so a tester can read it back to us. */
+  reportError(e: unknown): void {
+    const text = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    this.hud?.message(`Error: ${text.slice(0, 120)}`, 0xff6060);
+  }
+
   async init(): Promise<void> {
     const save = await loadGame();
     this.hasSave = !!save;

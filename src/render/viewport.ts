@@ -18,7 +18,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { GradeShader } from './postfx';
+import { GradeShader, SanitizeShader } from './postfx';
 
 export const BACKDROP = 0x06070c;
 
@@ -95,6 +95,7 @@ export class Viewport {
     const target = new WebGLRenderTarget(size.x, size.y, { type: HalfFloatType, samples: opts.mobile ? 2 : 4 });
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.composer.addPass(new ShaderPass(SanitizeShader));
     this.composer.addPass(new UnrealBloomPass(size, 0.42, 0.35, 1.0));
     this.composer.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);

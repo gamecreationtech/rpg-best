@@ -1163,8 +1163,9 @@ export class World {
       const pref = PROVING_GROUNDS.rangedPreferredRange * PX;
       const los = !this.map.lineBlocked(e.x, e.z, this.px, this.pz);
       if (dist < pref * 0.75) {
-        e.moveX = (e.x - this.px) / dist;
-        e.moveZ = (e.z - this.pz) / dist;
+        const safe = Math.max(dist, 0.001);
+        e.moveX = (e.x - this.px) / safe;
+        e.moveZ = (e.z - this.pz) / safe;
       } else if (dist > pref * 1.2 || !los) {
         const dir = { x: 0, z: 0 };
         this.flow.direction(e.x, e.z, dir);
@@ -1175,8 +1176,9 @@ export class World {
         if (e.attackTimer <= 0 && e.status.shock <= 0) {
           e.attackTimer = e.attackCooldown;
           this.emit({ type: 'enemy_attack', id: e.id });
-          const dx = (this.px - e.x) / dist;
-          const dz = (this.pz - e.z) / dist;
+          const safe = Math.max(dist, 0.001);
+          const dx = (this.px - e.x) / safe;
+          const dz = (this.pz - e.z) / safe;
           this.spawnProjectile({
             owner: 'enemy', shape: 'enemy_bolt', element: 'physical', x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
             speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: 'physical', canCrit: false, skillId: null, weaponHit: false },
@@ -1189,8 +1191,9 @@ export class World {
       const dir = { x: 0, z: 0 };
       this.flow.direction(e.x, e.z, dir);
       if (!dir.x && !dir.z && dist < 6) {
-        dir.x = (this.px - e.x) / dist;
-        dir.z = (this.pz - e.z) / dist;
+        const safe = Math.max(dist, 0.001);
+        dir.x = (this.px - e.x) / safe;
+        dir.z = (this.pz - e.z) / safe;
       }
       e.moveX = dir.x;
       e.moveZ = dir.z;

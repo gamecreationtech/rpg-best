@@ -49,9 +49,14 @@ if (location.search.includes('showcase')) {
 } else {
   const game = new Game(canvas, ui);
   void game.init();
-  startLoop((dt) => {
-    if (!window.fs.paused) game.update(dt);
-  });
+  startLoop(
+    (dt) => {
+      if (!window.fs.paused) game.update(dt);
+    },
+    (e) => game.reportError(e),
+  );
+  window.addEventListener('error', (e) => game.reportError(e.error ?? e.message));
+  window.addEventListener('unhandledrejection', (e) => game.reportError(e.reason));
   window.fs = {
     game,
     paused: false,
