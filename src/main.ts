@@ -4,6 +4,21 @@ import { startLoop } from './app/loop';
 import { Showcase } from './app/showcase';
 import { PLACEHOLDER_ENEMIES } from './data/placeholderEnemies';
 
+// Phones: no double-tap zoom, no pinch zoom, no long-press menus while playing
+document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('gesturechange', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', (e) => {
+  const now = performance.now();
+  const target = e.target as HTMLElement | null;
+  // Only the play area: buttons and panels must keep every tap
+  if (now - lastTouchEnd < 300 && !target?.closest('button, input, textarea, .panel-overlay, .screen')) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+document.addEventListener('contextmenu', (e) => { if ((e.target as HTMLElement | null)?.closest('canvas, button, .cluster')) e.preventDefault(); });
+
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const ui = document.getElementById('ui') as HTMLElement;
 
