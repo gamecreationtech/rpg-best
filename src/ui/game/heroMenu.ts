@@ -54,11 +54,16 @@ function label(text: string, color = MUTED): HTMLElement {
   return pxText(text, { color });
 }
 
-/** The gear layout: head and trinkets on top, arms and hands in the middle, legs below. */
+/**
+ * The gear layout follows the body: helmet on top with the totem and relic at
+ * the shoulders, the chest in the middle with the weapon and shield in either
+ * hand and the amulet and charm at its sides, then gloves, rings, belt and
+ * boots along the bottom.
+ */
 const DOLL: (EquipKey | null)[][] = [
-  ['helmet', 'amulet', 'totem', 'relic', 'charm'],
-  ['weapon', 'chest', 'shield', 'ring1', 'ring2'],
-  ['gloves', 'belt', 'boots', null, null],
+  ['totem', null, 'helmet', null, 'relic'],
+  ['weapon', 'amulet', 'chest', 'charm', 'shield'],
+  ['gloves', 'ring1', 'belt', 'ring2', 'boots'],
 ];
 
 /**
