@@ -565,13 +565,14 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
   const materials = {
     skin: pal.skin,
     cloth,
-    trim: pledge ? pledge.color : pal.heroTrim,
+    trim: pledge?.armor?.trim ?? (pledge ? pledge.color : pal.heroTrim),
     leather: pal.leather,
-    steel: pal.steel,
+    // A knight's plate takes the pledge's colours once sworn
+    steel: pledge?.armor?.plate ?? pal.steel,
     wood: pal.wood,
     bone: pal.bone,
-    cape: look.classId === 'knight' ? 0x5a6070 : cloth,
-    steelDark: 0x5a6070,
+    cape: pledge?.armor?.dark ?? (look.classId === 'knight' ? 0x5a6070 : cloth),
+    steelDark: pledge?.armor?.dark ?? 0x5a6070,
     hood: look.classId === 'sorcerer' ? darken(cloth, 0.8) : pal.leather,
   };
   // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour

@@ -8,6 +8,8 @@ export interface PledgeDef {
   color: number;
   /** Robe or tabard colour when it should not be the pledge colour darkened. */
   cloth?: number;
+  /** Knight pledges: plate colour, the darker colour of legs and cape, and the trim. */
+  armor?: { plate: number; dark: number; trim: number };
   description: string;
   /** Skill ids unlocked by this pledge. */
   skills: string[];
@@ -15,17 +17,17 @@ export interface PledgeDef {
 
 export const PLEDGES: Record<string, PledgeDef> = {
   paladin: {
-    id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a,
+    id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a, armor: { plate: 0xc8a040, dark: 0x2a4a9a, trim: 0x4a8aff },
     description: 'Blessed by the heavens, the Paladin wields divine power to smite evil and protect the innocent.',
     skills: ['prayer', 'hammer_of_gods', 'sanctuary'],
   },
   titan: {
-    id: 'titan', classId: 'knight', name: 'Titan', title: 'God of Earth', color: 0xc8945a,
+    id: 'titan', classId: 'knight', name: 'Titan', title: 'God of Earth', color: 0xc8945a, armor: { plate: 0x7a5636, dark: 0x7a2a2a, trim: 0xb03a2a },
     description: 'Born from stone and soil, the Titan is an immovable force of nature: raw, relentless, unbreakable.',
     skills: ['rock_solid', 'boulder_toss', 'leap'],
   },
   nightlord: {
-    id: 'nightlord', classId: 'knight', name: 'Nightlord', title: 'Knight of Darkness', color: 0xaa66cc,
+    id: 'nightlord', classId: 'knight', name: 'Nightlord', title: 'Knight of Darkness', color: 0xaa66cc, armor: { plate: 0x2a2a34, dark: 0x16161c, trim: 0x5a3a7a },
     description: 'Sworn to the void, the Nightlord commands the shadows: feared, ruthless, and shrouded in darkness.',
     skills: ['rite_of_blood', 'hemorrhage', 'void_slash'],
   },
