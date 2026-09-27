@@ -87,7 +87,7 @@ export class Panels {
     this.cellSize = Math.max(22, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / 12)));
     if (this.isHero) {
       this.hero.reset();
-      this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : 'inventory';
+      this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : kind === 'character' && !this.hero.mouse ? 'stats' : 'inventory';
     }
     this.root.classList.toggle('hero', this.isHero || kind === 'waypoint');
     this.render();

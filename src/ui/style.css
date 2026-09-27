@@ -462,14 +462,19 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-tabs .px-tab, .px-tabs .pxb { flex-shrink: 0; }
 /* Phones in portrait: tighter tabs and no title, so the X stays on screen */
 @media (max-width: 520px) {
-  .px-tab { padding: 4px 8px 2px; }
-  .px-tabs .mt { font-size: 13px; }
+  .px-tabs { gap: 3px; padding: 6px 6px 0; }
+  .px-tab { padding: 4px 6px 2px; }
+  .px-tabs .mt { font-size: 12px; }
+  .px-tabs .pxb { min-height: 26px; padding: 2px 6px; }
   .px-tabs-title { display: none; }
 }
 .px-content { flex: 1; overflow-y: auto; padding: 12px 10px; min-height: 0; }
 .px-content.fixed { overflow: hidden; display: flex; }
 .px-inventory { display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0; }
 .stats-col { flex: 1 1 0; min-width: 0; min-height: 0; }
+.stats-col.full { max-width: 720px; margin: 0 auto; width: 100%; }
+/* Narrow screens: the item panel drops under the gear instead of squeezing beside it */
+@media (max-width: 520px) { .gear-row { flex-wrap: wrap; } .gear-row > .px-col { flex: 1 1 100%; } .item-col .px-itembox { min-height: 0; } }
 .stats-col .px-stats { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #44444f #0c0c13; }
 .gear-col { flex: 2 1 0; min-width: 0; min-height: 0; justify-content: flex-start; }
 .bag-block { flex: 1; min-height: 0; }

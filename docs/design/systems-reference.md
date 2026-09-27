@@ -59,7 +59,9 @@ big Attack button with the five skill buttons on an arc around it. Tapping
 Attack is one swing at whatever is already in reach; holding it keeps swinging,
 and it never walks the hero anywhere. Next to a merchant, station, waypoint
 or portal the same button turns gold and becomes the action button (Trade,
-Open, Travel, Enter); tapping it uses the thing. Tapping a skill casts it at the nearest
+Open, Travel, Enter); tapping it uses the thing. The hero menu on touch has
+four tabs, Inventory, Stats, Skills and Passives, since the stat sheet does not
+fit beside the bag on a phone. Tapping a skill casts it at the nearest
 enemy; holding a skill repeats it; dragging from a skill aims it. Tapping an
 enemy directly still walks to it and attacks. Loot labels, the merchant and
 the stations can be tapped directly too.

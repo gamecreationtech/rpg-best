@@ -13,7 +13,8 @@ import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
 
-export type HeroTab = 'inventory' | 'skills' | 'passives';
+/** On touch devices the stats get their own tab; with a mouse they sit beside the bag. */
+export type HeroTab = 'inventory' | 'stats' | 'skills' | 'passives';
 
 export interface HeroMenuHost {
   world: World;
@@ -98,8 +99,8 @@ export class HeroMenu {
     const tabs = h(
       'div',
       { class: 'px-tabs' },
-      ...(['inventory', 'skills', 'passives'] as HeroTab[]).map((t) => {
-        const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
+      ...((this.mouse ? ['inventory', 'skills', 'passives'] : ['inventory', 'stats', 'skills', 'passives']) as HeroTab[]).map((t) => {
+        const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'stats' ? 'Stats' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
         b.addEventListener('pointerdown', (e) => e.stopPropagation());
         return b;
       }),
@@ -110,6 +111,7 @@ export class HeroMenu {
     // The window goes into the page first so the inventory can measure the room it has
     body.append(h('div', { class: 'px-window' }, tabs, content));
     if (this.tab === 'inventory') this.renderInventory(w, content);
+    else if (this.tab === 'stats') this.renderStats(w, content);
     else if (this.tab === 'skills') this.renderSkills(w, content);
     else this.renderPassives(w, content);
   }
@@ -119,9 +121,10 @@ export class HeroMenu {
   private renderInventory(w: World, content: HTMLElement): void {
     const p = w.player;
     const rerender = () => this.render(content.parentElement!.parentElement!);
-    // Stats take the left third at full height with their own scrollbar;
-    // the right two thirds hold the worn gear on top and the bag underneath
-    const stats = h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender));
+    // With a mouse the stats take the left third at full height with their own
+    // scrollbar and the right two thirds hold the worn gear on top and the bag
+    // underneath; on touch the stats have their own tab and the gear and bag get it all
+    const stats = this.mouse ? h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender)) : null;
     const dollRow = (row: (EquipKey | null)[]) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)));
     const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map(dollRow), h('div', { class: 'doll-rule' }), dollRow(TRINKETS));
     const side = this.mouse
@@ -139,8 +142,14 @@ export class HeroMenu {
     bagBlock.append(this.bagGrid(w, rerender));
   }
 
+  /** Touch devices: the stat sheet on its own tab, full width. */
+  private renderStats(w: World, content: HTMLElement): void {
+    const rerender = () => this.render(content.parentElement!.parentElement!);
+    content.append(h('div', { class: 'px-inventory' }, h('div', { class: 'px-col stats-col full' }, this.statSheet(w, rerender))));
+  }
+
   /** Mouse users hover for stats and click to act; touch users tap to select. */
-  private get mouse(): boolean {
+  get mouse(): boolean {
     return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   }
 
