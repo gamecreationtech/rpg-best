@@ -145,8 +145,9 @@ export class GameView {
   private readonly ringGeo: RingGeometry;
   private readonly discGeo: CircleGeometry;
 
-  constructor(canvas: HTMLCanvasElement, ui: HTMLElement, private readonly world: World, mobile: boolean, onPickDrop: (id: number) => void) {
-    this.view = new Viewport({ canvas, mobile, fog: 0.02, vignette: 0.42, ambient: 1.9 });
+  constructor(canvas: HTMLCanvasElement, ui: HTMLElement, private readonly world: World, private readonly mobile: boolean, onPickDrop: (id: number) => void) {
+    // Desktops see farther, so the fog thins to keep the far ground readable
+    this.view = new Viewport({ canvas, mobile, fog: mobile ? 0.02 : 0.015, vignette: 0.42, ambient: 1.9 });
     this.particles = new ParticleSystem(mobile ? 6000 : 12000);
     this.view.scene.add(this.particles.mesh);
     this.effects = new Effects(this.view.scene, this.particles);
@@ -811,7 +812,9 @@ export class GameView {
     // Camera: follow the player with a small lead in the walking direction
     const lead = w.moving ? 0.8 : 0;
     this.view.lookTarget.set(w.px + Math.sin(w.pyaw) * lead, 0.8, w.pz + Math.cos(w.pyaw) * lead + (window.innerHeight > window.innerWidth ? 1.6 : 0.4));
-    this.view.zoomTarget = (w.area === 'arena' ? 1.0 : 0.9) * (window.innerHeight > window.innerWidth ? 1.25 : 1);
+    // Desktops have the pixels for a wider view; phones stay closer so things are tappable
+    const desktop = !this.mobile && window.innerWidth >= 900;
+    this.view.zoomTarget = (w.area === 'arena' ? 1.0 : 0.9) * (window.innerHeight > window.innerWidth ? 1.25 : 1) * (desktop ? 1.45 : 1);
     this.syncHero(dt);
     this.syncEnemies(dt);
     this.syncProjectiles();
