@@ -33,8 +33,8 @@ export function serialize(p: PlayerState, seed: number): SaveData {
   };
 }
 
-function restoreInventory(items: Item[]): Inventory {
-  const inv = new Inventory(ITEM_RULES.inventoryCols, ITEM_RULES.inventoryRows);
+function restoreInventory(items: Item[], cols = ITEM_RULES.inventoryCols, rows = ITEM_RULES.inventoryRows): Inventory {
+  const inv = new Inventory(cols, rows);
   for (const item of items) {
     if (!inv.place(item, item.col, item.row)) inv.add(item);
   }
@@ -62,9 +62,9 @@ export function deserialize(data: SaveData): PlayerState {
     classId: src.classId as ClassId,
     inventory: restoreInventory(src.inventory),
     equipment,
-    stash: src.stash.map(restoreInventory),
+    stash: src.stash.map((page) => restoreInventory(page, ITEM_RULES.stashCols, ITEM_RULES.stashRows)),
   };
-  while (p.stash.length < ITEM_RULES.stashPages) p.stash.push(new Inventory(ITEM_RULES.inventoryCols, ITEM_RULES.inventoryRows));
+  while (p.stash.length < ITEM_RULES.stashPages) p.stash.push(new Inventory(ITEM_RULES.stashCols, ITEM_RULES.stashRows));
   return p;
 }
 

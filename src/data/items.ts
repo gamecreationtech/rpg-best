@@ -156,8 +156,10 @@ export const ITEM_RULES = {
   /** value = rarityGold * width * height * (1 + (ilvl - 1) * valueScale) */
   valueScale: 0.05,
   sellRatio: 0.4,
-  inventoryCols: 12,
-  inventoryRows: 12,
+  inventoryCols: 18,
+  inventoryRows: 14,
+  stashCols: 12,
+  stashRows: 12,
   stashPages: 3,
   /** Vendor stock item level relative to the player: 65% same, 20% +1, 10% +2, 5% +3. */
   vendorLevelWeights: [65, 20, 10, 5],

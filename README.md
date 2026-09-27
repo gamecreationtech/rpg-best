@@ -8,7 +8,7 @@ image, model or audio files.
 ## Status
 
 Playable pre-alpha. Three classes with nine pledges, 53 skills, passive trees,
-items with six rarities, a 12x12 inventory, stash, merchant, three crafting
+items with six rarities, an 18x14 bag, a stash, merchant, three crafting
 stations, consumables, synthesised sound and saves with a shareable code. Zones and
 monsters are placeholders until their data arrives. See
 [systems-reference.md](docs/design/systems-reference.md) for what is implemented

@@ -10,7 +10,7 @@ export interface GridCallbacks {
   onCellTap: (col: number, row: number, grid: Inventory) => void;
 }
 
-/** Renders a 12x12 grid with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
+/** Renders an item grid (the 18x14 bag or a 12x12 stash page) with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
 export class ItemGrid {
   readonly root: HTMLDivElement;
   private cell = 30;

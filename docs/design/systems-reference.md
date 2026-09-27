@@ -19,7 +19,7 @@ Proving Grounds.
 | Stats and formulas | `src/sim/player.ts`, `src/sim/combat.ts` | Max life and mana, move speed, attack speed, cast rate, crit, armour, resistances, dodge, block, shields, life steal, cooldown reduction |
 | Status effects | `src/data/status.ts`, `src/sim/combat.ts` | Stun, freeze, slow, poison, burn, bleed, death curse, shock, electrocute, with the export's proc chances |
 | Items | `src/data/items.ts`, `src/sim/items/` | 10 weapons, 5 armours, 8 accessories, 4 divine specials, 6 starters; six rarities with the export's weights, multipliers and value formula; random affixes |
-| Inventory and stash | `src/sim/items/inventory.ts` | 12x12 bag, three 12x12 stash pages, sized items |
+| Inventory and stash | `src/sim/items/inventory.ts` | 18x14 bag (`ITEM_RULES.inventoryCols/Rows`), three 12x12 stash pages, sized items |
 | Equipment | `src/sim/items/equipment.ts` | 13 slots, two rings, two-handed weapons block the shield, level requirements |
 | Vendor | `src/sim/items/vendor.ts` | Stock capped at magic, item level 65/20/10/5 spread, sells at 40% |
 | Crafting | `src/data/crafting.ts`, `src/sim/items/crafting.ts` | Forge (4 smelts, 5 uses each), Blood Fountain (4), Arcana Oracle (enchant, transmute, infuse, reroll) |

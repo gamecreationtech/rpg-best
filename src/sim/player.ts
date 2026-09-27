@@ -128,7 +128,7 @@ export function createPlayer(classId: ClassId, pledgeId: string | null): PlayerS
     professions: Object.fromEntries(PROFESSIONS.map((pr) => [pr.id, { level: 1, xp: 0 }])) as PlayerState['professions'],
     inventory: new Inventory(ITEM_RULES.inventoryCols, ITEM_RULES.inventoryRows),
     equipment: new Equipment(),
-    stash: Array.from({ length: ITEM_RULES.stashPages }, () => new Inventory(ITEM_RULES.inventoryCols, ITEM_RULES.inventoryRows)),
+    stash: Array.from({ length: ITEM_RULES.stashPages }, () => new Inventory(ITEM_RULES.stashCols, ITEM_RULES.stashRows)),
     kills: 0,
   };
   for (const id of cls.startingGear) p.equipment.equip(makeStarterItem(id), 1);

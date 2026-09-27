@@ -89,7 +89,7 @@ Every feature must serve at least one of these. If it does not, cut it.
 - **Random affixes:** one for magic, two for rare, three for mythic and set,
   four for divine, from a pool of eight, scaled by rarity and item level.
 - **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
-  rings, totem, relic, charm. A 12x12 bag and a three-page stash.
+  rings, totem, relic, charm. An 18x14 bag and a three-page stash of 12x12.
 - **Crafting:** Forge of Heaven, Blood Fountain and Arcana Oracle in town.
 - **Visible gear:** weapons and shields change the hero's appearance; other
   slots later.
