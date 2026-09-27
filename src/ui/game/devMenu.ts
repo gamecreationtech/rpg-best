@@ -33,7 +33,7 @@ const SLIDERS: DevSlider[] = [
 ];
 
 /** Weapons the dev menu can hand out, one button each, in this order. */
-const GIVE_WEAPONS = ['spear', 'mace', 'bardiche', 'wand', 'staff', 'dagger', 'bow', 'spellbook', 'warpike'];
+const GIVE_WEAPONS = ['sword', 'spear', 'mace', 'bardiche', 'wand', 'staff', 'dagger', 'bow', 'spellbook', 'warpike'];
 
 /**
  * The development menu: a strip on the left with a slider and an Apply button
