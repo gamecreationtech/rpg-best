@@ -3,7 +3,7 @@ import type { ConsumableId } from '../data/consumables';
 import { PROVING_GROUNDS } from '../data/placeholderEnemies';
 import { Music } from '../audio/music';
 import { Sfx } from '../audio/sfx';
-import { GameView } from '../render/world/gameView';
+import { PixelView } from '../render2d/pixelView';
 import { createPlayer, type PlayerState } from '../sim/player';
 import { decodeSave, deserialize, encodeSave, serialize } from '../sim/save';
 import type { SimEvent } from '../sim/types';
@@ -22,7 +22,7 @@ type State = 'title' | 'class' | 'pledge' | 'playing';
 export class Game {
   private state: State = 'title';
   private world: World | null = null;
-  private view: GameView | null = null;
+  private view: PixelView | null = null;
   private hud: Hud | null = null;
   private panels: Panels | null = null;
   private readonly screens: Screens;
@@ -37,6 +37,7 @@ export class Game {
   private autosaveTimer = 0;
   private readonly mobile: boolean;
   private readonly aim = { x: 0, z: 0 };
+  private readonly moveDir = { x: 0, z: 0 };
   private readonly gameUi: HTMLDivElement;
   private readonly cursor = new GameCursor();
 
@@ -84,7 +85,12 @@ export class Game {
       },
       castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
       usePotion: (id) => this.usePotion(id),
-      setMoveInput: (x, z) => this.world?.setMoveInput(x, z),
+      setMoveInput: (x, z) => {
+        // Keys and the joystick speak in screen directions; the isometric world is turned 45 degrees
+        if (!this.view) return;
+        this.view.screenDirToWorld(x, z, this.moveDir);
+        this.world?.setMoveInput(this.moveDir.x, this.moveDir.z);
+      },
       joystick: (active, x, y, dx, dy) => this.hud?.setJoystick(active, x, y, dx, dy),
       openPanel: (kind) => this.openPanel(kind),
       escape: () => {
@@ -160,7 +166,7 @@ export class Game {
     this.seed = seed;
     this.teardown();
     this.world = new World(player, seed);
-    this.view = new GameView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
+    this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
     this.buildHud();
     this.panels = new Panels(this.gameUi, {
       world: this.world,

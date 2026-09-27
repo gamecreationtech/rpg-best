@@ -32,6 +32,7 @@ Proving Grounds.
 | Audio | `src/audio/` | Sixteen synthesised effects from the export table plus a generative drone score |
 | Save | `src/sim/save.ts`, `src/app/storage.ts` | IndexedDB with a localStorage fallback, autosave on level up, travel and every 45 seconds, and a copyable save code |
 | Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
+| Rendering | `src/render2d/pixelView.ts`, `src/gen/pixel/` | Isometric pixel art: 32x16 tiles, 22px hero, Grim palette, dithered torchlight; sprites for heroes (class, pledge colour, weapon, shield), four placeholder monsters, dummies, the merchant, stations, projectiles, loot and spell effects, all generated at start-up |
 | Interface | `src/ui/game/` | HUD, bag, character, skills, passives, stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
 
 ## Calls made where the export was unclear

@@ -1,6 +1,6 @@
-import { RARITIES } from '../../data/items';
-import type { Drop } from '../../sim/types';
-import type { Viewport } from '../viewport';
+import { RARITIES } from '../data/items';
+import type { Drop } from '../sim/types';
+import type { Projector } from './camera';
 
 /** Tappable name tags above items on the ground, like a Diablo loot filter. */
 export class DropLabels {
@@ -8,7 +8,7 @@ export class DropLabels {
   private readonly els = new Map<number, HTMLButtonElement>();
   private readonly tmp = { x: 0, y: 0 };
 
-  constructor(parent: HTMLElement, private readonly view: Viewport, private readonly onPick: (id: number) => void) {
+  constructor(parent: HTMLElement, private readonly view: Projector, private readonly onPick: (id: number) => void) {
     this.root = document.createElement('div');
     this.root.className = 'drop-layer';
     parent.appendChild(this.root);

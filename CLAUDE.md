@@ -11,21 +11,26 @@ before making changes. They hold the decisions; do not relitigate them in code.
 ## Hard rules
 
 - **All art is code.** Never commit image, model, texture, font or audio files.
-  Meshes, materials, animation, effects, UI icons and sounds are generated at
-  runtime by code in `src/gen/`, `src/render/`, `src/audio/` or `src/ui/`.
+  Sprites, tiles, animation, effects, UI icons and sounds are generated at
+  runtime by code in `src/gen/`, `src/render2d/`, `src/audio/` or `src/ui/`.
+- **The look is isometric pixel art.** A 640x360 frame scaled by a whole
+  number, 32x16 diamond tiles, a 22px hero, outlines, the Grim palette,
+  dithered torchlight. Draw at integer pixel positions; never scale a sprite
+  by a fraction or blur one. `src/gen/pixel/` holds the generators.
 - **Performance is a feature.** 60 fps with 200 monsters on a 2021 mid-range
-  phone. Instanced rendering, GPU animation, a capped particle pool, one shadow
-  map, no allocation in the hot loop. Any change that adds draw calls or
-  per-frame allocations must justify itself.
-- **Simulation is pure.** `src/sim/` never imports Three.js or touches the DOM.
+  phone. A small frame, pre-drawn sprite sheets, one depth sort, a capped
+  particle pool, one lighting pass, no allocation in the hot loop. Any change
+  that adds per-frame work or allocations must justify itself.
+- **Simulation is pure.** `src/sim/` never imports rendering code or touches the DOM.
   It runs on a fixed timestep, is deterministic given a seed, and is unit tested.
 - **One thumb.** Every interaction works with tap or click. No hover-only or
   keyboard-only features.
 
 ## Stack
 
-TypeScript, Three.js, Vite, Vitest. Static deploy on every push to the default
-branch. Saves in IndexedDB with an export code. `tools/pwa.ts` draws the app
+TypeScript, Canvas 2D plus one WebGL 2 lighting pass, Vite, Vitest. Three.js
+survives only in the old 3D showcase (`?showcase`) and the lab's comparison
+tab. Static deploy on every push to the default branch. Saves in IndexedDB with an export code. `tools/pwa.ts` draws the app
 icons per pixel and emits the manifest and service worker at build time; that
 is the one place generated images are allowed, and only into `dist/`.
 
@@ -35,7 +40,7 @@ Playable pre-alpha. Read `docs/design/systems-reference.md` for what exists and
 where every number lives. Game data is in `src/data/` (transcribed from the
 producer's export, in pixels with 32px tiles; multiply by `PX` in the sim). The
 simulation is `src/sim/world.ts` plus `combat.ts` and `skills/cast.ts`; it emits
-`SimEvent`s that `src/render/world/gameView.ts`, the HUD and audio consume.
+`SimEvent`s that `src/render2d/pixelView.ts`, the HUD and audio consume.
 Zones and real monsters are intentionally absent; `src/data/placeholderEnemies.ts`
 stands in and should be deleted when their data arrives. `npm run check` must
 pass before every push.
@@ -45,7 +50,10 @@ pass before every push.
 The page exposes `window.fs` with `game` (or `showcase` at `?showcase`, `lab` at `?lab`), `paused`,
 `step(seconds)` and `data` for automated screenshots. Headless Chromium with
 SwiftShader renders it; pause the loop first and use `step` so only the final
-frame renders. The capture script lives in the session scratchpad, not the repo.
+frame renders. Keyboard input is polled every frame, so drive the hero with
+real key presses (Playwright `keyboard.down`), not by setting the move input.
+Crop around the hero and enlarge with pixelated scaling to judge sprites. The
+capture script lives in the session scratchpad, not the repo.
 
 ## Conventions
 

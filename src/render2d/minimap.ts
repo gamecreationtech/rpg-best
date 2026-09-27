@@ -1,5 +1,5 @@
-import { Tile } from '../../sim/map/tilemap';
-import type { World } from '../../sim/world';
+import { Tile } from '../sim/map/tilemap';
+import type { World } from '../sim/world';
 
 /** A small canvas drawn from the tile map a few times a second. Code-drawn, no images. */
 export class Minimap {

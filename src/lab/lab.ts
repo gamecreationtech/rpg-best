@@ -1,8 +1,9 @@
 import { h } from '../ui/dom';
-import { PALETTES, type Palette } from './palettes';
+import { PALETTES, type Palette } from '../gen/pixel/palettes';
 import { Pixel3D } from './pixel3d';
 import { Scene2D, type Lighting, type Projection } from './scene2d';
-import type { HeroClass, SpriteSize } from './sprites';
+import type { ClassId } from '../data/classes';
+import type { SpriteSize } from '../gen/pixel/sprites';
 
 type Look = 'iso' | 'top' | '3d';
 
@@ -32,7 +33,7 @@ interface Settings {
   size: SpriteSize;
   outline: boolean;
   lighting: Lighting;
-  heroClass: HeroClass;
+  heroClass: ClassId;
   levels: number;
 }
 
@@ -91,7 +92,7 @@ export class Lab {
     top.appendChild(this.group('Sprites', [['small', 'Small (22 px hero)'], ['large', 'Large (44 px hero)']], () => s.size, (v) => this.apply({ size: v as SpriteSize })));
     top.appendChild(this.group('Outlines', [['on', 'On'], ['off', 'Off']], () => (s.outline ? 'on' : 'off'), (v) => this.apply({ outline: v === 'on' })));
     top.appendChild(this.group('Lighting', [['dither', 'Dithered'], ['smooth', 'Smooth'], ['off', 'Off']], () => s.lighting, (v) => this.apply({ lighting: v as Lighting })));
-    top.appendChild(this.group('Hero', [['knight', 'Knight'], ['sorcerer', 'Sorcerer'], ['rogue', 'Rogue']], () => s.heroClass, (v) => this.apply({ heroClass: v as HeroClass })));
+    top.appendChild(this.group('Hero', [['knight', 'Knight'], ['sorcerer', 'Sorcerer'], ['rogue', 'Rogue']], () => s.heroClass, (v) => this.apply({ heroClass: v as ClassId })));
     top.appendChild(this.group('Colour steps', [['4', '4'], ['6', '6'], ['10', '10']], () => `${s.levels}`, (v) => this.apply({ levels: Number(v) })));
     this.root.appendChild(top);
 

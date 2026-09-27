@@ -1,21 +1,8 @@
-import type { Palette } from './palettes';
-import { bayer, hex } from './pixel';
-import {
-  effectSprites,
-  heroSprites,
-  isoTiles,
-  monsterSprites,
-  propSprites,
-  topTiles,
-  type CharacterSprites,
-  type EffectSprites,
-  type HeroClass,
-  type MonsterKind,
-  type PropSprites,
-  type SpriteAnim,
-  type SpriteSize,
-  type TileSet,
-} from './sprites';
+import type { Palette } from '../gen/pixel/palettes';
+import { bayer, hex } from '../gen/pixel/pixel';
+import type { ClassId } from '../data/classes';
+import { heroSheet, monsterSheet, type CharacterSheet, type Facing, type MonsterKind } from '../gen/pixel/characters';
+import { effectSprites, isoTiles, propSprites, topTiles, type EffectSprites, type PropSprites, type SpriteAnim, type SpriteSize, type TileSet } from '../gen/pixel/sprites';
 
 export type Projection = 'iso' | 'top';
 export type Lighting = 'dither' | 'smooth' | 'off';
@@ -28,7 +15,7 @@ export interface SceneConfig {
   lighting: Lighting;
   width: number;
   height: number;
-  heroClass: HeroClass;
+  heroClass: ClassId;
 }
 
 /** Map cells. */
@@ -43,10 +30,11 @@ const MAP_H = 14;
 
 interface Entity {
   kind: 'hero' | MonsterKind;
-  sprites: CharacterSprites;
+  sprites: CharacterSheet;
   x: number;
   y: number;
   faceLeft: boolean;
+  facing: Facing;
   anim: 'idle' | 'walk' | 'attack';
   animT: number;
   hp: number;
@@ -104,8 +92,8 @@ export class Scene2D {
   private tiles!: TileSet;
   private props!: PropSprites;
   private fx!: EffectSprites;
-  private heroLook!: CharacterSprites;
-  private monsterLooks!: Record<MonsterKind, CharacterSprites>;
+  private heroLook!: CharacterSheet;
+  private monsterLooks!: Record<MonsterKind, CharacterSheet>;
   private readonly map = new Uint8Array(MAP_W * MAP_H);
   private hero!: Entity;
   private readonly monsters: Entity[] = [];
@@ -142,12 +130,12 @@ export class Scene2D {
     this.tiles = config.projection === 'iso' ? isoTiles(pal, size, seed) : topTiles(pal, size, seed);
     this.props = propSprites(pal, size, outline);
     this.fx = effectSprites(pal, size);
-    this.heroLook = heroSprites(config.heroClass, pal, size, outline);
+    this.heroLook = heroSheet({ classId: config.heroClass, pledgeId: null, weapon: null, shield: null }, pal, size, outline);
     this.monsterLooks = {
-      ghoul: monsterSprites('ghoul', pal, size, outline),
-      skeleton: monsterSprites('skeleton', pal, size, outline),
-      brute: monsterSprites('brute', pal, size, outline),
-      wraith: monsterSprites('wraith', pal, size, outline),
+      ghoul: monsterSheet('ghoul', pal, size, outline),
+      skeleton: monsterSheet('skeleton', pal, size, outline),
+      brute: monsterSheet('brute', pal, size, outline),
+      wraith: monsterSheet('wraith', pal, size, outline),
     };
     if (this.hero) this.hero.sprites = this.heroLook;
     for (const m of this.monsters) m.sprites = this.monsterLooks[m.kind as MonsterKind];
@@ -195,7 +183,7 @@ export class Scene2D {
 
   private makeEntity(kind: Entity['kind'], x: number, y: number): Entity {
     const sprites = kind === 'hero' ? this.heroLook : this.monsterLooks[kind];
-    return { kind, sprites, x, y, faceLeft: false, anim: 'idle', animT: Math.random(), hp: 3, flash: 0, dead: -1, cooldown: 0, targetX: x, targetY: y, wander: 0, frozen: 0 };
+    return { kind, sprites, x, y, faceLeft: false, facing: 'front', anim: 'idle', animT: Math.random(), hp: 3, flash: 0, dead: -1, cooldown: 0, targetX: x, targetY: y, wander: 0, frozen: 0 };
   }
 
   private spawnMonster(i: number): void {
@@ -242,7 +230,7 @@ export class Scene2D {
     const dx = target.x - h.x;
     const dy = target.y - h.y;
     const len = Math.hypot(dx, dy) || 1;
-    h.faceLeft = dx < 0;
+    this.face(h, dx, dy);
     this.effects.push({ type: 'fireball', x: h.x, y: h.y, vx: (dx / len) * 7, vy: (dy / len) * 7, t: 0, life: 3 });
   }
 
@@ -292,7 +280,7 @@ export class Scene2D {
           h.anim = 'attack';
           h.animT = 0;
           h.cooldown = 0.55;
-          h.faceLeft = this.screenDx(m.x - h.x, m.y - h.y) < 0;
+          this.face(h, m.x - h.x, m.y - h.y);
           this.hit(m, 1, 0);
         }
       }
@@ -330,7 +318,7 @@ export class Scene2D {
           m.animT = 0;
           m.cooldown = 1.4 + Math.random();
         }
-        m.faceLeft = this.screenDx(dx, dy) < 0;
+        this.face(m, dx, dy);
       } else if (d < 6) {
         this.moveEntity(m, (dx / d) * speed * dt, (dy / d) * speed * dt);
         m.anim = 'walk';
@@ -371,7 +359,7 @@ export class Scene2D {
   }
 
   private advanceAnim(e: Entity, dt: number): void {
-    const a = e.sprites[e.anim];
+    const a = e.sprites[e.facing][e.anim];
     e.animT += dt;
     if (e.anim === 'attack' && e.animT >= a.frames.length * a.frameTime) {
       e.anim = 'idle';
@@ -394,8 +382,7 @@ export class Scene2D {
         e.y += (oy / d) * (0.6 - d) * 0.5;
       }
     }
-    const sdx = this.screenDx(dx, dy);
-    if (Math.abs(sdx) > 1e-4) e.faceLeft = sdx < 0;
+    this.face(e, dx, dy);
   }
 
   // ------------------------------------------------------------ projection
@@ -419,6 +406,20 @@ export class Scene2D {
   /** Horizontal screen component of a world direction, for choosing the facing. */
   private screenDx(dx: number, dy: number): number {
     return this.config.projection === 'iso' ? dx - dy : dx;
+  }
+
+  /** Picks side, front or back from a world direction. */
+  private face(e: Entity, dx: number, dy: number): void {
+    const sdx = this.screenDx(dx, dy);
+    const sdy = this.config.projection === 'iso' ? (dx + dy) / 2 : dy;
+    if (Math.abs(sdx) < 1e-4 && Math.abs(sdy) < 1e-4) return;
+    const a = Math.atan2(sdy, sdx);
+    if (a > Math.PI * 0.25 && a < Math.PI * 0.75) e.facing = 'front';
+    else if (a < -Math.PI * 0.25 && a > -Math.PI * 0.75) e.facing = 'back';
+    else {
+      e.facing = 'side';
+      e.faceLeft = sdx < 0;
+    }
   }
 
   private depth(x: number, y: number): number {
@@ -477,7 +478,8 @@ export class Scene2D {
       const [sx, sy] = this.project(e.x, e.y);
       const fx = Math.round(sx - this.camX);
       const fy = Math.round(sy - this.camY);
-      const anim: SpriteAnim = e.sprites[e.anim];
+      const anim: SpriteAnim = e.sprites[e.facing][e.anim];
+      const flip = e.facing === 'side' && e.faceLeft;
       const frame = anim.frames[Math.floor(e.animT / anim.frameTime) % anim.frames.length]!;
       const flash = e.flash > 0;
       const frozen = e.frozen > 0;
@@ -492,17 +494,17 @@ export class Scene2D {
             const k = Math.min(1, e.dead * 3);
             ctx.save();
             ctx.translate(fx, fy);
-            ctx.rotate((e.faceLeft ? 1 : -1) * k * Math.PI * 0.5);
+            ctx.rotate((flip ? 1 : -1) * k * Math.PI * 0.5);
             ctx.globalAlpha = Math.max(0, 1 - Math.max(0, e.dead - 2.5) / 1.5);
-            ctx.scale(e.faceLeft ? -1 : 1, 1);
+            ctx.scale(flip ? -1 : 1, 1);
             ctx.drawImage(frame, -anim.originX, -anim.originY);
             ctx.restore();
             return;
           }
           if (flash || frozen) {
-            this.drawTinted(frame, fx, fy, anim, e.faceLeft, flash ? '#ffffff' : '#9fe0ff', flash ? 1 : 0.55);
+            this.drawTinted(frame, fx, fy, anim, flip, flash ? '#ffffff' : '#9fe0ff', flash ? 1 : 0.55);
           } else {
-            this.drawSprite(frame, fx, fy, anim, e.faceLeft);
+            this.drawSprite(frame, fx, fy, anim, flip);
           }
         },
       });

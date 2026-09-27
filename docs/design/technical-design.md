@@ -8,7 +8,7 @@ Plain-language summaries come first, details follow.
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Language | TypeScript | Type safety keeps a large procedural codebase honest |
-| Rendering | Three.js (WebGL 2, WebGPU when widely available on mobile) | Lean, huge community, excellent for custom geometry and shaders |
+| Rendering | Canvas 2D into a 640x360 frame, then one WebGL 2 pass for lighting and upscaling | Pixel art needs no 3D engine; Three.js remains only for the old showcase |
 | Build | Vite | Fast builds, tiny output, first-class PWA plugin |
 | Tests | Vitest | Simulation and generators are tested without a browser |
 | Deploy | Static site, built on every push to the main branch | One link, always the latest version |
@@ -24,16 +24,18 @@ when the game starts, or the first time it is needed.
 
 What that means for each kind of asset:
 
-- **Meshes.** Built from primitives (boxes, cylinders, cones, extruded shapes)
-  combined and deformed by small generator functions. A monster is a recipe,
-  not a file. Recipes take parameters, so one recipe yields many variants.
-- **Materials.** Flat-shaded, vertex colours. No image textures. Surface
-  variety comes from vertex colour noise and simple shader effects (rim light,
-  emissive glow, dissolve on death).
-- **Animation.** Characters are assembled from rigid parts. Poses are keyframes
-  defined in code and blended. Playback runs in the vertex shader per instance.
-- **Effects.** GPU particle systems and shader-driven meshes (rings, cones,
-  bolts). Each spell is a small script that spawns and drives them.
+- **Sprites.** Drawn pixel by pixel into small buffers by generator functions
+  in `src/gen/pixel/` (`pixel.ts` is the toolkit: colour ramps with
+  hue-shifted shadows, Bayer dithering, edge shading, outlines). A character
+  is a recipe: a body drawn from three sides with idle, walk and attack frames,
+  coloured from one palette, with the equipped weapon and shield drawn on. All
+  sheets are generated once at start-up, hero looks on demand and cached.
+- **Tiles.** 32x16 diamond floor tiles in four variants and a brick wall block,
+  speckled from a seeded noise so the ground never repeats obviously.
+- **Animation.** Frame sequences per action and facing. Side views are
+  mirrored for left and right. Death is a fall and a fade drawn at run time.
+- **Effects.** A pooled square-particle system plus drawn effects (rings, discs,
+  arcs, jagged bolts, sprite bursts). Each spell event maps to a few of them.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,
@@ -41,29 +43,12 @@ What that means for each kind of asset:
 - **Levels.** Procedural generators seeded per run. A seed reproduces a level
   exactly, which makes bugs reproducible.
 
-### 2.1 Pixel-art option (under evaluation)
+### 2.1 The art lab
 
-The producer has asked for the game to look like pixel art instead of "fake 3D".
-`src/lab/` is a desktop-only test page (`?lab`) that keeps the all-art-in-code
-rule while drawing 2D sprites instead of meshes:
-
-- `pixel.ts` draws into small RGBA buffers: colour ramps with hue-shifted
-  shadows and highlights, Bayer dithering, edge-based shading and 1px outlines.
-- `sprites.ts` generates sprite sheets (idle, walk, attack) for the three
-  heroes and four placeholder monsters, isometric and top-down tile sets,
-  props and spell effects, all from one palette.
-- `scene2d.ts` renders a diorama at 320x180 to 640x360 with painter's-order
-  depth sorting and per-pixel torchlight (dithered or smooth), then the page
-  upscales it by an integer factor with nearest-neighbour sampling so every
-  pixel stays a crisp square.
-- `pixel3d.ts` shows the current 3D showcase through a low-resolution
-  posterize-and-outline filter, for comparison.
-
-If a 2D look is chosen, the simulation stays as it is (it never knew about
-Three.js) and `src/render/` is replaced by a sprite renderer that batches the
-sheets into one texture atlas per palette and draws with a single instanced
-quad mesh, which keeps the 200-monster budget. Sprite sheets are generated
-once at start-up and cached per palette.
+`src/lab/` (`?lab`, desktop only) is where the look was chosen and where new
+palettes and sprite sizes can still be compared side by side: isometric pixel
+art, a top-down 16-bit variant, and the old 3D showcase through a pixel filter.
+It shares the generators in `src/gen/pixel/` with the game.
 
 ## 3. Performance plan
 
@@ -71,27 +56,30 @@ Target: 60 frames per second with 200 live monsters and heavy spell effects on
 a mid-range phone from 2021 (iPhone 12 or Pixel 5 class), inside a mobile
 browser.
 
-Plain language: the game draws crowds in batches, animates them on the
-graphics chip, keeps a hard budget for effects, and lowers resolution rather
-than frame rate when a phone struggles.
+Plain language: the game draws a tiny picture (640x360 on desktop, 400x225 on
+phones) and scales it up, so the number of pixels is small no matter how big
+the screen is. Sprites are pre-drawn once, effects have a hard budget, and
+lighting is one cheap pass on the graphics chip.
 
 Rules, in priority order:
 
-1. **Instanced rendering.** All monsters of one kind are one draw call. Loot,
-   props and projectiles are also instanced. Target: under 100 draw calls in
-   the worst fight.
-2. **GPU animation.** Per-instance animation state (clip, time, direction) is
-   uploaded as instance attributes. The vertex shader poses rigid parts. The
-   CPU never touches vertices.
-3. **Effects budget.** One pooled GPU particle system with a fixed maximum.
-   Spells declare a priority. When the pool is full, low-priority effects are
-   shortened or skipped. Frame rate never drops to show a particle.
-4. **Cheap lighting.** One directional key light with one cascaded shadow map
-   at modest resolution, hemisphere ambient, exponential fog. Spells and
-   torches use emissive materials and additive sprites, not real lights.
-   A small budget of real point lights may be reserved for the player.
-5. **Post-processing that earns its cost.** Bloom, vignette and colour grading
-   in a single combined pass. No ambient occlusion or depth of field on mobile.
+1. **A small frame.** Everything is drawn into a low-resolution canvas with
+   pre-rendered sprites (`drawImage` of whole frames, never per-pixel work
+   during play). Only tiles and things inside the view are drawn; the map is
+   scanned by the visible rectangle, not in full.
+2. **One sort per frame.** Walls, props, characters, drops and projectiles go
+   into one list sorted by depth (painter's order). No per-object allocation:
+   the list is reused.
+3. **Effects budget.** One pooled particle system with a fixed maximum (1500)
+   and a priority per spawn; when the pool is full, low-priority particles
+   are dropped. Drawn effects are capped at 400 live entries.
+4. **Cheap lighting.** The compositor uploads the frame as one texture and a
+   single fragment shader applies up to 48 point lights, quantises the light
+   into dithered bands and scales the frame up with nearest sampling. No
+   shadow maps, no post-processing chain.
+5. **Sprite sheets are cached.** Monster, dummy and merchant sheets are built
+   once per session; each hero look (class, pledge, weapon, shield) is built
+   the first time it appears and kept.
 6. **Simulation on a fixed timestep.** Game logic runs at a fixed rate,
    independent of rendering, in plain data structures. This is what makes
    later co-op possible and keeps tests deterministic.
@@ -100,8 +88,8 @@ Rules, in priority order:
 8. **Staggered AI.** Monsters far from the player or idle think a few times per
    second, near ones every tick. Pathfinding is flow-field based per level, so
    200 monsters share one path computation.
-9. **Dynamic resolution.** Render scale adjusts between roughly 0.6 and 1.0 of
-   device resolution to hold the frame rate, with device pixel ratio capped.
+9. **Fixed resolution.** The frame is always about 640x360 (400x225 on phones)
+   at a whole-number scale, so the pixel cost never grows with the screen.
 10. **Memory discipline.** Object pools for everything spawned in combat. No
     allocation in the hot loop. iOS Safari memory limits are the ceiling.
 
@@ -116,8 +104,13 @@ src/
   data/       Game data tables (classes, pledges, skills, passives, items,
               crafting, consumables, status rules). Pixels, 32px tiles.
   sim/        Pure game simulation: world, combat, skill execution, items,
-              maps, pathing, saves. No Three.js imports. Emits SimEvents.
-  gen/        Procedural generators: characters, weapons, props, ground.
+              maps, pathing, saves. No rendering imports. Emits SimEvents.
+  gen/        Procedural generators. gen/pixel/ holds the pixel-art toolkit,
+              palettes, character sheets, tiles, props and effect sprites used
+              by the game; the rest are the 3D recipes of the old showcase.
+  render2d/   The game's renderer: isometric camera, the frame, particles,
+              drawn effects, the lighting compositor, HTML overlays (damage
+              numbers, loot tags, station tags) and the minimap.
   render/     Three.js viewport, GPU-posed crowds, particles, effects, the
               game view that draws a World. Reads sim state, never mutates it.
   audio/      Web Audio synthesis: sound effects and generative music.

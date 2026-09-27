@@ -1,6 +1,6 @@
 import { Showcase } from '../app/showcase';
-import type { Palette } from './palettes';
-import { bayer } from './pixel';
+import type { Palette } from '../gen/pixel/palettes';
+import { bayer } from '../gen/pixel/pixel';
 
 export interface Pixel3DConfig {
   palette: Palette;

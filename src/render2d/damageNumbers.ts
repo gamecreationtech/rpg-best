@@ -1,4 +1,4 @@
-import type { Viewport } from '../viewport';
+import type { Projector } from './camera';
 
 interface Num {
   el: HTMLSpanElement;
@@ -17,7 +17,7 @@ export class DamageNumbers {
   private next = 0;
   private readonly tmp = { x: 0, y: 0 };
 
-  constructor(parent: HTMLElement, private readonly view: Viewport, size = 40) {
+  constructor(parent: HTMLElement, private readonly view: Projector, size = 40) {
     this.root = document.createElement('div');
     this.root.className = 'dmg-layer';
     parent.appendChild(this.root);
