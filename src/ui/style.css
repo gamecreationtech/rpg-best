@@ -456,7 +456,14 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-tabs { display: flex; align-items: flex-end; gap: 4px; padding: 6px 10px 0; border-bottom: 4px solid #26262e; }
 .px-tab { border-image-source: var(--px-tab); border-image-slice: 4 fill; background: none; padding: 4px 14px 2px; cursor: pointer; margin-bottom: -4px; }
 .px-tab.on { border-image-source: var(--px-tabOn); }
-.px-tabs-title { flex: 1; text-align: center; padding-bottom: 8px; }
+.px-tabs-title { flex: 1 1 0; min-width: 0; text-align: center; padding-bottom: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.px-tabs .px-tab, .px-tabs .pxb { flex-shrink: 0; }
+/* Phones in portrait: tighter tabs and no title, so the X stays on screen */
+@media (max-width: 520px) {
+  .px-tab { padding: 4px 8px 2px; }
+  .px-tabs .mt { font-size: 13px; }
+  .px-tabs-title { display: none; }
+}
 .px-content { flex: 1; overflow-y: auto; padding: 12px 10px; min-height: 0; }
 .px-content.fixed { overflow: hidden; display: flex; }
 .px-inventory { display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0; }
