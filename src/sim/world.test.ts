@@ -3,7 +3,7 @@ import { MONSTERS } from '../data/monsters';
 import { ZONES } from '../data/zones';
 import { SKILLS, skillsFor } from '../data/skills';
 import { makeStarterItem } from './items/item';
-import { damagePlayer } from './combat';
+import { damagePlayer, hitEnemy } from './combat';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -171,6 +171,31 @@ describe('world', () => {
     w.respawn();
     expect(w.area).toBe('town');
     expect(w.player.hp).toBe(w.derived.maxHp);
+  });
+});
+
+describe('aggro', () => {
+  it('monsters ignore the hero beyond 300 px and chase once inside it', () => {
+    const w = new World(createPlayer('knight', 'titan'), 31);
+    w.travel('arena');
+    const far = w.spawnEnemy(MONSTERS.ghoul!, w.px + 14, w.pz); // 448 px away
+    const fx = far.x;
+    run(w, 2);
+    expect(far.x).toBeCloseTo(fx, 3);
+    expect(far.aggro).toBe(false);
+    const near = w.spawnEnemy(MONSTERS.ghoul!, w.px + 8, w.pz); // 256 px away
+    const nx = near.x;
+    run(w, 2);
+    expect(near.aggro).toBe(true);
+    expect(near.x).toBeLessThan(nx);
+  });
+
+  it('a hit wakes a monster wherever it stands', () => {
+    const w = new World(createPlayer('knight', 'titan'), 32);
+    w.travel('arena');
+    const far = w.spawnEnemy(MONSTERS.ghoul!, w.px + 14, w.pz);
+    hitEnemy(w, far, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: false });
+    expect(far.aggro).toBe(true);
   });
 });
 

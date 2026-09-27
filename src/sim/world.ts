@@ -1095,7 +1095,7 @@ export class World {
   private blankEnemy(id: number): Enemy {
     return {
       id, alive: false, def: null, dummy: null, name: '', recipeId: 'ghoul', x: 0, z: 0, yaw: 0, radius: 0.4, hp: 1, maxHp: 1, damage: 0, speed: 0, xp: 0,
-      attackRange: 1, attackCooldown: 1, attackTimer: 0, thinkTimer: 0, moving: false, dead: false, deadTimer: 0, status: emptyStatus(), sinceHit: 0, scale: 1, moveX: 0, moveZ: 0,
+      attackRange: 1, attackCooldown: 1, attackTimer: 0, thinkTimer: 0, moving: false, dead: false, deadTimer: 0, status: emptyStatus(), sinceHit: 0, scale: 1, moveX: 0, moveZ: 0, aggro: false,
     };
   }
 
@@ -1115,7 +1115,7 @@ export class World {
       def, dummy: null, name: def.name, recipeId: def.look, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
       maxHp: Math.round(def.hp * (1 + MONSTER_RULES.hpPerLevel * lv)), damage: Math.round(def.damage * (1 + MONSTER_RULES.dmgPerLevel * lv)),
       speed: def.speed * PX, xp: Math.round(def.xp * (1 + MONSTER_RULES.xpPerLevel * lv)), attackRange: def.attackRange * PX,
-      attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0,
+      attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0, aggro: false,
       scale: def.scale * this.rng.range(0.92, 1.08),
     });
     e.hp = e.maxHp;
@@ -1248,6 +1248,11 @@ export class World {
     e.moveX = 0;
     e.moveZ = 0;
     if (hidden) return;
+    // Monsters stand where they are until the hero comes close or hits them
+    if (!e.aggro) {
+      if (dist > MONSTER_RULES.aggroRange * PX) return;
+      e.aggro = true;
+    }
     const def = e.def!;
     const reach = e.attackRange + e.radius + PLAYER_RADIUS;
     if (def.ai === 'ranged') {

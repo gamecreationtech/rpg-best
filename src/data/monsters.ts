@@ -73,6 +73,8 @@ export const MONSTERS: Record<string, EnemyDef> = {
 
 /** How a monster's numbers grow with its zone's level. */
 export const MONSTER_RULES = {
+  /** Monsters ignore the hero beyond this many px until hit. */
+  aggroRange: 300,
   hpPerLevel: 0.18,
   dmgPerLevel: 0.12,
   xpPerLevel: 0.15,

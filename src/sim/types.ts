@@ -56,6 +56,8 @@ export interface Enemy {
   /** Damage multiplier from Electrocute is instant, so nothing stored. */
   moveX: number;
   moveZ: number;
+  /** Has noticed the hero: idle until the hero comes within MONSTER_RULES.aggroRange or hits it. */
+  aggro: boolean;
 }
 
 export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'boulder' | 'enemy_bolt';
