@@ -30,27 +30,27 @@ interface TextOptions {
 }
 
 /** Menu text in the game's normal font; only the frames and icons stay pixel art. */
-function pxText(text: string, opts: TextOptions = {}): HTMLElement {
+export function pxText(text: string, opts: TextOptions = {}): HTMLElement {
   const el = h('span', { class: 'mt' + (opts.scale === 1 ? ' small' : '') }, text);
   if (opts.color) el.style.color = opts.color;
   return el;
 }
 
-const MUTED = '#8b93a8';
-const TEXT = '#d9dce6';
-const GOLD = '#e8b45a';
+export const MUTED = '#8b93a8';
+export const TEXT = '#d9dce6';
+export const GOLD = '#e8b45a';
 const GREEN = '#6ae06a';
 const RED = '#ff6a6a';
 const BLUE = '#8fb8ff';
 
 /** A pixel-framed button with pixel text. */
-function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 'red' | 'on' | 'dim' = 'btn', color = TEXT): HTMLButtonElement {
+export function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 'red' | 'on' | 'dim' = 'btn', color = TEXT): HTMLButtonElement {
   const b = h('button', { class: `pxb ${kind}`, onclick: () => onClick() }, pxText(label, { color: kind === 'dim' ? MUTED : color }));
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
   return b;
 }
 
-function label(text: string, color = MUTED): HTMLElement {
+export function label(text: string, color = MUTED): HTMLElement {
   return pxText(text, { color });
 }
 

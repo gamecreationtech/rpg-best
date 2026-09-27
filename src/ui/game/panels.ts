@@ -11,7 +11,7 @@ import type { World } from '../../sim/world';
 import type { Settings } from '../../app/storage';
 import { button, clear, h, hex } from '../dom';
 import { ItemGrid, itemCard, itemIcon } from './itemGrid';
-import { HeroMenu } from './heroMenu';
+import { GOLD, HeroMenu, MUTED, TEXT, label, pbtn, pxText } from './heroMenu';
 import { installPixelChrome } from '../pixelChrome';
 import type { PanelKind } from './hud';
 
@@ -89,7 +89,7 @@ export class Panels {
       this.hero.reset();
       this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : 'inventory';
     }
-    this.root.classList.toggle('hero', this.isHero);
+    this.root.classList.toggle('hero', this.isHero || kind === 'waypoint');
     this.render();
   }
 
@@ -206,15 +206,26 @@ export class Panels {
 
   // ---------------------------------------------------------------- waypoint
 
+  /** The waypoint in the same pixel window as the hero menu: one framed row per place, Travel on the right. */
   private renderWaypoint(w: World): void {
-    const card = (name: string, desc: string, here: boolean, onGo: () => void) =>
-      h('div', { class: 'card wide' }, h('div', { class: 'card-title' }, name), h('div', { class: 'card-text' }, desc), here ? h('div', { class: 'dim' }, 'You are here') : button('Travel', onGo, 'btn primary'));
-    this.body.append(card('Town', 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', () => this.host.travel('town')));
+    const row = (name: string, level: number | null, desc: string, here: boolean, warn: string | null, onGo: () => void) => {
+      return h(
+        'div',
+        { class: 'px-inset px-zone' + (here ? ' here' : '') },
+        h('div', { class: 'px-row' }, pxText(name, { color: here ? GOLD : TEXT }), level === null ? null : pxText(`Level ${level}`, { color: MUTED, scale: 1 }), h('span', { class: 'grow' }), here ? label('You are here', GOLD) : pbtn('Travel', onGo, 'gold')),
+        pxText(desc, { color: MUTED }),
+        warn ? pxText(warn, { color: '#ff6a6a' }) : null,
+      );
+    };
+    const list = h('div', { class: 'px-zones' });
+    list.append(row('Town', null, 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', null, () => this.host.travel('town')));
     for (const z of ZONES) {
       const here = w.area === 'arena' && w.zoneId === z.id;
       const tooHigh = w.player.level + 4 < z.level;
-      this.body.append(card(`${z.name}  (level ${z.level})`, z.blurb + (tooHigh ? ` You are level ${w.player.level}; this will hurt.` : ''), here, () => this.host.travel('arena', z.id)));
+      list.append(row(z.name, z.level, z.blurb, here, tooHigh ? `You are level ${w.player.level}; this will hurt.` : null, () => this.host.travel('arena', z.id)));
     }
+    const head = h('div', { class: 'px-tabs' }, h('div', { class: 'px-tabs-title' }, pxText('Waypoint', { color: GOLD })), pbtn('X', () => this.host.close(), 'btn'));
+    this.body.append(h('div', { class: 'px-window' }, head, h('div', { class: 'px-content' }, list)));
   }
 
   // ---------------------------------------------------------------- crafting

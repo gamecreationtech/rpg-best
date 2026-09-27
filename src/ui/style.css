@@ -504,6 +504,10 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-skill { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; box-shadow: inset 6px 0 0 var(--c); }
 .px-skill.unlearned { opacity: 0.8; }
 .px-passives { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.px-zones { display: flex; flex-direction: column; gap: 8px; max-width: 1000px; margin: 0 auto; }
+.px-zone { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; }
+.px-zone.here { box-shadow: inset 6px 0 0 var(--accent); }
+.px-zone .px-row { align-items: center; gap: 10px; }
 .px-trees { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; }
 .px-tree { flex: 1 1 380px; display: flex; flex-direction: column; gap: 6px; }
 .px-passive { display: flex; align-items: center; gap: 8px; padding: 4px 8px; }
