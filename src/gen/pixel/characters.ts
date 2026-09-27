@@ -576,7 +576,8 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
       : look.classId === 'sorcerer'
         ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leather', arms: 'skin', trim: 'trim', hood: true };
-  const weapon = look.weapon ? WEAPONS[look.weapon] : look.classId === 'knight' ? WEAPONS.sword : look.classId === 'sorcerer' ? WEAPONS.staff : WEAPONS.bow;
+  // Only what is actually equipped is drawn: no weapon means empty hands
+  const weapon = look.weapon ? WEAPONS[look.weapon] : null;
   return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);
 }
 
