@@ -21,7 +21,7 @@ describe('save', () => {
     expect(back.gold).toBe(123);
     expect(back.level).toBe(4);
     expect(back.skillRanks.dagger_throw).toBe(2);
-    expect(back.inventory.items[0]!.name).toBe(bag.name);
+    expect(back.inventory.items.find((i) => i.uid === bag.uid)!.name).toBe(bag.name);
     expect(back.inventory.itemAt(bag.col, bag.row)!.uid).toBe(bag.uid);
     expect(back.stash[1]!.items[0]!.uid).toBe(stashed.uid);
     expect(back.equipment.get('weapon')!.baseId).toBe('wooden_bow');

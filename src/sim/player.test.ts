@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlockUltimate, unlockedSlots } from './player';
 
 describe('player', () => {
+  it('starts the rogue with a bow in hand and a dagger in the bag', () => {
+    const p = createPlayer('rogue', null);
+    expect(p.equipment.get('weapon')?.weapon?.type).toBe('bow');
+    expect(p.inventory.items.some((i) => i.weapon?.type === 'dagger')).toBe(true);
+    expect(createPlayer('knight', null).inventory.items.length).toBe(0);
+  });
+
   it('starts with class stats, starter gear and one skill', () => {
     const p = createPlayer('knight', 'paladin');
     const d = deriveStats(p, [], {});

@@ -20,8 +20,10 @@ export interface ClassDef {
   baseMana: number;
   hpPerVit: number;
   manaPerInt: number;
-  /** Starter item ids from `STARTER_ITEMS`. */
+  /** Starter item ids from `STARTER_ITEMS`, worn from the start. */
   startingGear: string[];
+  /** Starter item ids that begin in the bag instead. */
+  startingBag?: string[];
   pledges: string[];
   /** Weapon families this class fights with; others still work but look odd. */
   preferredWeapons: WeaponType[];
@@ -70,6 +72,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     hpPerVit: 10,
     manaPerInt: 10,
     startingGear: ['wooden_bow'],
+    startingBag: ['starter_dagger'],
     pledges: ['quiverbound', 'impaler', 'silverblade'],
     preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear'],
   },

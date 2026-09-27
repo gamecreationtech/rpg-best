@@ -133,6 +133,7 @@ export function createPlayer(classId: ClassId, pledgeId: string | null): PlayerS
     kills: 0,
   };
   for (const id of cls.startingGear) p.equipment.equip(makeStarterItem(id), 1);
+  for (const id of cls.startingBag ?? []) p.inventory.add(makeStarterItem(id));
   // The first class skill starts at rank 1 in slot 1
   const first = skillsFor(classId, pledgeId).find((s) => s.tier === 'base' && (s.reqLevel ?? 1) <= 1);
   if (first) {
