@@ -448,12 +448,13 @@ export class World {
     this.path = path ?? [];
   }
 
-  /** Continuous input (keyboard or joystick). Clears any tap destination but keeps the target. */
+  /** Continuous input (keyboard or joystick). Steering away clears the tap destination and the attack target. */
   setMoveInput(x: number, z: number): void {
     if (x || z) {
       this.path.length = 0;
       this.pendingInteract = null;
       this.pendingPickup = -1;
+      this.targetId = -1;
     }
     this.moveInput.x = x;
     this.moveInput.z = z;

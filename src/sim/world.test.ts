@@ -43,6 +43,24 @@ describe('world', () => {
     expect(w.drops.length + w.events.filter((ev) => ev.type === 'pickup').length).toBeGreaterThan(0);
   });
 
+  it('steering with the keys or joystick drops the attack target', () => {
+    const w = new World(createPlayer('knight', 'titan'), 3);
+    w.travel('arena');
+    const e = w.spawnEnemy(PLACEHOLDER_ENEMIES[0]!, w.px + 6, w.pz);
+    e.speed = 0;
+    w.setTarget(e.id);
+    run(w, 0.5);
+    expect(w.targetId).toBe(e.id);
+    w.setMoveInput(0, -1);
+    run(w, 0.5);
+    expect(w.targetId).toBe(-1);
+    w.setMoveInput(0, 0);
+    run(w, 3);
+    // Nothing brings the target back on its own
+    expect(w.targetId).toBe(-1);
+    expect(e.hp).toBe(e.maxHp);
+  });
+
   it('dummies reset after a few seconds and never die', () => {
     const w = new World(createPlayer('sorcerer', 'wintercaller'), 4);
     const dummy = w.enemies.find((e) => e.alive && e.dummy)!;
