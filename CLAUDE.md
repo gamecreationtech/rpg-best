@@ -42,7 +42,7 @@ pass before every push.
 
 ## Verifying visuals
 
-The page exposes `window.fs` with `game` (or `showcase` at `?showcase`), `paused`,
+The page exposes `window.fs` with `game` (or `showcase` at `?showcase`, `lab` at `?lab`), `paused`,
 `step(seconds)` and `data` for automated screenshots. Headless Chromium with
 SwiftShader renders it; pause the loop first and use `step` so only the final
 frame renders. The capture script lives in the session scratchpad, not the repo.

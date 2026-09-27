@@ -15,6 +15,13 @@ monsters are placeholders until their data arrives. See
 and [game-design-document.md](docs/design/game-design-document.md) for the design.
 The visual showcase is still available from the title screen.
 
+**Art direction is under review.** The producer wants the game to read as pixel
+art rather than low-poly 3D. The title screen's "Art Lab" (`?lab`, desktop only)
+shows candidate looks side by side: isometric pixel art, top-down 16-bit, and
+the current 3D rendered through a pixel filter, with palette, resolution, sprite
+size, outline and lighting knobs. The game itself is unchanged until a look is
+chosen.
+
 ## Repository layout
 
 | Path | Purpose |
@@ -26,6 +33,7 @@ The visual showcase is still available from the title screen.
 | `src/data/` | Game data: classes, pledges, skills, passives, items, crafting, consumables |
 | `src/sim/` | Pure simulation: world, combat, skills, items, maps, pathing, saves |
 | `src/gen/` | Procedural generators: characters, weapons, props, ground, noise |
+| `src/lab/` | Art lab: pixel-art toolkit, palettes, sprite generators, 2D scene, pixelated-3D filter |
 | `src/render/` | Three.js viewport, GPU-posed crowds, particles, effects, game view |
 | `src/ui/` | HTML overlay: HUD, panels, screens, showcase controls |
 | `src/audio/` | Synthesised sound effects and generative music |

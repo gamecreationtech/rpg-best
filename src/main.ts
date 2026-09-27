@@ -2,6 +2,7 @@ import './ui/style.css';
 import { Game } from './app/game';
 import { startLoop } from './app/loop';
 import { Showcase } from './app/showcase';
+import { Lab } from './lab/lab';
 import { PLACEHOLDER_ENEMIES } from './data/placeholderEnemies';
 
 // Phones: no double-tap zoom, no pinch zoom, no long-press menus while playing
@@ -24,7 +25,7 @@ const ui = document.getElementById('ui') as HTMLElement;
 
 declare global {
   interface Window {
-    fs: { showcase?: Showcase; game?: Game; paused: boolean; step(seconds: number): void; data?: { PLACEHOLDER_ENEMIES: typeof PLACEHOLDER_ENEMIES } };
+    fs: { showcase?: Showcase; game?: Game; lab?: Lab; paused: boolean; step(seconds: number): void; data?: { PLACEHOLDER_ENEMIES: typeof PLACEHOLDER_ENEMIES } };
   }
 }
 
@@ -33,7 +34,21 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined));
 }
 
-if (location.search.includes('showcase')) {
+if (location.search.includes('lab')) {
+  // Desktop-only art lab: candidate looks for the game, nothing here touches it
+  const lab = new Lab(canvas, ui);
+  startLoop((dt) => {
+    if (!window.fs.paused) lab.update(dt);
+  });
+  window.fs = {
+    lab,
+    paused: false,
+    step(seconds: number) {
+      const steps = Math.ceil(seconds / (1 / 60));
+      for (let i = 0; i < steps; i++) lab.update(1 / 60, i === steps - 1);
+    },
+  };
+} else if (location.search.includes('showcase')) {
   const showcase = new Showcase(canvas, ui);
   startLoop((dt) => {
     if (!window.fs.paused) showcase.update(dt);

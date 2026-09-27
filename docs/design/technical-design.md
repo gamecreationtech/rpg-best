@@ -41,6 +41,30 @@ What that means for each kind of asset:
 - **Levels.** Procedural generators seeded per run. A seed reproduces a level
   exactly, which makes bugs reproducible.
 
+### 2.1 Pixel-art option (under evaluation)
+
+The producer has asked for the game to look like pixel art instead of "fake 3D".
+`src/lab/` is a desktop-only test page (`?lab`) that keeps the all-art-in-code
+rule while drawing 2D sprites instead of meshes:
+
+- `pixel.ts` draws into small RGBA buffers: colour ramps with hue-shifted
+  shadows and highlights, Bayer dithering, edge-based shading and 1px outlines.
+- `sprites.ts` generates sprite sheets (idle, walk, attack) for the three
+  heroes and four placeholder monsters, isometric and top-down tile sets,
+  props and spell effects, all from one palette.
+- `scene2d.ts` renders a diorama at 320x180 to 640x360 with painter's-order
+  depth sorting and per-pixel torchlight (dithered or smooth), then the page
+  upscales it by an integer factor with nearest-neighbour sampling so every
+  pixel stays a crisp square.
+- `pixel3d.ts` shows the current 3D showcase through a low-resolution
+  posterize-and-outline filter, for comparison.
+
+If a 2D look is chosen, the simulation stays as it is (it never knew about
+Three.js) and `src/render/` is replaced by a sprite renderer that batches the
+sheets into one texture atlas per palette and draws with a single instanced
+quad mesh, which keeps the 200-monster budget. Sprite sheets are generated
+once at start-up and cached per palette.
+
 ## 3. Performance plan
 
 Target: 60 frames per second with 200 live monsters and heavy spell effects on

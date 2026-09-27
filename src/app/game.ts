@@ -57,6 +57,9 @@ export class Game {
       showcase: () => {
         location.search = '?showcase';
       },
+      lab: () => {
+        location.search = '?lab';
+      },
       chooseClass: (id) => this.screens.pledgeSelect(id),
       choosePledge: (classId, pledgeId) => this.start(createPlayer(classId, pledgeId), Math.floor(Math.random() * 1e9), true),
       respawn: () => this.respawn(),

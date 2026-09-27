@@ -395,3 +395,21 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
   .hud-root.touch .menu-row { top: calc(6px + var(--safe-t)); right: auto; left: 50%; transform: translateX(-50%); flex-direction: row; }
   .hud-root.touch .bottom-left { max-width: 40vw; }
 }
+
+/* Art lab (desktop test page) */
+.lab-display { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: crosshair; }
+.lab { position: absolute; inset: 0; pointer-events: none; font-family: ui-sans-serif, system-ui, sans-serif; }
+.lab-bar { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); pointer-events: auto; backdrop-filter: blur(6px); }
+.lab-title { font-family: ui-serif, Georgia, serif; font-size: 18px; color: var(--accent); letter-spacing: 0.04em; margin-right: 8px; }
+.lab-title span { display: block; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 10px; color: var(--muted); letter-spacing: 0.2em; text-transform: uppercase; }
+.lab-group { display: flex; align-items: center; gap: 4px; }
+.lab-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+.lab .chip { appearance: none; border: 1px solid var(--line); background: rgba(20, 24, 38, 0.9); color: var(--text); font: inherit; font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer; text-decoration: none; }
+.lab .chip.active { border-color: var(--accent); background: var(--accent-dim); color: #fff; }
+.lab .chip.fire { border-color: rgba(255, 140, 40, 0.5); }
+.lab .chip.frost { border-color: rgba(120, 200, 255, 0.5); }
+.lab .chip.bolt { border-color: rgba(200, 200, 255, 0.5); }
+.lab-bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--panel); border-top: 1px solid var(--line); pointer-events: auto; }
+.lab-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.lab-blurb { font-size: 13px; color: var(--text); max-width: 900px; }
+.lab-stats { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--muted); }

@@ -7,6 +7,7 @@ export interface ScreenHost {
   newGame(): void;
   continueGame(): void;
   showcase(): void;
+  lab(): void;
   chooseClass(id: ClassId): void;
   choosePledge(classId: ClassId, id: string): void;
   respawn(): void;
@@ -45,6 +46,7 @@ export class Screens {
         this.hasSave ? button('Continue', () => this.host.continueGame(), 'btn big primary') : null,
         button(this.hasSave ? 'New Hero' : 'Play', () => this.host.newGame(), 'btn big' + (this.hasSave ? '' : ' primary')),
         button('Visual Showcase', () => this.host.showcase(), 'btn'),
+        button('Art Lab (desktop)', () => this.host.lab(), 'btn'),
       ),
       h('div', { class: 'title-note' }, 'Monsters and the Proving Grounds are placeholders until the real monster and zone data arrives.'),
       this.installHint ? h('div', { class: 'title-note install' }, this.installHint) : null,
