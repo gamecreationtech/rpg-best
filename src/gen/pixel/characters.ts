@@ -570,12 +570,14 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     steel: pal.steel,
     wood: pal.wood,
     bone: pal.bone,
-    cape: look.classId === 'knight' ? 0x7a2a2a : cloth,
+    cape: look.classId === 'knight' ? 0x5a6070 : cloth,
+    steelDark: 0x5a6070,
     hood: look.classId === 'sorcerer' ? darken(cloth, 0.8) : pal.leather,
   };
+  // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour
   const heroLook: Look =
     look.classId === 'knight'
-      ? { skin: 'skin', body: 'cloth', head: 'steel', legs: 'leather', arms: 'steel', trim: 'trim', helm: true, cape: 'cape' }
+      ? { skin: 'skin', body: 'steel', head: 'steel', legs: 'steelDark', arms: 'steel', trim: 'trim', belt: 'steelDark', helm: true, cape: 'cape' }
       : look.classId === 'sorcerer'
         ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leather', arms: 'skin', trim: 'trim', hood: true };
