@@ -246,7 +246,14 @@ export class World {
     this.events.push(e);
   }
 
+  private lastMessage = '';
+  private lastMessageAt = -1;
+
+  /** A line for the log. The same line within half a second is dropped, so a held button cannot flood it. */
   message(text: string, color?: number): void {
+    if (text === this.lastMessage && this.time - this.lastMessageAt < 0.5) return;
+    this.lastMessage = text;
+    this.lastMessageAt = this.time;
     this.emit({ type: 'message', text, color });
   }
 

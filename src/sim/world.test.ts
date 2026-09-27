@@ -196,6 +196,24 @@ describe('leveling pace', () => {
   });
 });
 
+describe('messages', () => {
+  it('drops a repeated line within half a second so a held button cannot flood the log', () => {
+    const w = new World(createPlayer('sorcerer', null), 51);
+    w.player.mana = 0;
+    const id = skillsFor(w.player.classId, null)[0]!.id;
+    w.player.skillRanks[id] = 1;
+    const seen: string[] = [];
+    const drain = () => { for (const ev of w.events) if (ev.type === 'message') seen.push(ev.text); w.events.length = 0; };
+    for (let i = 0; i < 10; i++) { w.castSkillId(id, null); run(w, 0.05); }
+    drain();
+    expect(seen.filter((t) => t === 'Not enough mana').length).toBeLessThanOrEqual(2);
+    run(w, 0.6);
+    w.castSkillId(id, null);
+    drain();
+    expect(seen.filter((t) => t === 'Not enough mana').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
 describe('aggro', () => {
   it('monsters ignore the hero beyond 300 px and chase once inside it', () => {
     const w = new World(createPlayer('knight', 'titan'), 31);

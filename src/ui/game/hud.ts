@@ -58,7 +58,9 @@ export class Hud {
   private readonly joyBase: HTMLDivElement;
   private readonly joyKnob: HTMLDivElement;
   private time = 0;
-  private drag: { slot: number; x: number; y: number; moved: boolean; repeat: number | null } | null = null;
+  private drag: { slot: number; pointerId: number; x: number; y: number; moved: boolean } | null = null;
+  /** The hold-to-repeat timer per skill slot; one at most, whatever the fingers do. */
+  private readonly repeats: (number | null)[] = [null, null, null, null, null, null];
 
   constructor(parent: HTMLElement, private readonly host: HudHost, readonly touch: boolean) {
     this.root = h('div', { class: 'hud-root' + (touch ? ' touch' : '') });
@@ -139,8 +141,15 @@ export class Hud {
     b.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      b.setPointerCapture(e.pointerId);
-      const drag = { slot: i, x: e.clientX, y: e.clientY, moved: false, repeat: null as number | null };
+      try {
+        b.setPointerCapture(e.pointerId);
+      } catch {
+        // Some browsers refuse capture for a pointer that already lifted; the tap still counts
+      }
+      // A second finger or a tap before the last one lifted replaces the press;
+      // the old repeat timer must go with it or it would fire forever
+      this.stopRepeat(i);
+      const drag = { slot: i, pointerId: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
       this.drag = drag;
       if (i === 0) {
         if (this.touch && this.host.world.nearestInteractable()) {
@@ -154,7 +163,7 @@ export class Hud {
         }
       } else {
         // Hold to keep casting (fire bolt style); a drag switches to aiming
-        drag.repeat = window.setInterval(() => {
+        this.repeats[i] = window.setInterval(() => {
           if (!drag.moved) this.host.castSlot(i, null, null);
         }, 130);
       }
@@ -168,21 +177,20 @@ export class Hud {
       }
     });
     const finish = (e: PointerEvent, cancelled: boolean) => {
-      if (!this.drag || this.drag.slot !== i) return;
+      // Whatever finger this was, a lift on this slot ends its repeat and its hold
+      this.stopRepeat(i);
+      if (i === 0) this.host.attackHeld(false);
+      if (!this.drag || this.drag.slot !== i || this.drag.pointerId !== e.pointerId) return;
       const d = this.drag;
       this.drag = null;
-      if (d.repeat !== null) window.clearInterval(d.repeat);
       this.aimMarker.style.display = 'none';
-      if (i === 0) {
-        this.host.attackHeld(false);
-        return;
-      }
-      if (cancelled) return;
+      if (i === 0 || cancelled) return;
       if (d.moved) this.host.castSlot(i, e.clientX, e.clientY);
       else this.host.castSlot(i, null, null);
     };
     b.addEventListener('pointerup', (e) => finish(e, false));
     b.addEventListener('pointercancel', (e) => finish(e, true));
+    b.addEventListener('lostpointercapture', (e) => finish(e, true));
     this.slots.push(b);
     this.slotWipes.push(wipe);
     this.slotLabels.push(label);
@@ -297,8 +305,14 @@ export class Hud {
     }
   }
 
+  private stopRepeat(slot: number): void {
+    const r = this.repeats[slot];
+    if (r !== null && r !== undefined) window.clearInterval(r);
+    this.repeats[slot] = null;
+  }
+
   destroy(): void {
-    if (this.drag?.repeat !== null && this.drag?.repeat !== undefined) window.clearInterval(this.drag.repeat);
+    for (let i = 0; i < this.repeats.length; i++) this.stopRepeat(i);
     this.root.remove();
   }
 }
