@@ -137,38 +137,41 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   const oy = 1 + pose.bob + d.top;
   const hw = W / 2;
   const lean = pose.lean + (look.hunch ?? 0);
-  const legW = Math.max(2, px(W * 0.2));
-  const legTop = px(H * 0.6);
+  // Seen from the side a body is about two thirds as wide as from the front:
+  // a slimmer chest and thicker legs, the back leg a step behind the front one
+  const legW = Math.max(3, px(W * 0.28));
+  const legTop = px(H * 0.58);
   const legLen = H - legTop;
-  const drawLeg = (offset: number) => {
-    const x = px(ox + hw - legW - 1 + offset * W * 0.12 + lean);
+  const drawLeg = (offset: number, back: boolean) => {
+    const x = px(ox + hw - legW / 2 - (back ? 1 : 0) + offset * W * 0.1 + lean);
     const lift = Math.max(0, -offset) * Math.max(1, px(H * 0.03));
-    d.buf.rect(x, oy + legTop, legW, legLen - lift, base(d, look.legs));
-    d.buf.rect(x, oy + H - Math.max(1, px(H * 0.06)) - lift, legW + 1, Math.max(1, px(H * 0.06)), base(d, look.belt ?? 'leather'));
+    d.buf.rect(x, oy + legTop, legW - (back ? 1 : 0), legLen - lift, base(d, look.legs));
+    d.buf.rect(x, oy + H - Math.max(1, px(H * 0.06)) - lift, legW + (back ? 0 : 1), Math.max(1, px(H * 0.06)), base(d, look.belt ?? 'leather'));
   };
   const armW = Math.max(2, px(W * 0.16));
   const armTop = px(H * 0.36);
   const armLen = px(H * 0.26);
   const sleeve = look.robe ? 1 : 0;
+  const reach = look.robe || look.stout ? 0.32 : 0.24;
   const drawArm = (side: number, swing: number) => {
-    const x = px(ox + hw + side * (W * 0.32) - armW / 2 + swing * W * 0.1 + lean * 0.5);
+    const x = px(ox + hw + side * (W * reach) - armW / 2 + swing * W * 0.1 + lean * 0.5);
     const raise = Math.max(0, -swing) * px(H * 0.12);
     d.buf.rect(x - sleeve, oy + armTop - raise, armW + sleeve, armLen, base(d, look.arms ?? look.body));
     d.buf.rect(x, oy + armTop - raise + armLen, armW, Math.max(1, px(H * 0.05)), base(d, look.skin));
   };
-  if (!look.robe) drawLeg(pose.legR);
+  if (!look.robe) drawLeg(pose.legR, true);
   drawArm(-1, pose.armB);
   if (shield) {
     // The shield hangs on the back arm, a sliver shows behind the body
     d.buf.rect(px(ox + hw - W * 0.5 + lean), oy + px(H * 0.34), px(W * 0.25), px(H * 0.3), shield === 'wooden' ? base(d, 'wood') : base(d, 'steel'));
   }
-  if (look.cape) d.buf.rect(px(ox + hw - W * 0.3 + lean), oy + px(H * 0.3), px(W * 0.45), px(H * 0.4), base(d, look.cape));
+  if (look.cape) d.buf.rect(px(ox + hw - W * 0.34 + lean), oy + px(H * 0.3), px(W * 0.36), px(H * 0.42), base(d, look.cape));
   // Torso: broad shoulders, narrower waist, a belt where the legs start
   const torsoTop = px(H * 0.3);
   const torsoH = legTop - torsoTop + 1;
-  const torsoW = px(W * (look.stout ? 0.62 : 0.5));
+  const torsoW = px(W * (look.stout ? 0.56 : look.robe ? 0.5 : 0.4));
   const tx = px(ox + hw - torsoW / 2 + lean);
-  const waist = look.stout ? 0 : Math.max(1, px(W * 0.06));
+  const waist = look.stout || look.robe ? 0 : 1;
   d.buf.rect(tx, oy + torsoTop, torsoW, torsoH, base(d, look.body));
   for (let y = oy + torsoTop + px(torsoH * 0.55); y < oy + torsoTop + torsoH; y++) {
     for (let i = 0; i < waist; i++) {
@@ -208,10 +211,10 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   const hx = px(ox + hw + W * 0.05 + lean);
   const hy = oy + px(H * 0.17);
   sideHead(d, pal, look, hx, hy, headR);
-  if (!look.robe) drawLeg(pose.legL);
+  if (!look.robe) drawLeg(pose.legL, false);
   drawArm(1, pose.armF);
   if (weapon) {
-    const handX = px(ox + hw + W * 0.32 + pose.armF * W * 0.1 + lean * 0.5);
+    const handX = px(ox + hw + W * reach + pose.armF * W * 0.1 + lean * 0.5);
     const raise = Math.max(0, -pose.armF) * px(H * 0.12);
     weapon(d, handX, oy + armTop - raise + armLen, Math.max(0, -pose.armF), 'side', pal);
   }
