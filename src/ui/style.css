@@ -416,8 +416,16 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 
 /* ------------------------------------------------------------------ pixel menu */
 
-/* Pixel text and icons: canvases scaled by whole numbers, never smoothed */
-.px, .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
+/* Icons are canvases scaled by whole numbers, never smoothed; text is the normal font */
+.px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
+.mt { font-size: 14px; line-height: 1.3; white-space: pre-line; }
+.mt.small { font-size: 11px; }
+.px-tabs .mt { font-size: 15px; letter-spacing: 0.06em; }
+.px-tabs-title .mt { font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
+.pxb .mt { font-size: 13px; }
+.px-stat-head .mt { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+.px-stat .mt { font-size: 13px; }
+.px-tip .mt, .px-itembox .mt { font-size: 13px; }
 .px-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .px-row.tight { gap: 6px; }
 .px-row.between { justify-content: space-between; gap: 24px; flex-wrap: nowrap; }

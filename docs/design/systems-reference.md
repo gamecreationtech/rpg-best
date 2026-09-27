@@ -65,10 +65,10 @@ attack it. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
 space to attack, 1-4 potions, Tab for the hero menu (Inventory tab: worn gear
 as a paper doll, the full stat sheet and the bag; Skills tab: skills, the slot
 bar and the passive trees), K straight to Skills, F to interact, Escape for the
-menu. I, C and P still open the matching tab. The hero menu is drawn as pixel
-art: a code-drawn 5x7 font, nine-slice frames and item icons from
-`src/ui/pixelFont.ts`, `src/ui/pixelChrome.ts` and `src/gen/pixel/icons.ts`,
-over the game dimmed in dithered bands. The menu has a control switch:
+menu. I, C and P still open the matching tab. The hero menu's frames, buttons
+and item icons are pixel art (`src/ui/pixelChrome.ts`, `src/gen/pixel/icons.ts`)
+over the game dimmed in dithered bands; its text uses the game's normal serif
+font, by the producer's choice. The menu has a control switch:
 Automatic, Joystick and buttons, or Tap.
 
 For development only: F4 (or `?dev` in the address) opens a

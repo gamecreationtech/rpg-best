@@ -11,7 +11,7 @@ import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUlt
 import { skillCooldown } from '../../sim/skills/cast';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
-import { pxText } from '../pixelFont';
+
 
 export type HeroTab = 'inventory' | 'skills';
 
@@ -19,6 +19,21 @@ export interface HeroMenuHost {
   world: World;
   message(text: string, color?: number): void;
   close(): void;
+}
+
+interface TextOptions {
+  color?: string;
+  /** 1 for the small size; anything else is the normal size. */
+  scale?: number;
+  /** Kept for the callers; the browser wraps text on its own. */
+  maxChars?: number;
+}
+
+/** Menu text in the game's normal font; only the frames and icons stay pixel art. */
+function pxText(text: string, opts: TextOptions = {}): HTMLElement {
+  const el = h('span', { class: 'mt' + (opts.scale === 1 ? ' small' : '') }, text);
+  if (opts.color) el.style.color = opts.color;
+  return el;
 }
 
 const MUTED = '#8b93a8';
@@ -35,7 +50,7 @@ function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 'red' |
   return b;
 }
 
-function label(text: string, color = MUTED): HTMLCanvasElement {
+function label(text: string, color = MUTED): HTMLElement {
   return pxText(text, { color });
 }
 
