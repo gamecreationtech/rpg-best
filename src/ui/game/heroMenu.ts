@@ -74,7 +74,9 @@ export class HeroMenu {
     const p = w.player;
     const cls = CLASSES[p.classId];
     const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
-    this.cell = Math.max(22, Math.min(30, Math.floor((Math.min(window.innerWidth, 1400) * 0.34) / 12)));
+    // Bag cells: whatever height is left under the paper doll, 18 to 30 px
+    const spare = window.innerHeight - 24 - 16 - 46 - 24 - 22 - 300 - 8 - 26;
+    this.cell = Math.max(18, Math.min(30, Math.floor(spare / 12), Math.floor(((Math.min(window.innerWidth, 1180) - 40) * 0.66 - 16) / 12)));
     const tabs = h(
       'div',
       { class: 'px-tabs' },
@@ -86,7 +88,7 @@ export class HeroMenu {
       h('div', { class: 'px-tabs-title' }, pxText(`${pledge ? pledge.name + ' ' : ''}${cls.name}  Lv ${p.level}`, { color: hex(pledge ? pledge.color : cls.color) })),
       pbtn('X', () => this.host.close(), 'btn'),
     );
-    const content = h('div', { class: 'px-content' });
+    const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : '') });
     if (this.tab === 'inventory') this.renderInventory(w, content);
     else this.renderSkills(w, content);
     body.append(h('div', { class: 'px-window' }, tabs, content));
@@ -101,16 +103,18 @@ export class HeroMenu {
   private renderInventory(w: World, content: HTMLElement): void {
     const p = w.player;
     const rerender = () => this.render(content.parentElement!.parentElement!);
-    const left = h('div', { class: 'px-col gear' }, h('div', { class: 'px-inset doll' }, ...DOLL.map((row) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender))))), this.statSheet(w, rerender));
-    const bagGrid = this.bagGrid(w, rerender);
-    const right = h(
+    // Stats take the left third at full height with their own scrollbar;
+    // the right two thirds hold the worn gear on top and the bag underneath
+    const stats = h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender));
+    const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map((row) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)))));
+    const top = h('div', { class: 'px-row gear-row' }, h('div', { class: 'px-col' }, label('Equipped'), doll), h('div', { class: 'px-col item-col' }, label('Item'), this.itemPanel(w, rerender)));
+    const bottom = h(
       'div',
-      { class: 'px-col bagcol' },
+      { class: 'px-col bag-block' },
       h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)),
-      bagGrid,
-      this.itemPanel(w, rerender),
+      this.bagGrid(w, rerender),
     );
-    content.append(h('div', { class: 'px-inventory' }, left, right));
+    content.append(h('div', { class: 'px-inventory' }, stats, h('div', { class: 'px-col gear-col' }, top, bottom)));
   }
 
   private dollSlot(w: World, key: EquipKey | null, rerender: () => void): HTMLElement {
@@ -132,7 +136,7 @@ export class HeroMenu {
         rerender();
       };
     } else {
-      el.appendChild(pxText(keyLabel(key), { color: '#3a3c48', scale: 1 }));
+      el.appendChild(pxText(key.startsWith('ring') ? 'Ring' : keyLabel(key), { color: '#3a3c48', scale: 1 }));
     }
     el.title = keyLabel(key);
     return el;
