@@ -76,7 +76,7 @@ export interface BaseItem {
 
 export const WEAPON_BASES: BaseItem[] = [
   { id: 'sword', name: 'Sword', slot: 'weapon', size: [1, 3], stats: { str: 3 }, weapon: { type: 'sword', dmgMin: 5, dmgMax: 11, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 80 } },
-  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 5 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 30 } },
+  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 5 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 25 } },
   { id: 'axe', name: 'Axe', slot: 'weapon', size: [1, 3], stats: { str: 7 }, weapon: { type: 'axe', dmgMin: 12, dmgMax: 20, atkSpd: 0.9, ranged: false, magic: false, twoHanded: false, range: 84 } },
   { id: 'mace', name: 'Mace', slot: 'weapon', size: [1, 3], stats: { str: 4, vit: 2 }, weapon: { type: 'mace', dmgMin: 8, dmgMax: 14, atkSpd: 0.8, ranged: false, magic: false, twoHanded: false, range: 80 } },
   { id: 'spear', name: 'Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
@@ -85,7 +85,7 @@ export const WEAPON_BASES: BaseItem[] = [
   { id: 'wand', name: 'Wand', slot: 'weapon', size: [1, 2], stats: { int: 12 }, weapon: { type: 'wand', dmgMin: 6, dmgMax: 12, atkSpd: 1.6, ranged: true, magic: true, twoHanded: false, range: 320 } },
   { id: 'staff', name: 'Staff', slot: 'weapon', size: [1, 4], stats: { int: 18 }, weapon: { type: 'staff', dmgMin: 14, dmgMax: 22, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 340 } },
   { id: 'blowgun', name: 'Blowgun', slot: 'weapon', size: [1, 4], stats: { dex: 12 }, weapon: { type: 'blowgun', dmgMin: 3, dmgMax: 7, atkSpd: 1.9, ranged: true, magic: false, twoHanded: true, range: 300 } },
-  { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 9 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 50 } },
+  { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 9 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 45 } },
   { id: 'spellbook', name: 'Spellbook', slot: 'weapon', size: [2, 2], stats: { int: 10, mana: 20 }, weapon: { type: 'spellbook', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: true, magic: true, twoHanded: false, range: 300 } },
   { id: 'warpike', name: 'Warpike', slot: 'weapon', size: [1, 4], stats: { str: 5, dex: 3 }, weapon: { type: 'warpike', dmgMin: 12, dmgMax: 20, atkSpd: 1.0, ranged: false, magic: false, twoHanded: true, range: 130 } },
 ];
@@ -123,7 +123,7 @@ export const STARTER_ITEMS: BaseItem[] = [
   { id: 'wooden_shield', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 5, block: 25 }, noDrop: true, value: 0 },
   { id: 'wooden_staff', name: 'Wooden Staff', slot: 'weapon', size: [1, 4], stats: {}, noDrop: true, value: 0, weapon: { type: 'staff', dmgMin: 1, dmgMax: 2, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 340 } },
   { id: 'wooden_bow', name: 'Wooden Bow', slot: 'weapon', size: [2, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'bow', dmgMin: 2, dmgMax: 4, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 360 } },
-  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 2, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 30 } },
+  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 2, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 25 } },
   { id: 'starter_spear', name: 'Starter Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, noDrop: true, value: 0, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
 ];
 
