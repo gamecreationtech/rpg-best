@@ -232,6 +232,14 @@ button.chip.spell.bolt { color: #cfd6ff; }
 .dmg.el-poison { color: #7fe080; }
 .drop-label { position: absolute; left: 0; top: 0; background: rgba(6, 7, 12, 0.85); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; pointer-events: auto; }
 
+/* Merchant, station and portal tags */
+.interact-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.interact-label { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; background: rgba(6, 7, 12, 0.85); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-size: 12px; line-height: 1.3; }
+.interact-label b { display: block; font-weight: normal; font-size: 14px; letter-spacing: 0.06em; }
+.interact-label span { color: var(--muted); }
+.interact-label.near { border-color: var(--accent); box-shadow: 0 0 12px rgba(232, 180, 90, 0.25); }
+.interact-label.near span { color: var(--text); }
+
 /* Panels */
 .panel-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; background: rgba(8, 9, 15, 0.985); pointer-events: auto; }
 .hud-root.hidden { display: none; }

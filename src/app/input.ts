@@ -27,6 +27,8 @@ const JOY_DEAD = 8;
  */
 export class Input {
   mode: ControlMode = 'tap';
+  /** Last known mouse position, for hover effects. */
+  readonly mouse = { x: -1, y: -1, isMouse: false };
   private readonly keys = new Set<string>();
   private mouseX = 0;
   private mouseY = 0;
@@ -74,6 +76,9 @@ export class Input {
       this.mouseX = e.clientX;
       this.mouseY = e.clientY;
     }
+    this.mouse.x = e.clientX;
+    this.mouse.y = e.clientY;
+    this.mouse.isMouse = e.pointerType === 'mouse';
     if (this.joy && e.pointerId === this.pointerId) {
       let dx = e.clientX - this.joy.x;
       let dy = e.clientY - this.joy.y;

@@ -495,6 +495,21 @@ export class World {
     else this.path.length = 0;
   }
 
+  /** The merchant, station or portal the hero stands next to, if any. */
+  nearestInteractable(): Interactable | null {
+    let best: Interactable | null = null;
+    let bestD = Infinity;
+    for (const it of this.interactables) {
+      if (!it.active) continue;
+      const d = this.dist(it.x, it.z);
+      if (d <= it.radius + 0.4 && d < bestD) {
+        bestD = d;
+        best = it;
+      }
+    }
+    return best;
+  }
+
   /** Keyboard "F": use the nearest interactable in reach. */
   interactNearby(): boolean {
     let best: Interactable | null = null;

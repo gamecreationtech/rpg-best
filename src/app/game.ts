@@ -332,6 +332,21 @@ export class Game {
     }
   }
 
+  /** Mouse hover: name tag on merchants and stations, a hand cursor on anything clickable. */
+  private updateHover(): void {
+    if (!this.view || !this.world) return;
+    const m = this.input.mouse;
+    if (!m.isMouse || this.panels?.isOpen || this.world.playerDead) {
+      this.view.hoverInteractable = -1;
+      this.canvas.style.cursor = '';
+      return;
+    }
+    const it = this.view.pickInteractable(m.x, m.y, 40);
+    this.view.hoverInteractable = it;
+    const enemy = it < 0 ? this.view.pickEnemy(m.x, m.y, 34) : null;
+    this.canvas.style.cursor = it >= 0 ? 'pointer' : enemy ? 'crosshair' : '';
+  }
+
   update(dt: number, render = true): void {
     this.time += dt;
     this.input.update(dt);
@@ -353,6 +368,7 @@ export class Game {
       }
     }
     this.drainEvents();
+    this.updateHover();
     this.view.update(dt, this.time);
     this.hud.update(dt);
     if (render) this.view.render();

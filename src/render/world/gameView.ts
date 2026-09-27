@@ -41,6 +41,7 @@ import { ParticleSystem } from '../particles';
 import { Viewport } from '../viewport';
 import { DamageNumbers } from './damageNumbers';
 import { DropLabels } from './dropLabels';
+import { InteractLabels } from './interactLabels';
 import { Minimap } from './minimap';
 
 type Vec3 = [number, number, number];
@@ -119,6 +120,9 @@ export class GameView {
   readonly numbers: DamageNumbers;
   readonly labels: DropLabels;
   readonly minimap: Minimap;
+  readonly interactLabels: InteractLabels;
+  /** Interactable under the mouse, set by the game each frame. */
+  hoverInteractable = -1;
   private readonly areaGroup = new Group();
   private areaKey = '';
   private readonly enemyCrowds = new Map<string, Crowd>();
@@ -155,6 +159,7 @@ export class GameView {
     this.numbers = new DamageNumbers(ui, this.view, 48);
     this.labels = new DropLabels(ui, this.view, onPickDrop);
     this.minimap = new Minimap(ui, world, mobile ? 112 : 200);
+    this.interactLabels = new InteractLabels(ui, this.view, this.view.scene, mobile);
     this.view.scene.add(this.areaGroup);
 
     this.heroLight = new PointLight(0xffd0a0, 2, 11, 2);
@@ -240,6 +245,7 @@ export class GameView {
     for (const vis of this.zoneVisuals.values()) for (const o of vis) this.view.scene.remove(o);
     this.zoneVisuals.clear();
     this.labels.clear();
+    this.interactLabels.clear();
     const map = this.world.map;
     const seed = map.cols * 31 + map.rows;
 
@@ -831,6 +837,9 @@ export class GameView {
     this.numbers.update(dt);
     this.labels.update(w.drops);
     this.minimap.update(dt);
+    const near = w.nearestInteractable();
+    const hover = w.interactables.find((i) => i.id === this.hoverInteractable && i.active) ?? null;
+    this.interactLabels.update(dt, w.interactables, near, hover);
   }
 
   render(): void {
