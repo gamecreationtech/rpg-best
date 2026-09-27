@@ -196,6 +196,9 @@ export class GameView {
     this.view.scene.add(this.auraDisc);
 
     this.rebuildArea();
+    // Compile every shader now rather than during the first fight
+    this.effects.withAllVisible(() => this.view.precompile());
+    this.effects.warmup();
   }
 
   private addCrowd(key: string, crowd: Crowd): void {

@@ -51,8 +51,15 @@ export class Viewport {
   private readonly shakeVec = new Vector3();
   renderScale = 1;
   private readonly maxPixelRatio: number;
-  private frameAvg = 16.7;
-  private scaleTimer = 0;
+  /** Dynamic resolution bookkeeping: frames measured in the current window and how many were slow. */
+  private windowFrames = 0;
+  private windowSlow = 0;
+  private windowTime = 0;
+  private slowWindows = 0;
+  private fastWindows = 0;
+  private cooldown = 6;
+  private lastW = 0;
+  private lastH = 0;
   private lastDrawCalls = 0;
   readonly mobile: boolean;
 
@@ -101,33 +108,70 @@ export class Viewport {
     this.shake = Math.min(1, this.shake + intensity);
   }
 
+  /**
+   * The canvas always stays at full size; only the internal render targets scale.
+   * Changing the canvas size makes browsers clear it, which shows as a black frame.
+   */
   resize(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    if (w !== this.lastW || h !== this.lastH) {
+      this.lastW = w;
+      this.lastH = h;
+      this.renderer.setPixelRatio(this.maxPixelRatio);
+      this.renderer.setSize(w, h, false);
+      this.camera.aspect = w / h;
+      this.camera.fov = w < h ? 36 : 30;
+      this.camera.updateProjectionMatrix();
+    }
     const ratio = this.maxPixelRatio * this.renderScale;
-    this.renderer.setPixelRatio(ratio);
-    this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(ratio);
     this.composer.setSize(w, h);
-    this.camera.aspect = w / h;
-    this.camera.fov = w < h ? 36 : 30;
-    this.camera.updateProjectionMatrix();
     (this.grade.uniforms.uResolution!.value as Vector2).set(w * ratio, h * ratio);
   }
 
+  /**
+   * Steps the internal resolution down only after two seconds where most frames
+   * were slow, twice in a row, and back up only after a long calm stretch. A single
+   * stutter (a shader compiling, a burst of effects) never triggers it.
+   */
   private adaptQuality(dt: number): void {
-    const ms = dt * 1000;
-    this.frameAvg += (ms - this.frameAvg) * 0.08;
-    this.scaleTimer += dt;
-    if (this.scaleTimer < 1) return;
-    this.scaleTimer = 0;
-    if (this.frameAvg > 19 && this.renderScale > 0.6) {
-      this.renderScale = Math.max(0.6, this.renderScale - 0.1);
+    this.cooldown -= dt;
+    this.windowTime += dt;
+    this.windowFrames++;
+    if (dt > 0.021) this.windowSlow++;
+    if (this.windowTime < 2) return;
+    const slowShare = this.windowSlow / Math.max(1, this.windowFrames);
+    this.windowTime = 0;
+    this.windowFrames = 0;
+    this.windowSlow = 0;
+    if (slowShare > 0.5) {
+      this.slowWindows++;
+      this.fastWindows = 0;
+    } else if (slowShare < 0.05) {
+      this.fastWindows++;
+      this.slowWindows = 0;
+    } else {
+      this.slowWindows = 0;
+      this.fastWindows = 0;
+    }
+    if (this.cooldown > 0) return;
+    if (this.slowWindows >= 2 && this.renderScale > 0.6) {
+      this.renderScale = Math.max(0.6, Math.round((this.renderScale - 0.1) * 10) / 10);
+      this.slowWindows = 0;
+      this.cooldown = 6;
       this.resize();
-    } else if (this.frameAvg < 13 && this.renderScale < 1) {
-      this.renderScale = Math.min(1, this.renderScale + 0.1);
+    } else if (this.fastWindows >= 5 && this.renderScale < 1) {
+      this.renderScale = Math.min(1, Math.round((this.renderScale + 0.1) * 10) / 10);
+      this.fastWindows = 0;
+      this.cooldown = 10;
       this.resize();
     }
+  }
+
+  /** Compiles every material in the scene now, so nothing stutters the first time it appears. */
+  precompile(): void {
+    this.renderer.compile(this.scene, this.camera);
   }
 
   /** Moves the camera toward its target and keeps the shadow frustum centred on it. */

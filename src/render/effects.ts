@@ -436,6 +436,31 @@ export class Effects {
     this.burst(to[0], to[1], to[2], 2, 1.5, color, 0.4, 0.15, { drag: 2, priority: 0.5 });
   }
 
+  /**
+   * Fires every effect once far outside the view so their shaders compile before
+   * the first fight. Call once after the scene is set up.
+   */
+  warmup(): void {
+    const x = -900;
+    const z = -900;
+    this.flash(x, 1, z, 0.1, 0.05, 1, 1, 1);
+    this.ring(x, 0.1, z, 0.1, 0.05, 1, 1, 1);
+    this.ring(x, 0.1, z, 0.1, 0.05, 1, 1, 1, true);
+    this.chainLightning([[x, 1, z], [x + 1, 1, z + 1]]);
+    this.fireball([x, 1, z], [x + 1, 1, z], () => undefined);
+    this.burst(x, 1, z, 4, 1, [1, 1, 1], 0.05, 0.1);
+  }
+
+  /** Makes every pooled mesh visible for one shader compile pass, then hides it again. */
+  withAllVisible(fn: () => void): void {
+    const meshes = [...this.rings, ...this.flashes, ...this.projectiles].map((p) => p.mesh);
+    for (const b of this.bolts) meshes.push(b.core, b.glow);
+    const was = meshes.map((m) => m.visible);
+    for (const m of meshes) m.visible = true;
+    fn();
+    meshes.forEach((m, i) => (m.visible = was[i]!));
+  }
+
   // ---------- Per-frame update ----------
 
   update(dt: number, camera: Camera): void {
