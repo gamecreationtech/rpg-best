@@ -76,7 +76,7 @@ export interface BaseItem {
 
 export const WEAPON_BASES: BaseItem[] = [
   { id: 'sword', name: 'Sword', slot: 'weapon', size: [1, 3], stats: { str: 3 }, weapon: { type: 'sword', dmgMin: 5, dmgMax: 11, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 80 } },
-  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 5 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 64 } },
+  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 5 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'axe', name: 'Axe', slot: 'weapon', size: [1, 3], stats: { str: 7 }, weapon: { type: 'axe', dmgMin: 12, dmgMax: 20, atkSpd: 0.9, ranged: false, magic: false, twoHanded: false, range: 84 } },
   { id: 'mace', name: 'Mace', slot: 'weapon', size: [1, 3], stats: { str: 4, vit: 2 }, weapon: { type: 'mace', dmgMin: 8, dmgMax: 14, atkSpd: 0.8, ranged: false, magic: false, twoHanded: false, range: 80 } },
   { id: 'spear', name: 'Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
@@ -120,7 +120,7 @@ export const STARTER_ITEMS: BaseItem[] = [
   { id: 'wooden_shield', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 5, block: 25 }, noDrop: true, value: 0 },
   { id: 'wooden_staff', name: 'Wooden Staff', slot: 'weapon', size: [1, 4], stats: {}, noDrop: true, value: 0, weapon: { type: 'staff', dmgMin: 1, dmgMax: 2, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 340 } },
   { id: 'wooden_bow', name: 'Wooden Bow', slot: 'weapon', size: [2, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'bow', dmgMin: 2, dmgMax: 4, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 360 } },
-  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 2, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 64 } },
+  { id: 'starter_dagger', name: 'Starter Dagger', slot: 'weapon', size: [1, 2], stats: { critChance: 10 }, noDrop: true, value: 0, weapon: { type: 'dagger', dmgMin: 1, dmgMax: 2, atkSpd: 2.0, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'starter_spear', name: 'Starter Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, noDrop: true, value: 0, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
 ];
 
