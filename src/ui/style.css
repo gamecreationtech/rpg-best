@@ -232,6 +232,12 @@ button.chip.spell.bolt { color: #cfd6ff; }
 .dmg.el-poison { color: #7fe080; }
 .drop-label { position: absolute; left: 0; top: 0; background: rgba(6, 7, 12, 0.85); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; pointer-events: auto; }
 
+/* In-game cursor */
+body.custom-cursor, body.custom-cursor * { cursor: none !important; }
+.game-cursor { position: fixed; left: 0; top: 0; width: 32px; height: 32px; pointer-events: none; z-index: 10000; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)) drop-shadow(0 0 4px rgba(232,180,90,0.25)); transition: opacity 0.1s; }
+.game-cursor svg { display: block; }
+.game-cursor.press { transform-origin: 6px 3px; opacity: 0.85; }
+
 /* Merchant, station and portal tags */
 .interact-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .interact-label { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; background: rgba(6, 7, 12, 0.85); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; font-size: 12px; line-height: 1.3; }

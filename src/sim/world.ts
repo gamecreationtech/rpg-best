@@ -461,6 +461,8 @@ export class World {
 
   /** While true the hero attacks whatever is nearest (the touch attack button). */
   attackHeld = false;
+  /** Ground point under the mouse; the hero faces it while standing still. */
+  aimPoint: { x: number; z: number } | null = null;
 
   get movingByInput(): boolean {
     return this.moveInput.x !== 0 || this.moveInput.z !== 0;
@@ -826,6 +828,7 @@ export class World {
       return;
     }
     if (this.pStatus.stun > 0 || this.pStatus.freeze > 0) return;
+    if (!this.movingByInput && !this.path.length && this.aimPoint && !this.targetEnemy() && !this.beam) this.faceToward(this.aimPoint.x, this.aimPoint.z, dt);
     let speed = this.derived.moveSpeed;
     if (this.pStatus.slow > 0) speed *= STATUS_RULES.slowFactor;
 
@@ -858,6 +861,17 @@ export class World {
     const nz = this.pz + dz * speed * dt;
     if (!this.map.circleBlocked(nx, this.pz, PLAYER_RADIUS)) this.px = nx;
     if (!this.map.circleBlocked(this.px, nz, PLAYER_RADIUS)) this.pz = nz;
+  }
+
+  /** Turns the hero smoothly toward a point. */
+  private faceToward(x: number, z: number, dt: number): void {
+    const dx = x - this.px;
+    const dz = z - this.pz;
+    if (dx * dx + dz * dz < 0.09) return;
+    const want = Math.atan2(dx, dz);
+    let diff = want - this.pyaw;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    this.pyaw += diff * Math.min(1, dt * 14);
   }
 
   private onArrive(): void {

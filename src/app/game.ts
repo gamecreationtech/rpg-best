@@ -11,6 +11,7 @@ import { SIM_DT, World } from '../sim/world';
 import { Hud, type PanelKind } from '../ui/game/hud';
 import { Panels } from '../ui/game/panels';
 import { Screens } from '../ui/game/screens';
+import { GameCursor } from '../ui/game/cursor';
 import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
 import { deleteSave, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
@@ -37,6 +38,7 @@ export class Game {
   private readonly mobile: boolean;
   private readonly aim = { x: 0, z: 0 };
   private readonly gameUi: HTMLDivElement;
+  private readonly cursor = new GameCursor();
 
   constructor(private readonly canvas: HTMLCanvasElement, private readonly ui: HTMLElement) {
     this.mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || Math.min(window.innerWidth, window.innerHeight) < 600;
@@ -338,13 +340,22 @@ export class Game {
     const m = this.input.mouse;
     if (!m.isMouse || this.panels?.isOpen || this.world.playerDead) {
       this.view.hoverInteractable = -1;
-      this.canvas.style.cursor = '';
+      this.world.aimPoint = null;
+      this.cursor.setState('ui');
+      return;
+    }
+    // Over the interface the cursor is a plain pointer
+    const over = document.elementFromPoint(m.x, m.y);
+    if (over && over !== this.canvas && over.closest('button, .panel-overlay, .screen, .drop-label')) {
+      this.view.hoverInteractable = -1;
+      this.cursor.setState('ui');
       return;
     }
     const it = this.view.pickInteractable(m.x, m.y, 40);
     this.view.hoverInteractable = it;
     const enemy = it < 0 ? this.view.pickEnemy(m.x, m.y, 34) : null;
-    this.canvas.style.cursor = it >= 0 ? 'pointer' : enemy ? 'crosshair' : '';
+    this.cursor.setState(it >= 0 ? 'hand' : enemy ? 'attack' : 'default');
+    if (this.view.view.unproject(m.x, m.y, this.aim)) this.world.aimPoint = { x: this.aim.x, z: this.aim.z };
   }
 
   update(dt: number, render = true): void {
