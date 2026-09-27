@@ -1,4 +1,4 @@
-import { CLASSES, CLASS_LIST, type ClassId } from '../../data/classes';
+import { CLASSES, CLASS_LIST, LEVELING, type ClassId } from '../../data/classes';
 import { pledgesFor } from '../../data/pledges';
 import { SKILLS } from '../../data/skills';
 import { button, clear, h, hex } from '../dom';
@@ -68,7 +68,8 @@ export class Screens {
     this.show(h('h2', { class: 'screen-title' }, 'Choose your class'), h('div', { class: 'cards' }, ...cards), button('Back', () => this.host.cancelToTitle(), 'btn ghost'));
   }
 
-  pledgeSelect(classId: ClassId): void {
+  /** `forced`: the level-20 choice during play, with no way back. */
+  pledgeSelect(classId: ClassId, forced = false): void {
     const cls = CLASSES[classId];
     const cards = pledgesFor(classId).map((p) =>
       h(
@@ -81,7 +82,12 @@ export class Screens {
         button('Pledge to ' + p.name, () => this.host.choosePledge(classId, p.id), 'btn primary'),
       ),
     );
-    this.show(h('h2', { class: 'screen-title' }, `${cls.name}: choose a pledge`), h('div', { class: 'cards' }, ...cards), button('Back', () => this.host.cancelToTitle(), 'btn ghost'));
+    this.show(
+      h('h2', { class: 'screen-title' }, forced ? `Level ${LEVELING.pledgeLevel}: ${cls.name}, swear your pledge` : `${cls.name}: choose a pledge`),
+      forced ? h('div', { class: 'title-note' }, 'The world waits. Nothing can hurt you until you choose, and you cannot move.') : null,
+      h('div', { class: 'cards' }, ...cards),
+      forced ? null : button('Back', () => this.host.cancelToTitle(), 'btn ghost'),
+    );
   }
 
   dead(): void {

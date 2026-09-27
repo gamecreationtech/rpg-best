@@ -85,6 +85,8 @@ export const LEVELING = {
   skillPointsPerLevel: 1,
   passivePointsPerLevel: 1,
   ultimatePointLevel: 20,
+  /** The level at which a hero swears a pledge; play is held until they do. */
+  pledgeLevel: 20,
   /** Player level at which each skill slot (after the basic attack) unlocks. */
   slotUnlockLevels: [1, 5, 10, 15, 20],
   maxLevel: 70,

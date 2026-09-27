@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PLACEHOLDER_ENEMIES } from '../data/placeholderEnemies';
 import { SKILLS, skillsFor } from '../data/skills';
 import { makeStarterItem } from './items/item';
+import { damagePlayer } from './combat';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -59,6 +60,31 @@ describe('world', () => {
     // Nothing brings the target back on its own
     expect(w.targetId).toBe(-1);
     expect(e.hp).toBe(e.maxHp);
+  });
+
+  it('holds the hero at level 20 until a pledge is sworn', () => {
+    const w = new World(createPlayer('knight', null), 5);
+    expect(w.pledgePending).toBe(false);
+    for (let i = 0; i < 19; i++) w.devLevelUp();
+    expect(w.player.level).toBe(20);
+    expect(w.pledgePending).toBe(true);
+    expect(w.events.some((ev) => ev.type === 'pledge_choice')).toBe(true);
+    // Cannot move, cannot be hurt
+    const x = w.px;
+    w.setMoveInput(1, 0);
+    run(w, 1);
+    expect(w.px).toBe(x);
+    const hp = w.player.hp;
+    damagePlayer(w, 50, 'physical', null, true);
+    expect(w.player.hp).toBe(hp);
+    // A pledge of another class is refused; the right one releases the hold
+    expect(w.choosePledge('necromancer')).toBe(false);
+    expect(w.choosePledge('titan')).toBe(true);
+    expect(w.player.pledgeId).toBe('titan');
+    expect(w.pledgePending).toBe(false);
+    w.setMoveInput(1, 0);
+    run(w, 1);
+    expect(w.px).toBeGreaterThan(x);
   });
 
   it('dummies reset after a few seconds and never die', () => {

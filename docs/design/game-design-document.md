@@ -56,9 +56,10 @@ Every feature must serve at least one of these. If it does not, cut it.
 
 - **Three classes:** Knight (sword and shield, plate), Sorcerer (staff,
   elemental spells) and Rogue (bow or daggers, traps and stealth).
-- **Pledges:** each class chooses one of three pledges at creation, which
+- **Pledges:** at level 20 each class swears one of three pledges, which
   unlocks its own skills: Paladin, Titan, Nightlord; Necromancer, Stormsinger,
-  Wintercaller; Quiverbound, Impaler, Silverblade.
+  Wintercaller; Quiverbound, Impaler, Silverblade. The choice is a full-screen
+  moment: the hero is held in place and cannot be hurt until it is made.
 - **Skills:** base skills per class, pledge skills, and ultimates that replace
   a rank-5 base skill using the ultimate point earned at level 20. One skill
   point, one passive point and five attribute points per level.

@@ -188,6 +188,7 @@ export type SimEvent =
   | { type: 'beam'; on: boolean; targetId: number }
   | { type: 'message'; text: string; color?: number }
   | { type: 'level_up'; level: number }
+  | { type: 'pledge_choice' }
   | { type: 'pickup'; item: Item | null; gold: number }
   | { type: 'drop_spawn'; id: number }
   | { type: 'sound'; id: string }

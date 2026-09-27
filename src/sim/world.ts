@@ -3,6 +3,8 @@ import { DUMMIES, DUMMY_RULES } from '../data/dummies';
 import { PLACEHOLDER_ENEMIES, PROVING_GROUNDS, type EnemyDef } from '../data/placeholderEnemies';
 import { SKILLS, type BuffMods, type SkillDef } from '../data/skills';
 import { STATUS_RULES } from '../data/status';
+import { LEVELING } from '../data/classes';
+import { PLEDGES } from '../data/pledges';
 import { ELEMENT_COLORS, type Element, type StatMap } from '../data/stats';
 import { MS, PX } from '../data/units';
 import { Rng } from '../gen/rng';
@@ -132,6 +134,8 @@ export class World {
   pStatus = { stun: 0, freeze: 0, slow: 0 };
   invulnTimer = 0;
   playerDead = false;
+  /** True from the pledge level until a pledge is sworn: the hero is rooted and cannot be hurt. */
+  pledgePending = false;
   leap: Leap | null = null;
   charge: Charge | null = null;
   beam: Beam | null = null;
@@ -148,6 +152,8 @@ export class World {
     this.hash = new SpatialHash(this.map.cols, this.map.rows, 3, ENEMY_POOL);
     this.derived = deriveStats(player, [], {});
     this.enterTown(true);
+    // A loaded hero past the pledge level without a pledge is held right away
+    this.checkPledge();
   }
 
   // ---------------------------------------------------------------- areas
@@ -704,7 +710,16 @@ export class World {
     this.tickBuffs(dt);
     this.tickZoneMods();
     this.tickRegen(dt);
-    if (!this.playerDead) {
+    if (this.pledgePending) {
+      // Held for the pledge: safe, still, and out of the fight until the choice is made
+      this.invulnTimer = Math.max(this.invulnTimer, 1);
+      this.moveInput.x = 0;
+      this.moveInput.z = 0;
+      this.path.length = 0;
+      this.targetId = -1;
+      this.pendingCast = null;
+      this.moving = false;
+    } else if (!this.playerDead) {
       this.tickMovement(dt);
       this.tickAutoAttack(dt);
       this.tickPendingCast();
@@ -732,7 +747,31 @@ export class World {
       this.emit({ type: 'level_up', level: this.player.level });
       this.emit({ type: 'sound', id: 'levelUp' });
       this.message(`Level ${this.player.level}!`, 0xffe066);
+      this.checkPledge();
     }
+  }
+
+  /** At the pledge level a hero without a pledge is held until one is sworn. */
+  checkPledge(): void {
+    if (this.pledgePending || this.player.pledgeId || this.player.level < LEVELING.pledgeLevel) return;
+    this.pledgePending = true;
+    this.stop();
+    this.emit({ type: 'pledge_choice' });
+    this.message('Level 20: swear your pledge', 0xffe066);
+  }
+
+  /** Swears a pledge of the hero's class; releases the hold. */
+  choosePledge(pledgeId: string): boolean {
+    const def = PLEDGES[pledgeId];
+    if (!def || def.classId !== this.player.classId || this.player.pledgeId) return false;
+    this.player.pledgeId = pledgeId;
+    this.pledgePending = false;
+    this.invulnTimer = 0;
+    this.markDirty();
+    this.recomputeStats();
+    this.emit({ type: 'sound', id: 'levelUp' });
+    this.message(`You are now a ${def.name}`, def.color);
+    return true;
   }
 
   /** Development menu: one whole level, right now. */

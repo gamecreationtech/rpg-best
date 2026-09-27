@@ -63,13 +63,19 @@ export class Game {
       lab: () => {
         location.search = '?lab';
       },
-      chooseClass: (id) => this.screens.pledgeSelect(id),
-      choosePledge: (classId, pledgeId) => this.start(createPlayer(classId, pledgeId), Math.floor(Math.random() * 1e9), true),
+      // Pledges are sworn at level 20, so a new hero starts right after the class pick
+      chooseClass: (id) => this.start(createPlayer(id, null), Math.floor(Math.random() * 1e9), true),
+      choosePledge: (_classId, pledgeId) => {
+        if (!this.world || !this.world.choosePledge(pledgeId)) return;
+        this.screens.hide();
+        this.drainEvents();
+        void this.autosave();
+      },
       respawn: () => this.respawn(),
       cancelToTitle: () => this.showTitle(),
     });
     this.input = new Input(canvas, {
-      active: () => this.state === 'playing' && !!this.world && !this.panels?.isOpen && !this.world.playerDead,
+      active: () => this.state === 'playing' && !!this.world && !this.panels?.isOpen && !this.world.playerDead && !this.world.pledgePending,
       tapEnemy: (sx, sy) => {
         const e = this.view!.pickEnemy(sx, sy);
         if (!e) return false;
@@ -342,6 +348,10 @@ export class Game {
         break;
       case 'level_up':
         void this.autosave();
+        break;
+      case 'pledge_choice':
+        if (this.panels?.isOpen) this.closePanel();
+        this.screens.pledgeSelect(this.world!.player.classId, true);
         break;
       case 'player_died':
         this.screens.dead();
