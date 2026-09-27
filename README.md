@@ -7,8 +7,10 @@ image, model or audio files.
 
 ## Status
 
-Pre-production. The design foundation is decided (see the design documents); no
-game code has been written yet.
+Pre-production. The design foundation is decided (see the design documents). The
+first code milestone is a **visual showcase**: the sorcerer, four monsters, their
+animations and four spells, all generated at runtime, on a lit stage with an
+optional horde of 200. No game systems yet.
 
 ## Repository layout
 
@@ -17,14 +19,34 @@ game code has been written yet.
 | `docs/design/game-design-document.md` | What the game is: pillars, systems, tone, milestones |
 | `docs/design/technical-design.md` | How it is built: stack, art-in-code rules, performance plan |
 | `CLAUDE.md` | Conventions for contributors and AI-assisted development |
-
-Source folders arrive with the first milestone.
+| `src/gen/` | Procedural generators: characters, ground, props, noise |
+| `src/render/` | Three.js stage, GPU-posed crowds, particles, spell effects, post-processing |
+| `src/ui/` | HTML overlay: button panel and readouts |
+| `src/app/` | Showcase orchestration and the frame loop |
+| `.github/workflows/` | Checks on every push; deploy to GitHub Pages from the default branch |
 
 ## Getting started
 
-There is nothing to build or run yet. Start with the
-[game design document](docs/design/game-design-document.md) and the
-[technical design](docs/design/technical-design.md).
+Read the [game design document](docs/design/game-design-document.md) and the
+[technical design](docs/design/technical-design.md) first.
+
+To run the showcase locally you need Node 22:
+
+```
+npm install
+npm run dev
+```
+
+Then open the printed URL on your computer or phone (same Wi-Fi). Every push
+to the default branch also deploys the showcase to GitHub Pages, which is the
+easiest way to try it on a phone.
+
+Useful commands:
+
+```
+npm run check     # typecheck, lint, tests and a production build
+npm test          # unit tests for the generators
+```
 
 ## Contributing
 

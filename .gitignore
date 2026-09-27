@@ -24,3 +24,7 @@ tmp/
 # Godot: .godot/, *.import
 # Unity: Library/, Temp/, Logs/, obj/, *.csproj, *.sln
 # Unreal: Binaries/, DerivedDataCache/, Intermediate/, Saved/
+
+# Node and build output
+node_modules/
+dist/

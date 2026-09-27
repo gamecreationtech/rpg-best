@@ -24,8 +24,22 @@ before making changes. They hold the decisions; do not relitigate them in code.
 
 ## Stack
 
-TypeScript, Three.js, Vite, Vitest. Static deploy on every push to the main
-branch. Saves in IndexedDB with an export code.
+TypeScript, Three.js, Vite, Vitest. Static deploy on every push to the default
+branch. Saves in IndexedDB with an export code (not built yet).
+
+## Current state
+
+The repo holds the visual showcase (`src/app/showcase.ts`): characters from
+`src/gen/characters/`, GPU rigid-part animation in `src/render/characterMaterial.ts`,
+instanced crowds in `src/render/crowd.ts`, GPU particles and spell effects in
+`src/render/`. There is no `src/sim/` yet; game systems come after the look is
+approved. `npm run check` must pass before every push.
+
+## Verifying visuals
+
+The page exposes `window.fs` with `showcase`, `paused` and `step(seconds)` for
+automated screenshots. Headless Chromium with SwiftShader renders it; pause the
+loop first and use `step` so only the final frame renders.
 
 ## Conventions
 
