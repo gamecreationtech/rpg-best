@@ -334,7 +334,7 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .code { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 10px; background: rgba(10, 12, 20, 0.8); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; box-sizing: border-box; }
 
 /* Screens */
-.screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 16px; background: radial-gradient(ellipse at 50% 30%, rgba(30, 36, 60, 0.9), rgba(6, 7, 12, 0.97)); overflow-y: auto; pointer-events: auto; }
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 16px; background: radial-gradient(ellipse at 50% 30%, rgba(30, 36, 60, 0.9), rgba(6, 7, 12, 0.97)); overflow-y: auto; pointer-events: auto; z-index: 20; }
 .screen.dead { background: radial-gradient(ellipse at 50% 40%, rgba(80, 10, 10, 0.85), rgba(6, 7, 12, 0.97)); }
 .title-block { text-align: center; }
 .title-small { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
@@ -504,7 +504,7 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .panel-overlay:not(.hero) .panel-head, .panel-overlay:not(.hero) .panel-body { background: rgba(8, 9, 15, 0.92); }
 
 /* Development menu (temporary) */
-.dev-menu { position: absolute; left: 0; top: calc(60px + var(--safe-t)); bottom: 180px; width: 250px; display: flex; flex-direction: column; background: rgba(8, 9, 15, 0.92); border: 1px solid var(--line); border-left: 0; border-radius: 0 8px 8px 0; pointer-events: auto; font-family: ui-sans-serif, system-ui, sans-serif; z-index: 5; }
+.dev-menu { position: absolute; left: 0; top: calc(60px + var(--safe-t)); bottom: 180px; width: 250px; z-index: 1; display: flex; flex-direction: column; background: rgba(8, 9, 15, 0.92); border: 1px solid var(--line); border-left: 0; border-radius: 0 8px 8px 0; pointer-events: auto; font-family: ui-sans-serif, system-ui, sans-serif; }
 .dev-head { padding: 6px 10px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--line); }
 .dev-body { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; scrollbar-width: thin; }
 .dev-row { display: flex; flex-direction: column; gap: 2px; padding: 3px 4px; border-radius: 4px; }
