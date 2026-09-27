@@ -196,6 +196,25 @@ describe('leveling pace', () => {
   });
 });
 
+describe('monster collision', () => {
+  it('a monster squeezed between the hero and a wall is never pushed into the wall', () => {
+    const w = new World(createPlayer('knight', 'titan'), 24);
+    w.travel('arena');
+    const hc = Math.floor(w.px);
+    const hr = Math.floor(w.pz);
+    w.px = hc + 0.6;
+    w.pz = hr + 0.5;
+    w.map.set(hc + 1, hr, 0);
+    w.map.set(hc + 1, hr - 1, 0);
+    w.map.set(hc + 1, hr + 1, 0);
+    const bat = w.spawnEnemy(MONSTERS.crypt_bat!, hc + 0.7, hr + 0.5);
+    bat.speed = 0;
+    run(w, 1);
+    expect(w.map.circleBlocked(bat.x, bat.z, bat.radius)).toBe(false);
+    expect(w.map.lineBlocked(w.px, w.pz, bat.x, bat.z)).toBe(false);
+  });
+});
+
 describe('messages', () => {
   it('drops a repeated line within half a second so a held button cannot flood the log', () => {
     const w = new World(createPlayer('sorcerer', null), 51);
@@ -257,6 +276,32 @@ describe('touch attack button', () => {
     expect(w.targetId).toBe(-1);
     w.setMoveInput(0, 0);
     far.alive = false;
+  });
+
+  it('cannot hit through a wall even in reach, and neither can the monster', () => {
+    const w = new World(createPlayer('rogue', 'impaler'), 23);
+    w.travel('arena');
+    // Box the hero in so nobody can walk round: walls on every neighbouring tile
+    const hc = Math.floor(w.px);
+    const hr = Math.floor(w.pz);
+    w.px = hc + 0.5;
+    w.pz = hr + 0.5;
+    for (let r = hr - 1; r <= hr + 1; r++) for (let c = hc - 1; c <= hc + 1; c++) if (c !== hc || r !== hr) w.map.set(c, r, 0);
+    // A skeleton just past the east wall, well inside bow range but out of sight
+    const e = w.spawnEnemy(MONSTERS.skeleton!, hc + 2.6, hr + 0.5);
+    e.speed = 0;
+    e.aggro = true;
+    w.setTarget(e.id);
+    w.attackHeld = true;
+    const hp = w.player.hp;
+    run(w, 3);
+    expect(e.hp).toBe(e.maxHp);
+    expect(w.player.hp).toBe(hp);
+    expect(w.attackOnce()).toBe(false);
+    // Open the wall between them and the arrows fly
+    w.map.set(hc + 1, hr, 1);
+    run(w, 2);
+    expect(e.hp).toBeLessThan(e.maxHp);
   });
 
   it('never picks an enemy behind a wall', () => {

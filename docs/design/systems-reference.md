@@ -42,6 +42,7 @@ arrives.
 
 - **Pledge timing.** Decided by the producer on 2026-09-27: the pledge is sworn at level 20 (`LEVELING.pledgeLevel`), not at creation. On reaching it the world sets `pledgePending`, roots the hero, makes them invulnerable and emits `pledge_choice`; the game shows the pledge screen with no way back, and `World.choosePledge` releases the hold. Pledge skills therefore become learnable only from level 20, even though their level requirements are 5, 10 and 15. Level 20 also grants the ultimate point. Older saves that already have a pledge keep it.
 - **Skill slots.** Six slots: the primary (tap an enemy, or left click) holds Attack or a skill, and five skill slots unlock at levels 1, 5, 10, 15 and 20.
+- **Walls block everything.** No attack, skill, splash or monster bite reaches through a wall, whatever its range: every hit needs a clear line from its source to the target. Heroes and monsters walk round instead, and the hero's path shortcuts allow for its body width so it never wedges on a corner.
 - **Skill damage scaling.** Skills scale from the weapon roll plus strength (melee weapons) or intelligence and spell damage (magic weapons). Void Slash adds both. Rank multiplier is 1 + rank x rankBonus.
 - **Requirement level of items.** The export had a field but no formula: level = round(item level x 0.8), minimum 1.
 - **Death.** Respawn in town with no penalty, as decided in the design document.

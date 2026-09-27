@@ -65,6 +65,22 @@ describe('pathing', () => {
   const map = new TileMap(10, 10, Tile.Floor);
   for (let r = 0; r < 8; r++) map.set(5, r, Tile.Wall);
 
+  it('string-pulling never cuts a wall corner a body could not pass', () => {
+    const m = new TileMap(12, 12);
+    // A wall column; the goal is diagonally past its bottom end, a corner a straight line just grazes
+    for (let r = 2; r <= 5; r++) m.set(6, r, Tile.Wall);
+    const path = findPath(m, 5.5, 6.7, 7.5, 5.5)!;
+    expect(path).not.toBeNull();
+    // The first leg must clear the corner: no waypoint reached in a straight line whose body clips the wall
+    let ax = 5.5;
+    let az = 6.7;
+    for (const p of path) {
+      expect(m.lineBlockedWide(ax, az, p.x, p.z, 0.38)).toBe(false);
+      ax = p.x;
+      az = p.z;
+    }
+  });
+
   it('A* routes around a wall', () => {
     const path = findPath(map, 2.5, 2.5, 7.5, 2.5)!;
     expect(path).not.toBeNull();

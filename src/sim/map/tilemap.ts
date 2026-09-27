@@ -128,6 +128,18 @@ export class TileMap {
     return false;
   }
 
+  /** Like lineBlocked, but for a body of the given radius: the centre line and both edges must be clear. */
+  lineBlockedWide(x0: number, z0: number, x1: number, z1: number, radius: number): boolean {
+    if (this.lineBlocked(x0, z0, x1, z1)) return true;
+    const dx = x1 - x0;
+    const dz = z1 - z0;
+    const len = Math.hypot(dx, dz);
+    if (len < 1e-6) return this.circleBlocked(x0, z0, radius);
+    const nx = (-dz / len) * radius;
+    const nz = (dx / len) * radius;
+    return this.lineBlocked(x0 + nx, z0 + nz, x1 + nx, z1 + nz) || this.lineBlocked(x0 - nx, z0 - nz, x1 - nx, z1 - nz);
+  }
+
   /** Flood fill from a tile; returns a mask of reachable tiles. */
   reachableFrom(c: number, r: number): Uint8Array {
     const seen = new Uint8Array(this.cols * this.rows);

@@ -299,21 +299,22 @@ export class World {
       if (exclude && exclude.includes(e.id)) continue;
       const d = (e.x - x) ** 2 + (e.z - z) ** 2;
       if (d >= bestD) continue;
-      // Touching bodies count even across a wall corner; anything further must be in sight
-      const touch = e.radius + PLAYER_RADIUS + 0.5;
-      if (d > touch * touch && this.map.lineBlocked(x, z, e.x, e.z)) continue;
+      if (this.map.lineBlocked(x, z, e.x, e.z)) continue;
       bestD = d;
       best = e;
     }
     return best;
   }
 
+  /** Living enemies within the radius that a wall does not shield from the centre. */
   enemiesWithin(x: number, z: number, radius: number): Enemy[] {
     const out: Enemy[] = [];
     for (const e of this.enemies) {
       if (!e.alive || e.dead) continue;
       const r = radius + e.radius;
-      if ((e.x - x) ** 2 + (e.z - z) ** 2 <= r * r) out.push(e);
+      if ((e.x - x) ** 2 + (e.z - z) ** 2 > r * r) continue;
+      if (this.map.lineBlocked(x, z, e.x, e.z)) continue;
+      out.push(e);
     }
     return out;
   }
@@ -971,12 +972,10 @@ export class World {
     return (d.isRanged ? (this.player.equipment.get('weapon')?.weapon?.range ?? 300) + d.range : d.meleeRange) * PX + t.radius;
   }
 
+  /** In reach and in sight: nothing, melee or ranged, attacks through a wall. */
   private inReach(t: Enemy): boolean {
-    const dist = this.dist(t.x, t.z);
-    if (dist > this.attackReach(t)) return false;
-    // Point blank always counts: a wall corner between two touching bodies is no cover
-    if (dist <= t.radius + PLAYER_RADIUS + 0.5) return true;
-    return !(this.derived.isRanged && this.map.lineBlocked(this.px, this.pz, t.x, t.z));
+    if (this.dist(t.x, t.z) > this.attackReach(t)) return false;
+    return !this.map.lineBlocked(this.px, this.pz, t.x, t.z);
   }
 
   /** Nearest enemy the hero could hit from where it stands, without moving. */
@@ -1264,8 +1263,10 @@ export class World {
       const pd = Math.hypot(pdx, pdz);
       const minD = e.radius + PLAYER_RADIUS;
       if (pd < minD && pd > 0.001) {
-        e.x = this.px + (pdx / pd) * minD;
-        e.z = this.pz + (pdz / pd) * minD;
+        // Pushed out along the walls, never into one
+        this.map.slide(e.x, e.z, this.px + (pdx / pd) * minD, this.pz + (pdz / pd) * minD, e.radius, this.slid);
+        e.x = this.slid.x;
+        e.z = this.slid.z;
       }
     }
   }
@@ -1309,7 +1310,8 @@ export class World {
       }
       return;
     }
-    if (dist > reach) {
+    // Melee needs to be in reach and in sight; through a wall it keeps walking round
+    if (dist > reach || this.map.lineBlocked(e.x, e.z, this.px, this.pz)) {
       const dir = { x: 0, z: 0 };
       this.flow.direction(e.x, e.z, dir);
       if (!dir.x && !dir.z && dist < 6) {

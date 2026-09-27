@@ -101,7 +101,8 @@ export class FlowField {
 }
 
 /** A* over tile centres with 8-way movement and no corner cutting. Returns world waypoints. */
-export function findPath(map: TileMap, x0: number, z0: number, x1: number, z1: number, maxNodes = 6000): { x: number; z: number }[] | null {
+/** A* over tiles, then string-pulled for a body of `radius` so the shortcuts never clip a wall corner. */
+export function findPath(map: TileMap, x0: number, z0: number, x1: number, z1: number, maxNodes = 6000, radius = 0.38): { x: number; z: number }[] | null {
   const sc = Math.floor(x0);
   const sr = Math.floor(z0);
   let tc = Math.floor(x1);
@@ -187,7 +188,7 @@ export function findPath(map: TileMap, x0: number, z0: number, x1: number, z1: n
   let az = z0;
   for (let k = 0; k < path.length; k++) {
     const next = path[k + 1];
-    if (next && !map.lineBlocked(ax, az, next.x, next.z)) continue;
+    if (next && !map.lineBlockedWide(ax, az, next.x, next.z, radius)) continue;
     const p = path[k]!;
     pulled.push(p);
     ax = p.x;
