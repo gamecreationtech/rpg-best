@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs and temp
+*.log
+*.tmp
+tmp/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Engine-specific ignores (add once the engine is chosen):
+# Godot: .godot/, *.import
+# Unity: Library/, Temp/, Logs/, obj/, *.csproj, *.sln
+# Unreal: Binaries/, DerivedDataCache/, Intermediate/, Saved/
