@@ -5,6 +5,7 @@ import { SKILLS } from '../../data/skills';
 import { ATTACK_SLOT, resolveSlotSkill, unlockedSlots } from '../../sim/player';
 import { castReady, skillCooldown } from '../../sim/skills/cast';
 import type { World } from '../../sim/world';
+import { INTERACT_INFO } from '../../render2d/interactLabels';
 import { button, clear, h, hex } from '../dom';
 import { CLUSTER, skillPosition } from './touchLayout';
 
@@ -19,6 +20,8 @@ export interface HudHost {
   attackHeld(on: boolean): void;
   /** Touch attack button tapped: one attack at whatever is in reach. */
   attackOnce(): void;
+  /** Touch action button tapped next to a merchant, station or portal: use it. */
+  interactNearby(): void;
 }
 
 interface Message {
@@ -140,7 +143,10 @@ export class Hud {
       const drag = { slot: i, x: e.clientX, y: e.clientY, moved: false, repeat: null as number | null };
       this.drag = drag;
       if (i === 0) {
-        if (this.touch) {
+        if (this.touch && this.host.world.nearestInteractable()) {
+          // Standing next to something usable: the button is an action button
+          this.host.interactNearby();
+        } else if (this.touch) {
           this.host.attackOnce();
           this.host.attackHeld(true);
         } else {
@@ -249,8 +255,16 @@ export class Hud {
         continue;
       }
       if (id === ATTACK_SLOT) {
-        this.slotLabels[i]!.textContent = 'Attack';
-        this.slotWipes[i]!.style.setProperty('--p', String(Math.min(1, w.attackTimer * d.atkSpd) * 100));
+        const use = this.touch ? w.nearestInteractable() : null;
+        b.classList.toggle('use', !!use);
+        if (use) {
+          const verb = INTERACT_INFO[use.kind].verb;
+          this.slotLabels[i]!.textContent = verb.charAt(0).toUpperCase() + verb.slice(1);
+          this.slotWipes[i]!.style.setProperty('--p', '0');
+        } else {
+          this.slotLabels[i]!.textContent = 'Attack';
+          this.slotWipes[i]!.style.setProperty('--p', String(Math.min(1, w.attackTimer * d.atkSpd) * 100));
+        }
         b.classList.remove('nomana', 'noweapon');
         continue;
       }

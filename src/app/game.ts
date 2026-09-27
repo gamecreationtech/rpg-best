@@ -261,6 +261,9 @@ export class Game {
       attackOnce: () => {
         if (this.world && !this.panels?.isOpen) this.world.attackOnce();
       },
+      interactNearby: () => {
+        if (this.world && !this.panels?.isOpen) this.world.interactNearby();
+      },
     }, touch);
     this.input.mode = touch ? 'touch' : 'tap';
     if (this.panels?.isOpen) this.hud.root.classList.add('hidden');

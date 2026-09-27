@@ -389,6 +389,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .cluster .slot .wipe { border-radius: 50%; }
 .cluster .slot.attack { width: 86px; height: 86px; box-shadow: inset 0 0 0 3px var(--accent), 0 2px 14px rgba(0,0,0,0.7); background: var(--accent-dim); }
 .cluster .slot.attack .slot-label { font-size: 13px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+.cluster .slot.attack.use { box-shadow: inset 0 0 0 3px #ffd060, 0 2px 14px rgba(0,0,0,0.7); background: rgba(70, 52, 14, 0.9); }
+.cluster .slot.attack.use .slot-label { color: #ffd060; }
 .cluster .slot.locked { opacity: 0.3; }
 @media (max-height: 420px) { .cluster { transform: scale(0.85); transform-origin: bottom right; } }
 @media (orientation: landscape) and (max-height: 500px) {
