@@ -58,6 +58,8 @@ interface Item {
 const SIZE = 'small';
 const OUTLINE = true;
 const DEATH_FALL = 0.35;
+/** Rim colour of the targeted monster and its life bar. */
+const TARGET_COLOR = '#ffd860';
 
 function rgb(color: number): [number, number, number] {
   return [((color >> 16) & 255) / 255, ((color >> 8) & 255) / 255, (color & 255) / 255];
@@ -111,6 +113,8 @@ export class PixelView {
   private readonly staticLights: StaticLight[] = [];
   private readonly lights: Light[] = [];
   private readonly items: Item[] = [];
+  /** Life bars to draw this frame: frame x, frame y, fraction, targeted, four numbers each. */
+  private readonly bars: number[] = [];
   private beamTarget = -1;
   private time = 0;
   private lastW = 0;
@@ -620,6 +624,7 @@ export class PixelView {
     ctx.fillRect(0, 0, W, H);
     this.items.length = 0;
     this.lights.length = 0;
+    this.bars.length = 0;
     let drawn = 0;
 
     // Visible tiles: the world box that covers the four corners of the frame
@@ -724,7 +729,9 @@ export class PixelView {
       if (e.status.freeze > 0) tint = '#9fe0ff';
       else if (e.status.curse) tint = '#c080ff';
       else if (e.status.poison) tint = '#66e070';
-      this.pushPuppet(p, e.x, 0, e.z, 1, tint);
+      const targeted = e.id === w.targetId && !e.dead;
+      this.pushPuppet(p, e.x, 0, e.z, 1, tint, targeted ? TARGET_COLOR : null);
+      if (!e.dead) this.bars.push(Math.round(fx), Math.round(fy) - p.sheet.height - 5, e.hp / e.maxHp, targeted ? 1 : 0);
       drawn++;
     }
 
@@ -775,6 +782,7 @@ export class PixelView {
     this.items.sort((a, b) => a.depth - b.depth);
     for (const it of this.items) it.draw();
     drawn += this.items.length;
+    this.drawBars(ctx);
 
     this.effects.draw(ctx, cam, 'air');
     this.particles.draw(ctx, cam);
@@ -803,6 +811,31 @@ export class PixelView {
     this.compositor.lights.length = 0;
     for (const l of this.lights) this.compositor.lights.push(l);
     this.compositor.present(this.frame, cam.scale, cam.offsetX, cam.offsetY);
+  }
+
+  /** Small life bars above every monster; the target's is wider with a gold rim. */
+  private drawBars(ctx: CanvasRenderingContext2D): void {
+    const b = this.bars;
+    for (let i = 0; i < b.length; i += 4) {
+      const x = b[i]!;
+      const y = b[i + 1]!;
+      const frac = Math.max(0, Math.min(1, b[i + 2]!));
+      const targeted = b[i + 3] === 1;
+      const w = targeted ? 18 : 12;
+      const h = targeted ? 4 : 3;
+      const left = x - (w >> 1);
+      ctx.fillStyle = targeted ? TARGET_COLOR : '#0a0a12';
+      ctx.fillRect(left - 1, y - 1, w + 2, h + 2);
+      ctx.fillStyle = '#2a1014';
+      ctx.fillRect(left, y, w, h);
+      const fill = Math.round(w * frac);
+      if (fill > 0) {
+        ctx.fillStyle = frac > 0.5 ? '#c82828' : frac > 0.25 ? '#d06020' : '#e0a020';
+        ctx.fillRect(left, y, fill, h);
+        ctx.fillStyle = '#ff6a5a';
+        ctx.fillRect(left, y, fill, 1);
+      }
+    }
   }
 
   /** Things painted on the floor before anything stands on it: zones, rings, shadows, the buff aura. */
@@ -915,7 +948,7 @@ export class PixelView {
     this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W, intensity: 0.8, r, g, b });
   }
 
-  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null): void {
+  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null): void {
     const cam = this.view;
     const ctx = this.ctx;
     const set = p.sheet[p.facing];
@@ -942,6 +975,7 @@ export class PixelView {
           return;
         }
         if (alpha < 1) ctx.globalAlpha = alpha;
+        if (outline) this.drawOutline(frame, fx - anim.originX, fy - anim.originY, flip, outline, anim.originX);
         if (flash) this.drawTinted(frame, fx - anim.originX, fy - anim.originY, flip, '#ffffff', 0.9, anim.originX);
         else if (tint) this.drawTinted(frame, fx - anim.originX, fy - anim.originY, flip, tint, 0.5, anim.originX);
         else if (flip) {
@@ -981,6 +1015,37 @@ export class PixelView {
       ctx.drawImage(s, -originX, 0);
       ctx.restore();
     } else ctx.drawImage(s, x, y);
+  }
+
+  /** A one-pixel coloured rim around a sprite: its silhouette stamped in four directions under it. */
+  private drawOutline(frame: HTMLCanvasElement, x: number, y: number, flip: boolean, color: string, originX: number): void {
+    const s = this.scratch;
+    if (s.width !== frame.width || s.height !== frame.height) {
+      s.width = frame.width;
+      s.height = frame.height;
+    }
+    const c = this.sctx;
+    c.imageSmoothingEnabled = false;
+    c.globalCompositeOperation = 'source-over';
+    c.clearRect(0, 0, s.width, s.height);
+    c.drawImage(frame, 0, 0);
+    c.globalCompositeOperation = 'source-in';
+    c.globalAlpha = 1;
+    c.fillStyle = color;
+    c.fillRect(0, 0, s.width, s.height);
+    const ctx = this.ctx;
+    ctx.save();
+    if (flip) {
+      ctx.translate(x + originX, y);
+      ctx.scale(-1, 1);
+      x = -originX;
+      y = 0;
+    }
+    ctx.drawImage(s, x - 1, y);
+    ctx.drawImage(s, x + 1, y);
+    ctx.drawImage(s, x, y - 1);
+    ctx.drawImage(s, x, y + 1);
+    ctx.restore();
   }
 
   // ---------------------------------------------------------------- picking
