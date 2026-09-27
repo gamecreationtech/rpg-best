@@ -13,7 +13,7 @@ import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
 
-export type HeroTab = 'inventory' | 'skills';
+export type HeroTab = 'inventory' | 'skills' | 'passives';
 
 export interface HeroMenuHost {
   world: World;
@@ -71,8 +71,6 @@ export class HeroMenu {
   private selected: Item | null = null;
   private selectedFrom: 'bag' | 'equip' | null = null;
   private cell = 30;
-  /** Scroll the skills tab to the passives on the next render. */
-  scrollToPassives = false;
 
   constructor(private readonly host: HeroMenuHost) {}
 
@@ -94,8 +92,8 @@ export class HeroMenu {
     const tabs = h(
       'div',
       { class: 'px-tabs' },
-      ...(['inventory', 'skills'] as HeroTab[]).map((t) => {
-        const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : 'Skills', { color: t === this.tab ? GOLD : MUTED }));
+      ...(['inventory', 'skills', 'passives'] as HeroTab[]).map((t) => {
+        const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
         b.addEventListener('pointerdown', (e) => e.stopPropagation());
         return b;
       }),
@@ -106,11 +104,8 @@ export class HeroMenu {
     // The window goes into the page first so the inventory can measure the room it has
     body.append(h('div', { class: 'px-window' }, tabs, content));
     if (this.tab === 'inventory') this.renderInventory(w, content);
-    else this.renderSkills(w, content);
-    if (this.scrollToPassives) {
-      this.scrollToPassives = false;
-      content.querySelector('.px-passives')?.scrollIntoView({ block: 'start' });
-    }
+    else if (this.tab === 'skills') this.renderSkills(w, content);
+    else this.renderPassives(w, content);
   }
 
   // ---------------------------------------------------------------- inventory
@@ -506,8 +501,13 @@ export class HeroMenu {
       row.append(actions);
       wrap.append(row);
     }
+    content.append(wrap);
+  }
 
-    // Passives
+  private renderPassives(w: World, content: HTMLElement): void {
+    const p = w.player;
+    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const wrap = h('div', { class: 'px-skills' });
     const passives = h('div', { class: 'px-passives' });
     passives.append(h('div', { class: 'px-row' }, pxText('Passives', { color: GOLD }), pxText(`${p.passivePoints} points`, { color: MUTED })));
     const tree = (title: string, defs: typeof GENERAL_TREE) =>

@@ -1,6 +1,7 @@
 import { CONSUMABLES, CONSUMABLE_RULES, type ConsumableId } from '../data/consumables';
 import { DUMMIES, DUMMY_RULES } from '../data/dummies';
-import { PLACEHOLDER_ENEMIES, PROVING_GROUNDS, type EnemyDef } from '../data/placeholderEnemies';
+import { MONSTERS, MONSTER_RULES, type EnemyDef } from '../data/monsters';
+import { ZONES, zoneById, type ZoneDef } from '../data/zones';
 import { SKILLS, type BuffMods, type SkillDef } from '../data/skills';
 import { STATUS_RULES } from '../data/status';
 import { LEVELING } from '../data/classes';
@@ -14,7 +15,7 @@ import type { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
 import { buyPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
-import { buildArena, buildTown, type ArenaLayout, type TownLayout } from './map/tilemap';
+import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
 import { ATTACK_SLOT, addXp, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
@@ -101,6 +102,8 @@ export class World {
   area: Area = 'town';
   readonly town: TownLayout = buildTown();
   arena: ArenaLayout | null = null;
+  /** The zone the hero is in, or was last in. */
+  zoneId: string = ZONES[0]!.id;
   arenaVisited = false;
   map = this.town.map;
   flow: FlowField;
@@ -196,8 +199,14 @@ export class World {
     this.emit({ type: 'area', area: 'town' });
   }
 
-  enterArena(): void {
-    this.arena = buildArena(this.rng.int(1, 1e9));
+  get zone(): ZoneDef {
+    return zoneById(this.zoneId);
+  }
+
+  enterArena(zoneId = this.zoneId): void {
+    this.zoneId = zoneById(zoneId).id;
+    const z = this.zone;
+    this.arena = buildZone(z.layout, z.cols, z.rows, this.rng.int(1, 1e9));
     this.arenaVisited = true;
     this.area = 'arena';
     this.map = this.arena.map;
@@ -210,7 +219,7 @@ export class World {
     this.interactables.length = 0;
     this.interactables.push({ id: 1, kind: 'town_portal', x: this.arena.spawn.x - 2, z: this.arena.spawn.z, radius: 50 * PX, active: true });
     this.spawnTimer = 0.5;
-    this.emit({ type: 'area', area: 'arena' });
+    this.emit({ type: 'area', area: 'arena', zone: this.zoneId });
   }
 
   private clearArea(): void {
@@ -690,8 +699,8 @@ export class World {
     return true;
   }
 
-  travel(to: Area): void {
-    if (to === 'arena') this.enterArena();
+  travel(to: Area, zoneId?: string): void {
+    if (to === 'arena') this.enterArena(zoneId);
     else this.enterTown();
   }
 
@@ -1100,11 +1109,12 @@ export class World {
 
   spawnEnemy(def: EnemyDef, x: number, z: number): Enemy {
     const e = this.allocEnemy();
-    const lv = this.player.level - 1;
+    // Monsters grow with their zone, not with the hero
+    const lv = this.zone.level - 1;
     Object.assign(e, {
-      def, dummy: null, name: def.name, recipeId: def.recipeId, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
-      maxHp: Math.round(def.hp * (1 + PROVING_GROUNDS.hpPerLevel * lv)), damage: Math.round(def.damage * (1 + PROVING_GROUNDS.dmgPerLevel * lv)),
-      speed: def.speed * PX, xp: Math.round(def.xp * (1 + PROVING_GROUNDS.xpPerLevel * lv)), attackRange: def.attackRange * PX,
+      def, dummy: null, name: def.name, recipeId: def.look, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
+      maxHp: Math.round(def.hp * (1 + MONSTER_RULES.hpPerLevel * lv)), damage: Math.round(def.damage * (1 + MONSTER_RULES.dmgPerLevel * lv)),
+      speed: def.speed * PX, xp: Math.round(def.xp * (1 + MONSTER_RULES.xpPerLevel * lv)), attackRange: def.attackRange * PX,
       attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0,
       scale: def.scale * this.rng.range(0.92, 1.08),
     });
@@ -1127,7 +1137,7 @@ export class World {
     rechargePotions(this.player, this.potionFraction);
     this.gainXp(e.xp);
     if (e.def) {
-      const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + this.derived.goldFind / 100));
+      const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + MONSTER_RULES.goldPerLevel * (this.zone.level - 1)) * (1 + this.derived.goldFind / 100));
       this.addDrop(e.x + this.rng.range(-0.4, 0.4), e.z + this.rng.range(-0.4, 0.4), null, gold);
       if (this.rng.next() * 100 < e.def.dropChance) {
         const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind });
@@ -1241,7 +1251,7 @@ export class World {
     const def = e.def!;
     const reach = e.attackRange + e.radius + PLAYER_RADIUS;
     if (def.ai === 'ranged') {
-      const pref = PROVING_GROUNDS.rangedPreferredRange * PX;
+      const pref = (def.preferredRange ?? 195) * PX;
       const los = !this.map.lineBlocked(e.x, e.z, this.px, this.pz);
       if (dist < pref * 0.75) {
         const safe = Math.max(dist, 0.001);
@@ -1261,8 +1271,8 @@ export class World {
           const dx = (this.px - e.x) / safe;
           const dz = (this.pz - e.z) / safe;
           this.spawnProjectile({
-            owner: 'enemy', shape: 'enemy_bolt', element: 'physical', x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
-            speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: 'physical', canCrit: false, skillId: null, weaponHit: false },
+            owner: 'enemy', shape: 'enemy_bolt', element: def.element, x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
+            speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: def.element, canCrit: false, skillId: null, weaponHit: false },
           });
         }
       }
@@ -1283,7 +1293,7 @@ export class World {
       if (e.attackTimer <= 0 && e.status.shock <= 0) {
         e.attackTimer = e.attackCooldown;
         this.emit({ type: 'enemy_attack', id: e.id });
-        damagePlayer(this, e.damage, 'physical', e, true);
+        damagePlayer(this, e.damage, def.element, e, true);
       }
     }
   }
@@ -1569,18 +1579,19 @@ export class World {
     if (this.area !== 'arena' || !this.arena || this.playerDead) return;
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
-    this.spawnTimer = PROVING_GROUNDS.spawnInterval;
+    const zone = this.zone;
+    this.spawnTimer = zone.spawnInterval;
     const alive = this.enemies.filter((e) => e.alive && !e.dead && e.def).length;
-    if (alive >= PROVING_GROUNDS.maxAlive) return;
-    // Weighted pick
-    const weights = PLACEHOLDER_ENEMIES.map((d) => PROVING_GROUNDS.spawnWeights[d.id] ?? 0);
-    const total = weights.reduce((a, b) => a + b, 0);
+    if (alive >= zone.maxAlive) return;
+    // Weighted pick from the zone's roster
+    const ids = Object.keys(zone.spawns).filter((id) => MONSTERS[id]);
+    const total = ids.reduce((a, id) => a + zone.spawns[id]!, 0);
     let roll = this.rng.next() * total;
-    let def = PLACEHOLDER_ENEMIES[0]!;
-    for (let i = 0; i < weights.length; i++) {
-      roll -= weights[i]!;
+    let def = MONSTERS[ids[0]!]!;
+    for (const id of ids) {
+      roll -= zone.spawns[id]!;
       if (roll < 0) {
-        def = PLACEHOLDER_ENEMIES[i]!;
+        def = MONSTERS[id]!;
         break;
       }
     }
@@ -1595,7 +1606,7 @@ export class World {
       if (c < 2 || rr < 2 || c >= this.map.cols - 2 || rr >= this.map.rows - 2) continue;
       if (!this.arena.reachable[rr * this.map.cols + c]) continue;
       if (this.map.circleBlocked(x, z, def.radius * PX)) continue;
-      const pack = def.id === 'ghoul' ? this.rng.int(2, 4) : 1;
+      const pack = this.rng.int(def.pack[0], def.pack[1]);
       for (let k = 0; k < pack; k++) {
         const ox = x + this.rng.range(-0.8, 0.8);
         const oz = z + this.rng.range(-0.8, 0.8);

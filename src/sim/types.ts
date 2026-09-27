@@ -1,5 +1,5 @@
 import type { DummyDef } from '../data/dummies';
-import type { EnemyDef } from '../data/placeholderEnemies';
+import type { EnemyDef } from '../data/monsters';
 import type { BuffMods } from '../data/skills';
 import type { Element } from '../data/stats';
 import type { Item } from './items/item';
@@ -27,7 +27,7 @@ export interface EnemyStatus {
 export interface Enemy {
   id: number;
   alive: boolean;
-  /** Placeholder monster definition, or null for a training dummy. */
+  /** Monster definition, or null for a training dummy. */
   def: EnemyDef | null;
   dummy: DummyDef | null;
   name: string;
@@ -193,6 +193,6 @@ export type SimEvent =
   | { type: 'drop_spawn'; id: number }
   | { type: 'sound'; id: string }
   | { type: 'open'; panel: InteractableKind }
-  | { type: 'area'; area: 'town' | 'arena' }
+  | { type: 'area'; area: 'town' | 'arena'; zone?: string }
   | { type: 'kick'; k: number }
   | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' };

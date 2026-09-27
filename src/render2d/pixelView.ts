@@ -5,7 +5,8 @@ import { SKILLS } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
 import { dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
-import { arcanaProp, bloodFountainProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, type Prop } from '../gen/pixel/props';
+import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, type Prop } from '../gen/pixel/props';
+import { zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
 import type { Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types';
@@ -96,10 +97,10 @@ export class PixelView {
   private readonly pal: Palette;
   private tiles: TileSet;
   private readonly townTiles: TileSet;
-  private readonly arenaTiles: TileSet;
+  private readonly zoneTiles = new Map<string, TileSet>();
   private readonly props: PropSprites;
   private readonly fx: EffectSprites;
-  private readonly monsters: Record<MonsterKind, CharacterSheet>;
+  private readonly monsters = new Map<MonsterKind, CharacterSheet>();
   private readonly dummies = new Map<string, CharacterSheet>();
   private readonly vendor: CharacterSheet;
   private readonly heroSheets = new Map<string, CharacterSheet>();
@@ -107,6 +108,7 @@ export class PixelView {
   private readonly drops = new Map<string, Prop>();
   private readonly stations: Record<string, Prop>;
   private readonly rubble: Prop[];
+  private readonly decor = new Map<string, Prop[]>();
   private readonly puppets = new Map<number, Puppet>();
   private hero: Puppet;
   private heroKey = '';
@@ -133,16 +135,10 @@ export class PixelView {
     this.compositor.background = rgb(pal.background);
 
     this.townTiles = isoTiles(pal, SIZE, 11);
-    this.arenaTiles = isoTiles({ ...pal, floor: 0x46403a, floorAlt: 0x423c36, seam: 0x2a2520, wall: 0x4e4842, wallTop: 0x625a50 }, SIZE, 23);
     this.tiles = this.townTiles;
     this.props = propSprites(pal, SIZE, OUTLINE);
     this.fx = effectSprites(pal, SIZE);
-    this.monsters = {
-      ghoul: monsterSheet('ghoul', pal, SIZE, OUTLINE),
-      skeleton: monsterSheet('skeleton', pal, SIZE, OUTLINE),
-      brute: monsterSheet('brute', pal, SIZE, OUTLINE),
-      wraith: monsterSheet('wraith', pal, SIZE, OUTLINE),
-    };
+    for (const look of ['ghoul', 'skeleton', 'brute', 'wraith'] as MonsterKind[]) this.monsterSheet(look);
     for (const d of DUMMIES) this.dummies.set(d.id, dummySheet(d.color, pal, SIZE, OUTLINE));
     this.vendor = vendorSheet(pal, SIZE, OUTLINE);
     this.stations = {
@@ -203,6 +199,16 @@ export class PixelView {
     return sheet;
   }
 
+  /** Monster sheets are drawn the first time a look appears and kept. */
+  private monsterSheet(look: MonsterKind): CharacterSheet {
+    let sheet = this.monsters.get(look);
+    if (!sheet) {
+      sheet = monsterSheet(look, this.pal, SIZE, OUTLINE);
+      this.monsters.set(look, sheet);
+    }
+    return sheet;
+  }
+
   private projectileProp(shape: ProjectileShape, color: number): Prop {
     const key = `${shape}:${color}`;
     let p = this.projectiles.get(key);
@@ -227,15 +233,24 @@ export class PixelView {
 
   rebuildArea(): void {
     const w = this.world;
-    const key = w.area + ':' + w.map.cols + ':' + (w.arenaVisited ? 1 : 0);
+    const zone = w.zone;
+    const key = w.area + ':' + zone.id + ':' + w.map.cols + ':' + (w.arenaVisited ? 1 : 0);
     if (key === this.areaKey) return;
     this.areaKey = key;
     this.placed.length = 0;
     this.staticLights.length = 0;
     this.labels.clear();
     this.interactLabels.clear();
-    this.tiles = w.area === 'town' ? this.townTiles : this.arenaTiles;
-    this.compositor.darkness = w.area === 'town' ? 0.42 : 0.55;
+    if (w.area === 'town') this.tiles = this.townTiles;
+    else {
+      let tiles = this.zoneTiles.get(zone.id);
+      if (!tiles) {
+        tiles = isoTiles({ ...this.pal, ...zone.tiles }, SIZE, 23 + zone.level);
+        this.zoneTiles.set(zone.id, tiles);
+      }
+      this.tiles = tiles;
+    }
+    this.compositor.darkness = w.area === 'town' ? 0.42 : zone.darkness;
     const place = (prop: Prop, x: number, z: number, interactId = -1) => this.placed.push({ prop, x, z, interactId });
     const light = (x: number, z: number, color: number, intensity: number, radius: number, flicker = false, y = 1.2) => this.staticLights.push({ x, z, y, color, intensity, radius, flicker });
     const idOf = (kind: string) => w.interactables.find((i) => i.kind === kind)?.id ?? -1;
@@ -268,23 +283,37 @@ export class PixelView {
       place(this.stations.town_portal!, s.x - 2, s.z, idOf('town_portal'));
       light(s.x - 2, s.z, 0xb070ff, 1.2, 3.4);
       const map = w.map;
-      for (let i = 0; i < 60; i++) {
-        const c = 3 + ((i * 13) % (map.cols - 6));
-        const r = 3 + ((i * 29) % (map.rows - 6));
+      const decor = this.decorFor(zone.id);
+      const scatter = Math.round((map.cols * map.rows) / 70);
+      for (let i = 0; i < scatter; i++) {
+        const c = 3 + ((i * 13 + zone.level) % (map.cols - 6));
+        const r = 3 + ((i * 29 + zone.level * 3) % (map.rows - 6));
         if (map.get(c, r) !== Tile.Floor) continue;
-        place(this.rubble[i % this.rubble.length]!, c + 0.5, r + 0.5);
+        place(decor[i % decor.length]!, c + 0.5, r + 0.5);
       }
-      // A few braziers scattered where the floor is open, so the field has light pools
-      for (let i = 0; i < 14; i++) {
+      // Fixed lights scattered where the floor is open, in the zone's colour
+      const lamps = Math.round((map.cols * map.rows) / 300);
+      for (let i = 0; i < lamps; i++) {
         const c = 4 + ((i * 17 + 5) % (map.cols - 8));
         const r = 4 + ((i * 23 + 3) % (map.rows - 8));
         if (map.get(c, r) !== Tile.Floor) continue;
         place(this.stations.brazier!, c + 0.5, r + 0.5);
-        light(c + 0.5, r + 0.5, 0xff8a3a, 1.1, 4, true, 1.0);
+        light(c + 0.5, r + 0.5, zone.lightColor, 1.1, 4, true, 1.0);
       }
     }
     this.puppets.clear();
     this.view.snapTo(w.px, w.pz);
+  }
+
+  /** Scattered decoration per zone: stones, bones, mushrooms or ice, drawn once and kept. */
+  private decorFor(zoneId: string): Prop[] {
+    let d = this.decor.get(zoneId);
+    if (!d) {
+      const kind = zoneById(zoneId).decor;
+      d = [1, 2, 3, 4].map((seed) => decorProp(kind, seed, this.pal, SIZE, OUTLINE));
+      this.decor.set(zoneId, d);
+    }
+    return d;
   }
 
   // ---------------------------------------------------------------- sync
@@ -348,7 +377,7 @@ export class PixelView {
       }
       let p = this.puppets.get(e.id);
       if (!p) {
-        const sheet = e.dummy ? this.dummies.get(e.dummy.id)! : this.monsters[e.recipeId as MonsterKind] ?? this.monsters.ghoul;
+        const sheet = e.dummy ? this.dummies.get(e.dummy.id)! : this.monsterSheet(e.recipeId as MonsterKind);
         p = { sheet, anim: 'idle', animT: Math.random(), facing: 'front', faceLeft: Math.random() < 0.5, flash: 0, dying: -1 };
         this.puppets.set(e.id, p);
       }
@@ -732,7 +761,13 @@ export class PixelView {
       else if (e.status.curse) tint = '#c080ff';
       else if (e.status.poison) tint = '#66e070';
       const targeted = e.id === w.targetId && !e.dead;
-      this.pushPuppet(p, e.x, 0, e.z, 1, tint, targeted ? TARGET_COLOR : null);
+      // Flying things bob above the ground
+      const hover = e.def?.hover && !e.dead ? (e.def.hover + Math.sin(this.time * 4 + e.id) * 2) / 12 : 0;
+      this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null);
+      if (e.def?.glow && !e.dead) {
+        const [gr, gg, gb] = rgb(e.def.glow);
+        this.lights.push({ x: Math.round(fx), y: Math.round(fy) - p.sheet.height * 0.5, radius: 46, intensity: 0.8, r: gr, g: gg, b: gb });
+      }
       if (!e.dead) this.bars.push(Math.round(fx), Math.round(fy) - p.sheet.height - 5, e.hp / e.maxHp, targeted ? 1 : 0);
       drawn++;
     }

@@ -3,7 +3,8 @@ import { Game } from './app/game';
 import { startLoop } from './app/loop';
 import { Showcase } from './app/showcase';
 import { Lab } from './lab/lab';
-import { PLACEHOLDER_ENEMIES } from './data/placeholderEnemies';
+import { MONSTERS } from './data/monsters';
+import { ZONES } from './data/zones';
 
 // Phones: no double-tap zoom, no pinch zoom, no long-press menus while playing
 document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
@@ -25,7 +26,7 @@ const ui = document.getElementById('ui') as HTMLElement;
 
 declare global {
   interface Window {
-    fs: { showcase?: Showcase; game?: Game; lab?: Lab; paused: boolean; step(seconds: number): void; data?: { PLACEHOLDER_ENEMIES: typeof PLACEHOLDER_ENEMIES } };
+    fs: { showcase?: Showcase; game?: Game; lab?: Lab; paused: boolean; step(seconds: number): void; data?: { MONSTERS: typeof MONSTERS; ZONES: typeof ZONES } };
   }
 }
 
@@ -75,7 +76,7 @@ if (location.search.includes('lab')) {
   window.fs = {
     game,
     paused: false,
-    data: { PLACEHOLDER_ENEMIES },
+    data: { MONSTERS, ZONES },
     step(seconds: number) {
       const steps = Math.ceil(seconds / (1 / 60));
       for (let i = 0; i < steps; i++) game.update(1 / 60, i === steps - 1);

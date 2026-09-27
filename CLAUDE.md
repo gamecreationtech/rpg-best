@@ -41,8 +41,8 @@ where every number lives. Game data is in `src/data/` (transcribed from the
 producer's export, in pixels with 32px tiles; multiply by `PX` in the sim). The
 simulation is `src/sim/world.ts` plus `combat.ts` and `skills/cast.ts`; it emits
 `SimEvent`s that `src/render2d/pixelView.ts`, the HUD and audio consume.
-Zones and real monsters are intentionally absent; `src/data/placeholderEnemies.ts`
-stands in and should be deleted when their data arrives. `npm run check` must
+Zones live in `src/data/zones.ts` and monsters in `src/data/monsters.ts`; both
+are engineer drafts to be replaced by the producer's data when it arrives. `npm run check` must
 pass before every push.
 
 ## Verifying visuals

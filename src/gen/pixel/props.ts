@@ -160,6 +160,57 @@ export function rubbleProp(seed: number, pal: Palette, size: SpriteSize, outline
   return prop([b.toCanvas()], 1 + 8 * s, H + 1);
 }
 
+export type DecorKind = 'rubble' | 'bones' | 'mushrooms' | 'ice';
+
+/** Ground clutter that gives each zone its character. */
+export function decorProp(kind: DecorKind, seed: number, pal: Palette, size: SpriteSize, outline: boolean): Prop {
+  if (kind === 'rubble') return rubbleProp(seed, pal, size, outline);
+  const s = size === 'large' ? 2 : 1;
+  const W = 16 * s;
+  const H = 10 * s;
+  const b = new PixelBuffer(W + 2, H + 2);
+  if (kind === 'bones') {
+    const bone = ramp(pal.bone, pal.contrast);
+    // A skull and a couple of long bones
+    const sx = 1 + Math.floor(noise(seed, 1, 3) * 8 * s);
+    b.ellipse(sx + 3 * s, 1 + 5 * s, 3 * s, 2.5 * s, bone[1]);
+    b.set(sx + 2 * s, 1 + 5 * s, hex(pal.outline));
+    b.set(sx + 4 * s, 1 + 5 * s, hex(pal.outline));
+    b.rect(sx + 2 * s, 1 + 7 * s, 3 * s, 1, bone[0]);
+    for (let i = 0; i < 2; i++) {
+      const x0 = 1 + Math.floor(noise(seed, i + 2, 3) * 10 * s);
+      const y0 = 1 + 7 * s + i * s;
+      b.rect(x0, y0, 5 * s, 1, bone[1]);
+      b.set(x0 - 1, y0 - 1, bone[2]);
+      b.set(x0 + 5 * s, y0 + 1, bone[2]);
+    }
+  } else if (kind === 'mushrooms') {
+    const cap = ramp(0x8ab070, pal.contrast);
+    const stem = ramp(0xd8d0b8, pal.contrast);
+    for (let i = 0; i < 3; i++) {
+      const x = 1 + Math.floor(noise(seed, i, 5) * 11 * s) + 2 * s;
+      const h = (2 + Math.floor(noise(seed, i, 6) * 3)) * s;
+      b.rect(x, 1 + H - h - 1, s, h, stem[1]);
+      b.ellipse(x + 0.5 * s, 1 + H - h - 1, 2 * s, 1.5 * s, cap[1]);
+      b.set(x, 1 + H - h - 2 * s, cap[3]);
+    }
+  } else {
+    const ice = ramp(pal.ice, pal.contrast);
+    // Ice shards jutting up
+    for (let i = 0; i < 3; i++) {
+      const x = 1 + Math.floor(noise(seed, i, 7) * 12 * s) + s;
+      const h = (3 + Math.floor(noise(seed, i, 8) * 5)) * s;
+      for (let y = 0; y < h; y++) {
+        const half = Math.max(0, Math.round(((h - y) / h) * 1.5 * s) - (y === 0 ? 1 : 0));
+        b.rect(x - half, 1 + H - 1 - y, half * 2 + 1, 1, y > h * 0.6 ? ice[2] : ice[1]);
+      }
+      b.set(x, 1 + H - h, ice[3]);
+    }
+  }
+  if (outline) b.outline(hex(pal.outline));
+  return prop([b.toCanvas()], 1 + 8 * s, H + 1);
+}
+
 /** A dropped item: a small sack with the rarity colour on the tie, or a pile of coins. */
 export function dropProp(color: number | null, pal: Palette, size: SpriteSize, outline: boolean): Prop {
   const s = size === 'large' ? 2 : 1;

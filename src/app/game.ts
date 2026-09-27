@@ -1,6 +1,6 @@
 
 import type { ConsumableId } from '../data/consumables';
-import { PROVING_GROUNDS } from '../data/placeholderEnemies';
+import { zoneById } from '../data/zones';
 import { Music } from '../audio/music';
 import { Sfx } from '../audio/sfx';
 import { PixelView } from '../render2d/pixelView';
@@ -196,9 +196,9 @@ export class Game {
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),
-      travel: (area) => {
+      travel: (area, zoneId) => {
         this.closePanel();
-        this.world!.travel(area);
+        this.world!.travel(area, zoneId);
       },
       exportCode: () => encodeSave(serialize(this.world!.player, this.seed)),
       importCode: async (code) => {
@@ -233,7 +233,7 @@ export class Game {
     this.screens.hide();
     this.hud!.banner(fresh ? 'Falling Sky' : 'Welcome back');
     this.hud!.message(fresh ? (this.touchControls ? 'Drag on the ground to move. Attack hits what is in reach. Tap skills to cast.' : 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.') : `Level ${player.level}, ${player.gold} gold.`);
-    this.hud!.message(`${PROVING_GROUNDS.name} monsters are placeholders. Find the gold waypoint to travel.`, 0xa0a8c0);
+    this.hud!.message('Find the gold waypoint to travel to the zones.', 0xa0a8c0);
     this.drainEvents();
     if (fresh) void this.autosave();
   }
@@ -342,7 +342,7 @@ export class Game {
         }
         break;
       case 'area':
-        this.hud?.banner(ev.area === 'town' ? 'Town' : PROVING_GROUNDS.name);
+        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name);
         this.sfx.play('portal');
         void this.autosave();
         break;

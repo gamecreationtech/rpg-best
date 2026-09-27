@@ -67,6 +67,14 @@ Every feature must serve at least one of these. If it does not, cut it.
 - **Stats:** Strength, Dexterity, Intelligence, Vitality. Full formulas are in
   `docs/design/systems-reference.md` and the export they came from.
 
+### 4.2b Zones (first draft)
+
+Four zones reached from the town waypoint, each with its own map generator,
+colours and monsters, and a level that its monsters scale to: the Proving
+Grounds (open field, level 1), the Cursed Hollow (caves, 6), the Ashen Marsh
+(sunken ruins, 12) and the Frozen Crypt (halls and corridors, 18). Drafted by
+the engineer until the producer's zone and monster data replaces them.
+
 ### 4.3 Combat
 
 - **Camera:** Fixed isometric camera, angle and zoom tuned for phone screens.

@@ -93,7 +93,7 @@ export class Scene2D {
   private props!: PropSprites;
   private fx!: EffectSprites;
   private heroLook!: CharacterSheet;
-  private monsterLooks!: Record<MonsterKind, CharacterSheet>;
+  private monsterLooks!: Partial<Record<MonsterKind, CharacterSheet>>;
   private readonly map = new Uint8Array(MAP_W * MAP_H);
   private hero!: Entity;
   private readonly monsters: Entity[] = [];
@@ -138,7 +138,7 @@ export class Scene2D {
       wraith: monsterSheet('wraith', pal, size, outline),
     };
     if (this.hero) this.hero.sprites = this.heroLook;
-    for (const m of this.monsters) m.sprites = this.monsterLooks[m.kind as MonsterKind];
+    for (const m of this.monsters) m.sprites = this.monsterLooks[m.kind as MonsterKind] ?? this.monsterLooks.ghoul!;
   }
 
   private buildMap(): void {
@@ -182,7 +182,7 @@ export class Scene2D {
   }
 
   private makeEntity(kind: Entity['kind'], x: number, y: number): Entity {
-    const sprites = kind === 'hero' ? this.heroLook : this.monsterLooks[kind];
+    const sprites = kind === 'hero' ? this.heroLook : (this.monsterLooks[kind] ?? this.monsterLooks.ghoul!);
     return { kind, sprites, x, y, faceLeft: false, facing: 'front', anim: 'idle', animT: Math.random(), hp: 3, flash: 0, dead: -1, cooldown: 0, targetX: x, targetY: y, wander: 0, frozen: 0 };
   }
 

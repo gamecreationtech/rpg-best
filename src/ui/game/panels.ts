@@ -1,7 +1,7 @@
 import { ARCANA_OPS, BLOOD_OPS, FORGE_OPS, STATIONS } from '../../data/crafting';
 import { PROFESSIONS, PROFESSION_PERKS } from '../../data/professions';
 import { RARITIES } from '../../data/items';
-import { PROVING_GROUNDS } from '../../data/placeholderEnemies';
+import { ZONES } from '../../data/zones';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
@@ -22,7 +22,7 @@ export interface PanelHost {
   fullscreen: { supported: boolean; active(): boolean; toggle(): void; hint: string | null };
   message(text: string, color?: number): void;
   close(): void;
-  travel(area: 'town' | 'arena'): void;
+  travel(area: 'town' | 'arena', zoneId?: string): void;
   exportCode(): string;
   importCode(code: string): Promise<boolean>;
   saveNow(): Promise<void>;
@@ -87,8 +87,7 @@ export class Panels {
     this.cellSize = Math.max(22, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / 12)));
     if (this.isHero) {
       this.hero.reset();
-      this.hero.tab = kind === 'skills' || kind === 'passives' ? 'skills' : 'inventory';
-      this.hero.scrollToPassives = kind === 'passives';
+      this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : 'inventory';
     }
     this.root.classList.toggle('hero', this.isHero);
     this.render();
@@ -210,10 +209,12 @@ export class Panels {
   private renderWaypoint(w: World): void {
     const card = (name: string, desc: string, here: boolean, onGo: () => void) =>
       h('div', { class: 'card wide' }, h('div', { class: 'card-title' }, name), h('div', { class: 'card-text' }, desc), here ? h('div', { class: 'dim' }, 'You are here') : button('Travel', onGo, 'btn primary'));
-    this.body.append(
-      card('Town', 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', () => this.host.travel('town')),
-      card(PROVING_GROUNDS.name + ' (placeholder)', `An open field with respawning placeholder monsters scaled to your level. Up to ${PROVING_GROUNDS.maxAlive} at once. This stands in for the real zones until their data arrives.`, w.area === 'arena', () => this.host.travel('arena')),
-    );
+    this.body.append(card('Town', 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', () => this.host.travel('town')));
+    for (const z of ZONES) {
+      const here = w.area === 'arena' && w.zoneId === z.id;
+      const tooHigh = w.player.level + 4 < z.level;
+      this.body.append(card(`${z.name}  (level ${z.level})`, z.blurb + (tooHigh ? ` You are level ${w.player.level}; this will hurt.` : ''), here, () => this.host.travel('arena', z.id)));
+    }
   }
 
   // ---------------------------------------------------------------- crafting

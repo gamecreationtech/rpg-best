@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { PLACEHOLDER_ENEMIES } from '../data/placeholderEnemies';
+import { MONSTERS } from '../data/monsters';
+import { ZONES } from '../data/zones';
 import { SKILLS, skillsFor } from '../data/skills';
 import { makeStarterItem } from './items/item';
 import { damagePlayer } from './combat';
@@ -34,7 +35,7 @@ describe('world', () => {
     const w = new World(createPlayer('knight', 'titan'), 3);
     w.travel('arena');
     expect(w.area).toBe('arena');
-    const e = w.spawnEnemy(PLACEHOLDER_ENEMIES[0]!, w.px + 3, w.pz);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
     e.speed = 0;
     w.setTarget(e.id);
     run(w, 4);
@@ -47,7 +48,7 @@ describe('world', () => {
   it('steering with the keys or joystick drops the attack target', () => {
     const w = new World(createPlayer('knight', 'titan'), 3);
     w.travel('arena');
-    const e = w.spawnEnemy(PLACEHOLDER_ENEMIES[0]!, w.px + 6, w.pz);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 6, w.pz);
     e.speed = 0;
     w.setTarget(e.id);
     run(w, 0.5);
@@ -87,6 +88,23 @@ describe('world', () => {
     expect(w.px).toBeGreaterThan(x);
   });
 
+  it('every zone builds, spawns its own roster and scales monsters by its level', () => {
+    for (const zone of ZONES) {
+      const w = new World(createPlayer('rogue', null), 9);
+      w.travel('arena', zone.id);
+      expect(w.zoneId).toBe(zone.id);
+      expect(w.map.cols).toBe(zone.cols);
+      expect(w.map.circleBlocked(w.px, w.pz, 0.4)).toBe(false);
+      run(w, 12);
+      const spawned = w.enemies.filter((e) => e.alive && e.def);
+      expect(spawned.length).toBeGreaterThan(0);
+      for (const e of spawned) {
+        expect(zone.spawns[e.def!.id]).toBeGreaterThan(0);
+        expect(e.maxHp).toBe(Math.round(e.def!.hp * (1 + 0.18 * (zone.level - 1))));
+      }
+    }
+  });
+
   it('dummies reset after a few seconds and never die', () => {
     const w = new World(createPlayer('sorcerer', 'wintercaller'), 4);
     const dummy = w.enemies.find((e) => e.alive && e.dummy)!;
@@ -116,7 +134,7 @@ describe('world', () => {
         w.playerDead = false;
         p.hp = w.derived.maxHp;
         for (let i = 0; i < 6; i++) {
-          const e = w.spawnEnemy(PLACEHOLDER_ENEMIES[i % 2]!, w.px + 2 + i * 0.8, w.pz + (i % 2 ? 0.7 : -0.7));
+          const e = w.spawnEnemy((i % 2 ? MONSTERS.skeleton! : MONSTERS.ghoul!), w.px + 2 + i * 0.8, w.pz + (i % 2 ? 0.7 : -0.7));
           e.speed = 0;
         }
       };
@@ -146,7 +164,7 @@ describe('world', () => {
     const w = new World(createPlayer('rogue', 'silverblade'), 9);
     w.travel('arena');
     w.player.hp = 1;
-    const e = w.spawnEnemy(PLACEHOLDER_ENEMIES[3]!, w.px + 0.8, w.pz);
+    const e = w.spawnEnemy(MONSTERS.brute!, w.px + 0.8, w.pz);
     e.attackTimer = 0;
     run(w, 3);
     expect(w.playerDead).toBe(true);
@@ -160,14 +178,14 @@ describe('touch attack button', () => {
   it('one tap is one swing at something in reach and never walks', () => {
     const w = new World(createPlayer('knight', 'titan'), 21);
     w.travel('arena');
-    const far = w.spawnEnemy(PLACEHOLDER_ENEMIES[1]!, w.px + 6, w.pz);
+    const far = w.spawnEnemy(MONSTERS.skeleton!, w.px + 6, w.pz);
     far.speed = 0;
     const startX = w.px;
     expect(w.attackOnce()).toBe(false);
     run(w, 1);
     expect(w.px).toBeCloseTo(startX, 3);
     expect(w.targetId).toBe(-1);
-    const near = w.spawnEnemy(PLACEHOLDER_ENEMIES[1]!, w.px + 1.2, w.pz);
+    const near = w.spawnEnemy(MONSTERS.skeleton!, w.px + 1.2, w.pz);
     near.speed = 0;
     expect(w.attackOnce()).toBe(true);
     const hp = near.hp;

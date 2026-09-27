@@ -1,4 +1,5 @@
 import type { ClassId } from '../../data/classes';
+import type { MonsterLook } from '../../data/monsters';
 import type { WeaponType } from '../../data/items';
 import { PLEDGES } from '../../data/pledges';
 import type { Palette } from './palettes';
@@ -500,27 +501,73 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
   return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);
 }
 
-export type MonsterKind = 'ghoul' | 'skeleton' | 'brute' | 'wraith';
+export type MonsterKind = MonsterLook;
 
+/** Every monster look. Humanoids share the body drawer; beasts have their own. */
 export function monsterSheet(kind: MonsterKind, pal: Palette, size: SpriteSize, outline: boolean): CharacterSheet {
   const scale = size === 'large' ? 2 : 1;
-  if (kind === 'wraith') return wraithSheet(pal, scale, outline);
-  const H = (kind === 'brute' ? 28 : kind === 'ghoul' ? 18 : 22) * scale;
-  const W = Math.round(H * (kind === 'brute' ? 0.9 : 0.7));
-  const materials = { skin: pal.ghoul, dark: pal.ghoulDark, bone: pal.bone, boneDark: 0x9a9078, brute: pal.brute, bruteDark: pal.bruteDark, leather: pal.leather, steel: pal.steel, wood: pal.wood };
-  const look: Look =
-    kind === 'ghoul'
-      ? { skin: 'skin', body: 'skin', head: 'skin', legs: 'dark', belt: 'dark', eyes: hex(pal.eyeGlow), claws: true, hunch: 1.5 }
-      : kind === 'skeleton'
-        ? { skin: 'bone', body: 'bone', head: 'bone', legs: 'boneDark', belt: 'boneDark', eyes: [0x40, 0xff, 0x90], ribs: true }
-        : { skin: 'brute', body: 'brute', head: 'bruteDark', legs: 'bruteDark', trim: 'leather', belt: 'leather', eyes: [0xff, 0x70, 0x20], horns: true, stout: true };
-  return sheet(pal, H, W, outline, materials, look, null, null, undefined, kind === 'brute' ? 0.65 : kind === 'ghoul' ? 1.2 : 1);
+  switch (kind) {
+    case 'wraith': return wraithSheet(pal, scale, outline, pal.wraith, [0x9f, 0xe0, 0xff]);
+    case 'frostwraith': return wraithSheet(pal, scale, outline, 0x6aa8c8, [0xe0, 0xf8, 0xff]);
+    case 'bat': return batSheet(pal, scale, outline);
+    case 'spider': return spiderSheet(pal, scale, outline);
+    case 'rat': return ratSheet(pal, scale, outline);
+    case 'crawler': return crawlerSheet(pal, scale, outline);
+    case 'wisp': return wispSheet(pal, scale, outline);
+    default: break;
+  }
+  const H = (kind === 'golem' ? 34 : kind === 'troll' ? 32 : kind === 'brute' ? 28 : kind === 'ghoul' ? 18 : kind === 'revenant' ? 24 : 22) * scale;
+  const W = Math.round(H * (kind === 'brute' || kind === 'troll' ? 0.9 : kind === 'golem' ? 0.95 : 0.7));
+  const materials = {
+    skin: pal.ghoul, dark: pal.ghoulDark, bone: pal.bone, boneDark: 0x9a9078, brute: pal.brute, bruteDark: pal.bruteDark,
+    leather: pal.leather, steel: pal.steel, wood: pal.wood, troll: 0x5a7a4a, trollDark: 0x3a5230, stone: 0x6a7a90, stoneDark: 0x4a5670,
+    robe: 0x3a2a5a, robeDark: 0x2a1e42, pale: 0xc8c0b8, darkSteel: 0x5a6070,
+  };
+  let look: Look;
+  let weapon: WeaponDrawer | null = null;
+  let speed = 1;
+  switch (kind) {
+    case 'ghoul':
+      look = { skin: 'skin', body: 'skin', head: 'skin', legs: 'dark', belt: 'dark', eyes: hex(pal.eyeGlow), claws: true, hunch: 1.5 };
+      speed = 1.2;
+      break;
+    case 'skeleton':
+      look = { skin: 'bone', body: 'bone', head: 'bone', legs: 'boneDark', belt: 'boneDark', eyes: [0x40, 0xff, 0x90], ribs: true };
+      break;
+    case 'archer':
+      look = { skin: 'bone', body: 'bone', head: 'leather', legs: 'boneDark', belt: 'leather', eyes: [0x40, 0xff, 0x90], ribs: true, hood: true };
+      weapon = WEAPONS.bow;
+      break;
+    case 'brute':
+      look = { skin: 'brute', body: 'brute', head: 'bruteDark', legs: 'bruteDark', trim: 'leather', belt: 'leather', eyes: [0xff, 0x70, 0x20], horns: true, stout: true };
+      speed = 0.65;
+      break;
+    case 'troll':
+      look = { skin: 'troll', body: 'troll', head: 'trollDark', legs: 'trollDark', belt: 'leather', eyes: [0xff, 0xe0, 0x40], claws: true, hunch: 2, stout: true };
+      speed = 0.7;
+      break;
+    case 'revenant':
+      look = { skin: 'darkSteel', body: 'darkSteel', head: 'darkSteel', legs: 'darkSteel', arms: 'steel', trim: 'boneDark', belt: 'boneDark', helm: true, cape: 'robeDark', eyes: [0x7f, 0xd8, 0xff] };
+      weapon = WEAPONS.sword;
+      break;
+    case 'golem':
+      look = { skin: 'stone', body: 'stone', head: 'stoneDark', legs: 'stoneDark', arms: 'stone', belt: 'stoneDark', eyes: [0x7f, 0xd8, 0xff], stout: true };
+      speed = 0.55;
+      break;
+    case 'necromancer':
+      look = { skin: 'pale', body: 'robe', head: 'robeDark', legs: 'robe', arms: 'robe', trim: 'boneDark', hood: true, eyes: [0x66, 0xe0, 0x70] };
+      weapon = WEAPONS.staff;
+      break;
+    default:
+      look = { skin: 'skin', body: 'skin', head: 'skin', legs: 'dark' };
+  }
+  return sheet(pal, H, W, outline, materials, look, weapon, null, undefined, speed);
 }
 
-function wraithSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+function wraithSheet(pal: Palette, scale: number, outline: boolean, cloth: number, eyes: Rgb): CharacterSheet {
   const H = 24 * scale;
   const W = 14 * scale;
-  const materials = { cloth: pal.wraith, dark: pal.outline };
+  const materials = { cloth, dark: pal.outline };
   const frame = (bob: number, flutter: number, facing: Facing) => {
     const d = doll(H, W, pal, outline, materials);
     const c = base(d, 'cloth');
@@ -537,9 +584,9 @@ function wraithSheet(pal: Palette, scale: number, outline: boolean): CharacterSh
       const ex = facing === 'side' ? hw : hw - 1;
       d.buf.rect(ex - 1, 1 + px(H * 0.2) + bob, 3, 2, hex(pal.outline));
       if (facing === 'front') {
-        d.buf.set(ex - 1, 1 + px(H * 0.2) + bob, [0x9f, 0xe0, 0xff]);
-        d.buf.set(ex + 1, 1 + px(H * 0.2) + bob, [0x9f, 0xe0, 0xff]);
-      } else d.buf.set(ex + 1, 1 + px(H * 0.2) + bob, [0x9f, 0xe0, 0xff]);
+        d.buf.set(ex - 1, 1 + px(H * 0.2) + bob, eyes);
+        d.buf.set(ex + 1, 1 + px(H * 0.2) + bob, eyes);
+      } else d.buf.set(ex + 1, 1 + px(H * 0.2) + bob, eyes);
     }
     return finish(d, hex(pal.outline));
   };
@@ -548,6 +595,150 @@ function wraithSheet(pal: Palette, scale: number, outline: boolean): CharacterSh
     return { idle: anim(idle, W, H, 0.2), walk: anim(idle, W, H, 0.15), attack: anim([frame(-2, 0, facing), frame(-2, 1, facing)], W, H, 0.12) };
   };
   return { side: set('side'), front: set('front'), back: set('back'), height: H };
+}
+
+// ---------------------------------------------------------------- beasts
+
+/** Beasts are drawn from the side only; the same frames serve every facing. */
+function beastSheet(W: number, H: number, frames: { idle: HTMLCanvasElement[]; walk: HTMLCanvasElement[]; attack: HTMLCanvasElement[] }, times: [number, number, number]): CharacterSheet {
+  const set: AnimSet = { idle: anim(frames.idle, W, H, times[0]), walk: anim(frames.walk, W, H, times[1]), attack: anim(frames.attack, W, H, times[2]) };
+  return { side: set, front: set, back: set, height: H };
+}
+
+/** A bat: round body, ears, two wings that beat. */
+function batSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 18 * scale;
+  const H = 12 * scale;
+  const materials = { fur: 0x4a3a5a, wing: 0x3a2a48 };
+  const frame = (beat: number) => {
+    const d = doll(H, W, pal, outline, materials);
+    const fur = base(d, 'fur');
+    const wing = base(d, 'wing');
+    const cx = 2 + W / 2;
+    const cy = 1 + H * 0.6;
+    // Wings: a fan of lines from the shoulder to a tip that rises and falls
+    for (const side of [-1, 1]) {
+      const tipX = cx + side * px(W * 0.45);
+      const tipY = cy - px(H * 0.45) + beat * px(H * 0.35);
+      for (let k = 0; k < 3; k++) {
+        const ex = cx + side * px(W * (0.2 + k * 0.12));
+        const ey = tipY + (k + 1) * px(H * 0.12);
+        d.buf.line(px(cx + side * 2), px(cy - 1), ex, ey, wing);
+      }
+      d.buf.line(px(cx + side * 2), px(cy - 1), tipX, tipY, wing);
+      d.buf.line(tipX, tipY, cx + side * px(W * 0.2), tipY + px(H * 0.36), wing);
+    }
+    d.buf.ellipse(cx, cy, px(W * 0.14), px(H * 0.3), fur);
+    d.buf.set(px(cx - 2), px(cy - H * 0.35), fur);
+    d.buf.set(px(cx + 1), px(cy - H * 0.35), fur);
+    d.buf.set(px(cx - 1), px(cy - H * 0.15), [0xff, 0x40, 0x40]);
+    d.buf.set(px(cx + 1), px(cy - H * 0.15), [0xff, 0x40, 0x40]);
+    return finish(d, hex(pal.outline));
+  };
+  const flap = [frame(0), frame(0.5), frame(1), frame(0.5)];
+  return beastSheet(W, H, { idle: flap, walk: flap, attack: [frame(1), frame(0)] }, [0.08, 0.07, 0.08]);
+}
+
+/** A spider: fat abdomen, small head, four legs a side that scuttle. */
+function spiderSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 20 * scale;
+  const H = 11 * scale;
+  const materials = { body: 0x3a3a40, leg: 0x2a2a30, mark: 0x8a3a3a };
+  const frame = (step: number, lunge: number) => {
+    const d = doll(H, W, pal, outline, materials);
+    const body = base(d, 'body');
+    const leg = base(d, 'leg');
+    const cx = 2 + W * 0.45;
+    const cy = 1 + H * 0.55;
+    for (let k = 0; k < 4; k++) {
+      const spread = (k - 1.5) * px(W * 0.14);
+      const lift = (k + step) % 2 ? 0 : 1;
+      for (const side of [-1, 1]) {
+        const kneeX = px(cx + spread + side * px(W * 0.18));
+        const kneeY = px(cy - H * 0.35 - lift);
+        d.buf.line(px(cx + spread * 0.5), px(cy), kneeX, kneeY, leg);
+        d.buf.line(kneeX, kneeY, px(kneeX + side * px(W * 0.08)), 1 + H - 1 - lift, leg);
+      }
+    }
+    d.buf.ellipse(cx - px(W * 0.12), cy, px(W * 0.24), px(H * 0.32), body);
+    d.buf.ellipse(cx + px(W * 0.2) + lunge, cy + 1, px(W * 0.12), px(H * 0.22), body);
+    d.buf.set(px(cx - W * 0.12), px(cy - 1), base(d, 'mark'));
+    d.buf.set(px(cx + W * 0.28 + lunge), px(cy), [0xff, 0x40, 0x40]);
+    d.buf.set(px(cx + W * 0.28 + lunge), px(cy + 1), [0xff, 0x40, 0x40]);
+    return finish(d, hex(pal.outline));
+  };
+  return beastSheet(W, H, { idle: [frame(0, 0), frame(1, 0)], walk: [frame(0, 0), frame(1, 0)], attack: [frame(0, 1), frame(1, 2), frame(0, 1)] }, [0.3, 0.08, 0.08]);
+}
+
+/** A rat: long body, pointed head, a curling tail. */
+function ratSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 16 * scale;
+  const H = 8 * scale;
+  const materials = { fur: 0x6a5a4a, dark: 0x4a3a2a, tail: 0x8a6a5a };
+  const frame = (step: number) => {
+    const d = doll(H, W, pal, outline, materials);
+    const fur = base(d, 'fur');
+    const cx = 2 + W * 0.5;
+    const cy = 1 + H * 0.55;
+    d.buf.ellipse(cx, cy, px(W * 0.26), px(H * 0.28), fur);
+    d.buf.ellipse(cx + px(W * 0.32), cy + 1, px(W * 0.14), px(H * 0.2), fur);
+    d.buf.set(px(cx + W * 0.28), px(cy - H * 0.3), base(d, 'dark'));
+    d.buf.set(px(cx + W * 0.44), px(cy), [0xff, 0x40, 0x40]);
+    // Tail
+    for (let i = 0; i < px(W * 0.3); i++) d.buf.set(px(cx - W * 0.26) - i, px(cy + Math.sin(i * 0.6 + step) * 1.2), base(d, 'tail'));
+    // Legs
+    for (const ox of [-px(W * 0.14), px(W * 0.14)]) d.buf.rect(px(cx + ox + step), px(cy + H * 0.2), 1, px(H * 0.3), base(d, 'dark'));
+    return finish(d, hex(pal.outline));
+  };
+  return beastSheet(W, H, { idle: [frame(0), frame(0)], walk: [frame(0), frame(1), frame(0), frame(-1)], attack: [frame(1), frame(-1)] }, [0.4, 0.06, 0.08]);
+}
+
+/** A bog crawler: three fat segments, six legs and mandibles. */
+function crawlerSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 26 * scale;
+  const H = 13 * scale;
+  const materials = { shell: 0x4a5a3a, dark: 0x3a4a2a, leg: 0x2e3a22, under: 0x6a7a4a };
+  const frame = (step: number, bite: number) => {
+    const d = doll(H, W, pal, outline, materials);
+    const shell = base(d, 'shell');
+    const cy = 1 + H * 0.55;
+    for (let seg = 0; seg < 3; seg++) {
+      const sx = 2 + W * (0.2 + seg * 0.26);
+      for (const side of [-1, 1]) {
+        const lift = (seg + step) % 2 ? 1 : 0;
+        d.buf.line(px(sx), px(cy), px(sx + side * 2), px(cy + H * 0.3 - lift), base(d, 'leg'));
+        d.buf.line(px(sx + side * 2), px(cy + H * 0.3 - lift), px(sx + side * 3), 1 + H - 1 - lift, base(d, 'leg'));
+      }
+      d.buf.ellipse(sx, cy, px(W * 0.14), px(H * 0.3), seg === 2 ? base(d, 'dark') : shell);
+      d.buf.rect(px(sx - W * 0.08), px(cy + H * 0.1), px(W * 0.16), 1, base(d, 'under'));
+    }
+    const hx = 2 + W * 0.78;
+    d.buf.line(px(hx), px(cy - 1), px(hx + 3 + bite), px(cy - 3), base(d, 'dark'));
+    d.buf.line(px(hx), px(cy + 1), px(hx + 3 + bite), px(cy + 3), base(d, 'dark'));
+    d.buf.set(px(hx), px(cy - 2), [0xe0, 0xff, 0x60]);
+    return finish(d, hex(pal.outline));
+  };
+  return beastSheet(W, H, { idle: [frame(0, 0), frame(0, 0)], walk: [frame(0, 0), frame(1, 0)], attack: [frame(0, 1), frame(1, -1), frame(0, 1)] }, [0.4, 0.12, 0.1]);
+}
+
+/** A wisp: a glowing orb with a flickering halo and a wisp of trail. */
+function wispSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 12 * scale;
+  const H = 12 * scale;
+  const glow = ramp(0x8fffc0, pal.contrast);
+  const frame = (pulse: number) => {
+    const d = doll(H, W, pal, false, { glow: 0x8fffc0 });
+    const cx = 2 + W / 2;
+    const cy = 1 + H / 2;
+    d.buf.ellipse(cx, cy, px(W * 0.3 + pulse), px(H * 0.3 + pulse), glow[1]);
+    d.buf.ellipse(cx, cy, px(W * 0.15), px(H * 0.15), glow[3]);
+    for (let i = 0; i < 3; i++) d.buf.set(px(cx - W * 0.35 - i + pulse), px(cy + H * 0.2 + i), glow[0]);
+    d.buf.set(px(cx + W * 0.2 * pulse), px(cy - H * 0.4), glow[2]);
+    void outline;
+    return d.buf.toCanvas();
+  };
+  const flicker = [frame(0), frame(1), frame(0), frame(-1)];
+  return beastSheet(W, H, { idle: flicker, walk: flicker, attack: [frame(2), frame(1)] }, [0.12, 0.12, 0.1]);
 }
 
 /** The merchant: stout, aproned, wide hat. */
