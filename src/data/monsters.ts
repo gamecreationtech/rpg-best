@@ -65,10 +65,10 @@ export const MONSTERS: Record<string, EnemyDef> = {
   marsh_troll: M({ id: 'marsh_troll', name: 'Marsh Troll', look: 'troll', hp: 420, damage: 26, element: 'physical', speed: 46, xp: 40, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [25, 60], scale: 1.2, pack: [1, 1] }),
 
   // Frozen Crypt
-  frost_wraith: M({ id: 'frost_wraith', name: 'Frost Wraith', look: 'frostwraith', hp: 60, damage: 16, element: 'cold', speed: 55, xp: 10, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, glow: 0x9fe0ff, preferredRange: 190 }),
-  revenant: M({ id: 'revenant', name: 'Revenant Knight', look: 'revenant', hp: 180, damage: 22, element: 'physical', speed: 60, xp: 22, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [10, 30], scale: 1, pack: [1, 2] }),
-  necromancer: M({ id: 'necromancer', name: 'Necromancer', look: 'necromancer', hp: 90, damage: 18, element: 'poison', speed: 50, xp: 18, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [12, 34], scale: 1, pack: [1, 1], preferredRange: 210 }),
-  ice_golem: M({ id: 'ice_golem', name: 'Ice Golem', look: 'golem', hp: 700, damage: 34, element: 'cold', speed: 36, xp: 70, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [40, 90], scale: 1.25, pack: [1, 1], glow: 0x7fd8ff }),
+  frost_wraith: M({ id: 'frost_wraith', name: 'Frost Wraith', look: 'frostwraith', hp: 60, damage: 13, element: 'cold', speed: 55, xp: 10, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, glow: 0x9fe0ff, preferredRange: 190 }),
+  revenant: M({ id: 'revenant', name: 'Revenant Knight', look: 'revenant', hp: 180, damage: 18, element: 'physical', speed: 60, xp: 22, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [10, 30], scale: 1, pack: [1, 1] }),
+  necromancer: M({ id: 'necromancer', name: 'Necromancer', look: 'necromancer', hp: 90, damage: 15, element: 'poison', speed: 50, xp: 18, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [12, 34], scale: 1, pack: [1, 1], preferredRange: 210 }),
+  ice_golem: M({ id: 'ice_golem', name: 'Ice Golem', look: 'golem', hp: 700, damage: 30, element: 'cold', speed: 36, xp: 70, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [40, 90], scale: 1.25, pack: [1, 1], glow: 0x7fd8ff }),
 
   // Ember Foundry
   cinder_bat: M({ id: 'cinder_bat', name: 'Cinder Bat', look: 'bat', hp: 30, damage: 8, element: 'fire', speed: 145, xp: 3, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 5], scale: 1, pack: [3, 6], hover: 14, glow: 0xff7030 }),
@@ -125,8 +125,8 @@ export const MONSTERS: Record<string, EnemyDef> = {
 export const MONSTER_RULES = {
   /** Monsters ignore the hero beyond this many px until hit. */
   aggroRange: 300,
-  hpPerLevel: 0.18,
-  dmgPerLevel: 0.12,
+  hpPerLevel: 0.14,
+  dmgPerLevel: 0.08,
   xpPerLevel: 0.15,
   goldPerLevel: 0.08,
 };

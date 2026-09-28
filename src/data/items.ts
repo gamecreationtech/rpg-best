@@ -34,15 +34,17 @@ export interface RarityDef {
   dropWeight: number;
   /** Random affixes rolled on generation. */
   affixes: number;
+  /** Multiplier for attribute bonuses (strength, life, crit and the like); `mult` is for weapon damage and armour. */
+  bonus: number;
 }
 
 export const RARITIES: Record<Rarity, RarityDef> = {
-  common: { id: 'common', name: 'Common', color: 0xcccccc, mult: 1.0, gold: 8, dropWeight: 55, affixes: 0 },
-  magic: { id: 'magic', name: 'Magic', color: 0x4488ff, mult: 1.6, gold: 40, dropWeight: 25, affixes: 1 },
-  rare: { id: 'rare', name: 'Rare', color: 0xffdd00, mult: 2.4, gold: 120, dropWeight: 14, affixes: 2 },
-  mythic: { id: 'mythic', name: 'Mythic', color: 0xcc44ff, mult: 3.8, gold: 350, dropWeight: 5, affixes: 3 },
-  set: { id: 'set', name: 'Set', color: 0x00ee66, mult: 3.2, gold: 500, dropWeight: 0, affixes: 3 },
-  divine: { id: 'divine', name: 'Divine', color: 0xff8800, mult: 5.5, gold: 900, dropWeight: 1, affixes: 4 },
+  common: { id: 'common', name: 'Common', color: 0xcccccc, mult: 1.0, gold: 8, dropWeight: 55, affixes: 0, bonus: 1.0 },
+  magic: { id: 'magic', name: 'Magic', color: 0x4488ff, mult: 1.6, gold: 40, dropWeight: 25, affixes: 1, bonus: 1.25 },
+  rare: { id: 'rare', name: 'Rare', color: 0xffdd00, mult: 2.4, gold: 120, dropWeight: 14, affixes: 2, bonus: 1.5 },
+  mythic: { id: 'mythic', name: 'Mythic', color: 0xcc44ff, mult: 3.8, gold: 350, dropWeight: 5, affixes: 3, bonus: 2.0 },
+  set: { id: 'set', name: 'Set', color: 0x00ee66, mult: 3.2, gold: 500, dropWeight: 0, affixes: 3, bonus: 1.8 },
+  divine: { id: 'divine', name: 'Divine', color: 0xff8800, mult: 5.5, gold: 900, dropWeight: 1, affixes: 4, bonus: 2.5 },
 };
 
 export const RARITY_ORDER: Rarity[] = ['common', 'magic', 'rare', 'mythic', 'set', 'divine'];
@@ -75,38 +77,38 @@ export interface BaseItem {
 }
 
 export const WEAPON_BASES: BaseItem[] = [
-  { id: 'sword', name: 'Sword', slot: 'weapon', size: [1, 3], stats: { str: 3 }, weapon: { type: 'sword', dmgMin: 5, dmgMax: 11, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 30 } },
-  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 5 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 25 } },
-  { id: 'axe', name: 'Axe', slot: 'weapon', size: [1, 3], stats: { str: 7 }, weapon: { type: 'axe', dmgMin: 12, dmgMax: 20, atkSpd: 0.9, ranged: false, magic: false, twoHanded: false, range: 84 } },
-  { id: 'mace', name: 'Mace', slot: 'weapon', size: [1, 3], stats: { str: 4, vit: 2 }, weapon: { type: 'mace', dmgMin: 8, dmgMax: 14, atkSpd: 0.8, ranged: false, magic: false, twoHanded: false, range: 30 } },
-  { id: 'spear', name: 'Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
-  { id: 'bow', name: 'Bow', slot: 'weapon', size: [2, 3], stats: { dex: 8 }, weapon: { type: 'bow', dmgMin: 10, dmgMax: 18, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 200 } },
-  { id: 'crossbow', name: 'Crossbow', slot: 'weapon', size: [2, 3], stats: { dex: 5 }, weapon: { type: 'crossbow', dmgMin: 16, dmgMax: 28, atkSpd: 0.8, ranged: true, magic: false, twoHanded: true, range: 380 } },
-  { id: 'wand', name: 'Wand', slot: 'weapon', size: [1, 2], stats: { int: 12 }, weapon: { type: 'wand', dmgMin: 6, dmgMax: 12, atkSpd: 1.6, ranged: true, magic: true, twoHanded: false, range: 200 } },
-  { id: 'staff', name: 'Staff', slot: 'weapon', size: [1, 4], stats: { int: 18 }, weapon: { type: 'staff', dmgMin: 14, dmgMax: 22, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 200 } },
-  { id: 'blowgun', name: 'Blowgun', slot: 'weapon', size: [1, 4], stats: { dex: 12 }, weapon: { type: 'blowgun', dmgMin: 3, dmgMax: 7, atkSpd: 1.9, ranged: true, magic: false, twoHanded: true, range: 300 } },
-  { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 9 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 45 } },
-  { id: 'spellbook', name: 'Spellbook', slot: 'weapon', size: [2, 2], stats: { int: 10, mana: 20 }, weapon: { type: 'spellbook', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: true, magic: true, twoHanded: false, range: 200 } },
-  { id: 'warpike', name: 'Warpike', slot: 'weapon', size: [1, 4], stats: { str: 5, dex: 3 }, weapon: { type: 'warpike', dmgMin: 12, dmgMax: 20, atkSpd: 1.0, ranged: false, magic: false, twoHanded: true, range: 130 } },
+  { id: 'sword', name: 'Sword', slot: 'weapon', size: [1, 3], stats: { str: 1 }, weapon: { type: 'sword', dmgMin: 5, dmgMax: 11, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 30 } },
+  { id: 'dagger', name: 'Dagger', slot: 'weapon', size: [1, 2], stats: { dex: 2 }, weapon: { type: 'dagger', dmgMin: 2, dmgMax: 6, atkSpd: 2.2, ranged: false, magic: false, twoHanded: false, range: 25 } },
+  { id: 'axe', name: 'Axe', slot: 'weapon', size: [1, 3], stats: { str: 2 }, weapon: { type: 'axe', dmgMin: 12, dmgMax: 20, atkSpd: 0.9, ranged: false, magic: false, twoHanded: false, range: 84 } },
+  { id: 'mace', name: 'Mace', slot: 'weapon', size: [1, 3], stats: { str: 1, vit: 1 }, weapon: { type: 'mace', dmgMin: 8, dmgMax: 14, atkSpd: 0.8, ranged: false, magic: false, twoHanded: false, range: 30 } },
+  { id: 'spear', name: 'Spear', slot: 'weapon', size: [1, 4], stats: { str: 1 }, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 110 } },
+  { id: 'bow', name: 'Bow', slot: 'weapon', size: [2, 3], stats: { dex: 2 }, weapon: { type: 'bow', dmgMin: 10, dmgMax: 18, atkSpd: 1.3, ranged: true, magic: false, twoHanded: true, range: 200 } },
+  { id: 'crossbow', name: 'Crossbow', slot: 'weapon', size: [2, 3], stats: { dex: 1 }, weapon: { type: 'crossbow', dmgMin: 16, dmgMax: 28, atkSpd: 0.8, ranged: true, magic: false, twoHanded: true, range: 380 } },
+  { id: 'wand', name: 'Wand', slot: 'weapon', size: [1, 2], stats: { int: 2 }, weapon: { type: 'wand', dmgMin: 6, dmgMax: 12, atkSpd: 1.6, ranged: true, magic: true, twoHanded: false, range: 200 } },
+  { id: 'staff', name: 'Staff', slot: 'weapon', size: [1, 4], stats: { int: 3 }, weapon: { type: 'staff', dmgMin: 14, dmgMax: 22, atkSpd: 0.9, ranged: true, magic: true, twoHanded: true, range: 200 } },
+  { id: 'blowgun', name: 'Blowgun', slot: 'weapon', size: [1, 4], stats: { dex: 3 }, weapon: { type: 'blowgun', dmgMin: 3, dmgMax: 7, atkSpd: 1.9, ranged: true, magic: false, twoHanded: true, range: 300 } },
+  { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 2 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 45 } },
+  { id: 'spellbook', name: 'Spellbook', slot: 'weapon', size: [2, 2], stats: { int: 2, mana: 10 }, weapon: { type: 'spellbook', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: true, magic: true, twoHanded: false, range: 200 } },
+  { id: 'warpike', name: 'Warpike', slot: 'weapon', size: [1, 4], stats: { str: 1, dex: 1 }, weapon: { type: 'warpike', dmgMin: 12, dmgMax: 20, atkSpd: 1.0, ranged: false, magic: false, twoHanded: true, range: 130 } },
 ];
 
 export const ARMOR_BASES: BaseItem[] = [
-  { id: 'helmet', name: 'Helmet', slot: 'helmet', size: [2, 2], stats: { armor: 4, vit: 3 } },
-  { id: 'chest_armor', name: 'Chest Armor', slot: 'chest', size: [2, 3], stats: { armor: 10, vit: 6 } },
-  { id: 'leather_armor', name: 'Leather Armor', slot: 'chest', size: [2, 3], stats: { armor: 6, dex: 2 } },
-  { id: 'gauntlets', name: 'Gauntlets', slot: 'gloves', size: [2, 2], stats: { armor: 2, dex: 3 } },
-  { id: 'boots', name: 'Boots', slot: 'boots', size: [2, 2], stats: { armor: 3, dex: 2 } },
+  { id: 'helmet', name: 'Helmet', slot: 'helmet', size: [2, 2], stats: { armor: 4, vit: 1 } },
+  { id: 'chest_armor', name: 'Chest Armor', slot: 'chest', size: [2, 3], stats: { armor: 10, vit: 1 } },
+  { id: 'leather_armor', name: 'Leather Armor', slot: 'chest', size: [2, 3], stats: { armor: 6, dex: 1 } },
+  { id: 'gauntlets', name: 'Gauntlets', slot: 'gloves', size: [2, 2], stats: { armor: 2, dex: 1 } },
+  { id: 'boots', name: 'Boots', slot: 'boots', size: [2, 2], stats: { armor: 3, dex: 1 } },
 ];
 
 export const ACCESSORY_BASES: BaseItem[] = [
-  { id: 'ring', name: 'Ring', slot: 'ring', size: [1, 1], stats: { int: 2, mana: 15 } },
-  { id: 'power_ring', name: 'Power Ring', slot: 'ring', size: [1, 1], stats: { str: 3, damage: 5 } },
-  { id: 'belt', name: 'Belt', slot: 'belt', size: [1, 2], stats: { armor: 3, vit: 4 } },
-  { id: 'war_belt', name: 'War Belt', slot: 'belt', size: [1, 2], stats: { armor: 6, str: 2, vit: 2 } },
-  { id: 'amulet', name: 'Amulet', slot: 'amulet', size: [1, 1], stats: { int: 3, mana: 20 } },
-  { id: 'jade_amulet', name: 'Jade Amulet', slot: 'amulet', size: [1, 1], stats: { vit: 4, armor: 2 } },
-  { id: 'wooden_shield_base', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 2, block: 8 } },
-  { id: 'iron_shield', name: 'Iron Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 2, block: 15 } },
+  { id: 'ring', name: 'Ring', slot: 'ring', size: [1, 1], stats: { int: 1, mana: 10 } },
+  { id: 'power_ring', name: 'Power Ring', slot: 'ring', size: [1, 1], stats: { str: 1, damage: 2 } },
+  { id: 'belt', name: 'Belt', slot: 'belt', size: [1, 2], stats: { armor: 3, vit: 1 } },
+  { id: 'war_belt', name: 'War Belt', slot: 'belt', size: [1, 2], stats: { armor: 6, str: 1, vit: 1 } },
+  { id: 'amulet', name: 'Amulet', slot: 'amulet', size: [1, 1], stats: { int: 1, mana: 10 } },
+  { id: 'jade_amulet', name: 'Jade Amulet', slot: 'amulet', size: [1, 1], stats: { vit: 1, armor: 2 } },
+  { id: 'wooden_shield_base', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 1, block: 8 } },
+  { id: 'iron_shield', name: 'Iron Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 1, block: 15 } },
 ];
 
 /** Divine-only specials. They can drop at the divine weight and are never scaled down. */
@@ -143,19 +145,21 @@ export interface Affix {
 }
 
 export const AFFIX_POOL: Affix[] = [
-  { stat: 'damage', delta: 12, suffix: 'of Fury' },
-  { stat: 'armor', delta: 10, suffix: 'of Warding' },
-  { stat: 'str', delta: 6, suffix: 'of Strength' },
-  { stat: 'dex', delta: 6, suffix: 'of Swiftness' },
-  { stat: 'int', delta: 6, suffix: 'of Wisdom' },
-  { stat: 'vit', delta: 6, suffix: 'of Endurance' },
+  { stat: 'damage', delta: 3, suffix: 'of Fury' },
+  { stat: 'armor', delta: 6, suffix: 'of Warding' },
+  { stat: 'str', delta: 2, suffix: 'of Strength' },
+  { stat: 'dex', delta: 2, suffix: 'of Swiftness' },
+  { stat: 'int', delta: 2, suffix: 'of Wisdom' },
+  { stat: 'vit', delta: 2, suffix: 'of Endurance' },
   { stat: 'critChance', delta: 0.1, suffix: 'of Precision' },
   { stat: 'atkSpd', delta: 0.15, suffix: 'of Haste' },
 ];
 
 export const ITEM_RULES = {
-  /** mult = rarity.mult * (1 + (ilvl - 1) * levelScale) */
+  /** Weapon damage, armour and block: mult = rarity.mult * (1 + (ilvl - 1) * levelScale) */
   levelScale: 0.12,
+  /** Attribute bonuses: bonus = rarity.bonus * (1 + (ilvl - 1) * bonusLevelScale). A level 2 magic axe gives a point or two, a level 100 mythic one a dozen. */
+  bonusLevelScale: 0.06,
   /** value = rarityGold * width * height * (1 + (ilvl - 1) * valueScale) */
   valueScale: 0.05,
   sellRatio: 0.4,

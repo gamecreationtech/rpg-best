@@ -3,7 +3,8 @@ import { Rng } from '../../gen/rng';
 import { ARCANA_OPS, FORGE_OPS, applyArcana, applyForge } from './crafting';
 import { Equipment } from './equipment';
 import { Inventory } from './inventory';
-import { generateItem, makeStarterItem, rollRarity } from './item';
+import { baseItem } from '../../data/items';
+import { generateItem, makeItem, makeStarterItem, rollRarity } from './item';
 import { generateStock, sellPrice } from './vendor';
 
 describe('item generation', () => {
@@ -15,6 +16,27 @@ describe('item generation', () => {
     expect(rare.affixes.length).toBe(2);
     expect(rare.value).toBeGreaterThan(common.value);
     expect(rare.reqLevel).toBe(8);
+  });
+
+  it('keeps attribute bonuses small on low-level items and lets them grow', () => {
+    const attrs = ['str', 'dex', 'int', 'vit'] as const;
+    for (let seed = 1; seed <= 40; seed++) {
+      const rng = new Rng(seed);
+      const low = generateItem(rng, { ilvl: 2, rarity: 'magic' });
+      for (const k of attrs) expect(low.stats[k] ?? 0, `${low.name} ${k}`).toBeLessThanOrEqual(4);
+      const rare = generateItem(rng, { ilvl: 2, rarity: 'rare' });
+      for (const k of attrs) expect(rare.stats[k] ?? 0, `${rare.name} ${k}`).toBeLessThanOrEqual(6);
+    }
+    const rng = new Rng(5);
+    const high = makeItem(baseItem('axe'), 'mythic', 100, null);
+    expect(high.stats.str!).toBeGreaterThanOrEqual(10);
+    expect(high.stats.str!).toBeLessThanOrEqual(40);
+    // Weapon damage still climbs steeply with rarity and level
+    const low = makeItem(baseItem('axe'), 'magic', 2, rng);
+    expect(high.weapon!.dmgMax).toBeGreaterThan(low.weapon!.dmgMax * 10);
+    // Divine specials carry their numbers as written
+    const charm = makeItem(baseItem('vital_charm'), 'divine', 60, rng);
+    expect(charm.stats.life).toBe(500);
   });
 
   it('rarity weights roughly match the design', () => {

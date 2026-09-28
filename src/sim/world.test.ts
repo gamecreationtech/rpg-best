@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MONSTERS } from '../data/monsters';
+import { MONSTERS, MONSTER_RULES } from '../data/monsters';
 import { ZONES } from '../data/zones';
 import { SKILLS, skillsFor } from '../data/skills';
 import { makeStarterItem } from './items/item';
@@ -100,7 +100,7 @@ describe('world', () => {
       expect(spawned.length).toBeGreaterThan(0);
       for (const e of spawned) {
         expect(zone.spawns[e.def!.id]).toBeGreaterThan(0);
-        expect(e.maxHp).toBe(Math.round(e.def!.hp * (1 + 0.18 * (zone.level - 1))));
+        expect(e.maxHp).toBe(Math.round(e.def!.hp * (1 + MONSTER_RULES.hpPerLevel * (zone.level - 1))));
       }
     }
   });

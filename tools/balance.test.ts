@@ -24,6 +24,7 @@ function run(w: World, seconds: number): void {
 
 it('every class levels at a sane pace in every zone', () => {
   const out: string[] = [];
+  const problems: string[] = [];
   for (const zone of ZONES) {
     for (const cls of ['knight', 'rogue', 'sorcerer'] as const) {
       const level = Math.min(LEVELING.maxLevel, Math.max(1, zone.level));
@@ -72,11 +73,10 @@ it('every class levels at a sane pace in every zone', () => {
       }
       const perMin = xpSum / (t / 60);
       const minutesPerLevel = xpForLevel(level) / Math.max(1, perMin);
-      expect(deaths, `${cls} died in ${zone.id}`).toBe(0);
-      expect(minutesPerLevel, `${cls} in ${zone.id}`).toBeGreaterThan(0.5);
-      expect(minutesPerLevel, `${cls} in ${zone.id}`).toBeLessThan(30);
+      problems.push(...(deaths ? [`${cls} died in ${zone.id}`] : []), ...(minutesPerLevel <= 0.5 || minutesPerLevel >= 30 ? [`${cls} in ${zone.id}: ${minutesPerLevel.toFixed(1)} min per level`] : []));
       out.push(`${zone.id.padEnd(22)} L${String(level).padEnd(3)} ${cls.padEnd(8)} kills/min ${(w.player.kills / (t / 60)).toFixed(1).padStart(5)} xp/min ${perMin.toFixed(0).padStart(6)} unit ${(perMin / (1 + 0.15 * (level - 1))).toFixed(0).padStart(4)} min/lvl ${minutesPerLevel.toFixed(1).padStart(6)} ${deaths ? 'DIED at ' + t + 's' : 'alive'} hp ${Math.round(w.player.hp)}/${w.derived.maxHp} potions ${w.player.potions.hp_potion}`);
     }
   }
   console.log(out.join('\n'));
+  expect(problems, problems.join('; ')).toEqual([]);
 }, 120000);

@@ -40,9 +40,18 @@ export function itemValue(rarity: Rarity, size: [number, number], ilvl: number):
   return Math.round(RARITIES[rarity].gold * size[0] * size[1] * (1 + (ilvl - 1) * ITEM_RULES.valueScale));
 }
 
+/** Weapon damage, armour and block grow fast with rarity and level. */
 export function statMultiplier(rarity: Rarity, ilvl: number): number {
   return RARITIES[rarity].mult * (1 + (ilvl - 1) * ITEM_RULES.levelScale);
 }
+
+/** Attribute bonuses grow gently, so a low-level item gives a point or two. */
+export function bonusMultiplier(rarity: Rarity, ilvl: number): number {
+  return RARITIES[rarity].bonus * (1 + (ilvl - 1) * ITEM_RULES.bonusLevelScale);
+}
+
+/** The stats that use the big multiplier; everything else is an attribute bonus. */
+const HEAVY_STATS: StatKey[] = ['armor', 'block'];
 
 /** Small decimal stats keep their precision; everything else rounds to whole numbers. */
 const DECIMAL_STATS: StatKey[] = ['atkSpd', 'critChance', 'lifeSteal', 'dodge'];
@@ -58,11 +67,15 @@ export function reqLevelFor(ilvl: number): number {
 
 /** Builds an item from a base definition at a rarity and item level. */
 export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng | null): Item {
-  const mult = base.noDrop ? 1 : statMultiplier(rarity, ilvl);
+  // Starters and the divine specials carry their numbers as written
+  const fixed = base.noDrop || !!base.rarity;
+  const mult = fixed ? 1 : statMultiplier(rarity, ilvl);
+  const bonus = fixed ? 1 : bonusMultiplier(rarity, ilvl);
+  const multFor = (key: StatKey) => (HEAVY_STATS.includes(key) ? mult : bonus);
   const stats: StatMap = {};
   for (const k in base.stats) {
     const key = k as StatKey;
-    stats[key] = scaleStat(key, base.stats[key]!, mult);
+    stats[key] = scaleStat(key, base.stats[key]!, multFor(key));
   }
   const affixes: string[] = [];
   if (rng && RARITIES[rarity].affixes > 0) {
@@ -70,7 +83,8 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     for (let i = 0; i < RARITIES[rarity].affixes && pool.length; i++) {
       const idx = rng.int(0, pool.length - 1);
       const affix = pool.splice(idx, 1)[0]!;
-      stats[affix.stat] = (stats[affix.stat] ?? 0) + scaleStat(affix.stat as StatKey, affix.delta, mult);
+      const key = affix.stat as StatKey;
+      stats[key] = (stats[key] ?? 0) + scaleStat(key, affix.delta, multFor(key));
       affixes.push(affix.suffix);
     }
   }

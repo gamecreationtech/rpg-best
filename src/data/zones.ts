@@ -61,7 +61,7 @@ export const ZONES: ZoneDef[] = [
   {
     id: 'frozen_crypt', name: 'Frozen Crypt', blurb: 'Halls of ice beneath a dead king. Wraiths of frost, knights who will not stay buried, necromancers, and the golems they woke.',
     level: 18, layout: 'crypt', cols: 84, rows: 70,
-    spawns: { frost_wraith: 30, revenant: 30, necromancer: 16, ice_golem: 6, skeleton: 18 }, maxAlive: 44, spawnInterval: 1.5,
+    spawns: { frost_wraith: 28, revenant: 22, necromancer: 14, ice_golem: 6, skeleton: 30 }, maxAlive: 40, spawnInterval: 1.5,
     tiles: { floor: 0x3e4658, floorAlt: 0x384052, seam: 0x1e2434, wall: 0x4a5670, wallTop: 0x6a7a96 },
     lightColor: 0x7fd8ff, darkness: 0.62, decor: 'ice',
   },
