@@ -2,13 +2,12 @@ import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
-import { SKILLS, skillsFor } from '../../data/skills';
+import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
 import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
 import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlockUltimate, unlockedSlots } from '../../sim/player';
-import { skillCooldown } from '../../sim/skills/cast';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -53,6 +52,50 @@ export function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 
 
 export function label(text: string, color = MUTED): HTMLElement {
   return pxText(text, { color });
+}
+
+/**
+ * What a skill does in numbers for the hero as it stands: cooldown at this
+ * rank (and at rank 5), the damage range it would deal now, and the sum
+ * behind it so the player can see what to raise.
+ */
+function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; damage: string; formula: string | null } {
+  const d = w.derived;
+  const eff = def.effect;
+  const atRank = Math.max(1, rank);
+  const rankBonus = def.rankBonus ?? 0.2;
+  const rankMult = 1 + atRank * rankBonus;
+  const cdNow = (rank >= 5 && def.rank5Cooldown ? def.rank5Cooldown : def.cooldown) / 1000 * (1 - d.cdr / 100);
+  const cd5 = (def.rank5Cooldown ?? def.cooldown) / 1000 * (1 - d.cdr / 100);
+  let cooldown = cdNow > 0 ? `${cdNow.toFixed(1)}s` : eff.kind === 'projectile' && eff.rateLimited ? `none (limited by ${eff.rateLimited} speed)` : 'none';
+  if (cdNow > 0 && rank < 5 && cd5 < cdNow) cooldown += ` (${cd5.toFixed(1)}s at rank 5)`;
+  // The base roll: weapon plus the stat that scales it
+  const magic = d.isMagicWeapon;
+  const scalesWithInt = 'scalesWithInt' in eff && !!eff.scalesWithInt && !magic;
+  let statBonus = magic ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage;
+  if (scalesWithInt) statBonus += d.int * 0.5 + d.spellDmg;
+  const baseText = `weapon ${d.dmgMin}-${d.dmgMax} + ${magic ? `Intelligence ${d.int}` : `Strength ${d.str}`} x 0.5${magic ? (d.spellDmg ? ` + spell damage ${d.spellDmg}` : '') : (d.bonusDamage ? ` + bonus damage ${d.bonusDamage}` : '')}${scalesWithInt ? ` + Intelligence ${d.int} x 0.5` : ''}`;
+  const hit = (mult: number) => [Math.max(1, Math.round((d.dmgMin + statBonus) * mult * rankMult * d.dmgMult)), Math.max(1, Math.round((d.dmgMax + statBonus) * mult * rankMult * d.dmgMult))];
+  const chain = (mult: number) => `(${baseText}) x ${mult} skill x ${rankMult.toFixed(2)} rank (1 + ${rankBonus} per rank)${d.dmgMult !== 1 ? ` x ${d.dmgMult.toFixed(2)} bonuses` : ''}`;
+  const when = rank ? '' : ' at rank 1';
+  const mult = 'damageMult' in eff ? eff.damageMult ?? 0 : 0;
+  if (mult > 0) {
+    const [lo, hi] = hit(mult);
+    let extra = '';
+    if (eff.kind === 'projectile' && eff.count && eff.count > 1) extra = ` per bolt, ${eff.count} bolts`;
+    else if (eff.kind === 'aoe') extra = ` to everything within ${eff.radius} px`;
+    else if (eff.kind === 'melee' && eff.arc) extra = ` in a ${eff.arc}\u00b0 arc`;
+    else if (eff.kind === 'zone') extra = ` per tick`;
+    return { cooldown, damage: `Damage ${lo} to ${hi} ${def.element}${extra}${when}`, formula: chain(mult) };
+  }
+  if (eff.kind === 'beam') {
+    const [lo, hi] = hit(eff.drainMult);
+    return { cooldown, damage: `Damage ${lo} to ${hi} ${def.element} every ${(eff.interval / 1000).toFixed(1)}s for ${(eff.duration / 1000).toFixed(0)}s${when}`, formula: chain(eff.drainMult) };
+  }
+  if (eff.kind === 'curse') return { cooldown, damage: `Damage ${eff.pctPerSec}% of the target's life per second for ${(eff.duration / 1000).toFixed(0)}s; kills below ${eff.executeBelowPct}% life`, formula: 'Scales with the target\'s life, not your gear' };
+  if (eff.kind === 'melee' && eff.bleed) return { cooldown, damage: `Damage ${eff.bleed.pctOfMaxHp}% of the target's life over ${(eff.bleed.duration / 1000).toFixed(0)}s`, formula: 'Scales with the target\'s life, not your gear' };
+  if (eff.kind === 'buff') return { cooldown, damage: `No damage: a ${(eff.duration / 1000).toFixed(0)}s buff`, formula: null };
+  return { cooldown, damage: 'No direct damage', formula: null };
 }
 
 /**
@@ -476,18 +519,18 @@ export class HeroMenu {
       const ult = s.upgradesTo ? SKILLS[s.upgradesTo] : null;
       const ultOn = !!ult && p.unlockedUltimates.includes(ult.id);
       const active = ultOn ? ult! : s;
-      const eff = active.effect;
-      const cd = skillCooldown(w, active);
       const color = hex(s.pledgeId ? PLEDGES[s.pledgeId]!.color : CLASSES[p.classId].color);
       const learn = canLearnSkill(p, s.id);
-      const meta = `${active.manaCost} mana, ${cd > 0 ? cd.toFixed(1) + 's cooldown' : eff.kind === 'projectile' && eff.rateLimited ? 'no cooldown' : 'instant'}${(s.reqLevel ?? 1) > 1 ? `, level ${s.reqLevel}` : ''}${s.requires ? `, needs ${s.requires}` : ''}${'damageMult' in eff && eff.damageMult ? `, ${eff.damageMult}x damage` : ''}`;
       const row = h('div', { class: 'px-inset px-skill' + (rank ? '' : ' unlearned') });
       row.style.setProperty('--c', color);
+      const info = skillInfo(w, active, rank);
       row.append(
-        h('div', { class: 'px-row' }, pxText(active.name, { color }), ultOn ? pxText('ULTIMATE', { color: '#ffdd44', scale: 1 }) : null, s.tier === 'pledge' ? pxText(PLEDGES[s.pledgeId!]!.name, { color: MUTED, scale: 1 }) : null, h('span', { class: 'grow' }), pxText(`Rank ${rank}/5`, { color: MUTED })),
+        h('div', { class: 'px-row' }, pxText(`${active.name}  Rank ${rank}/5`, { color }), ultOn ? pxText('ULTIMATE', { color: '#ffdd44', scale: 1 }) : null, s.tier === 'pledge' ? pxText(PLEDGES[s.pledgeId!]!.name, { color: MUTED, scale: 1 }) : null, h('span', { class: 'grow' }), (s.reqLevel ?? 1) > 1 ? pxText(`Level ${s.reqLevel}`, { color: MUTED, scale: 1 }) : null),
         pxText(active.description, { color: TEXT, maxChars: 80 }),
-        pxText(meta, { color: MUTED, maxChars: 80 }),
+        pxText(`Cooldown ${info.cooldown}  \u00b7  ${active.manaCost} mana${s.requires ? `  \u00b7  needs a ${s.requires}` : ''}`, { color: MUTED }),
+        pxText(info.damage, { color: rank ? TEXT : MUTED }),
       );
+      if (info.formula) row.append(pxText(info.formula, { color: MUTED, scale: 1 }));
       const actions = h('div', { class: 'px-row actions' });
       actions.append(pbtn(rank ? `Rank up (${p.skillPoints})` : `Learn (${p.skillPoints})`, () => {
         if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
