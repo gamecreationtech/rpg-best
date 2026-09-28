@@ -40,10 +40,11 @@ export class IsoCamera implements Projector {
   private targetZ = 0;
 
   /** Chooses the frame size for the window: about 640x360 at a whole-number scale, always filling the window. */
-  fit(windowW: number, windowH: number, targetW = 640, targetH = 360): void {
+  /** Sizes the frame to the window: the largest whole scale that fits the target frame, or a forced one. */
+  fit(windowW: number, windowH: number, targetW = 640, targetH = 360, forcedScale = 0): void {
     this.windowW = windowW;
     this.windowH = windowH;
-    this.scale = Math.max(1, Math.floor(Math.min(windowW / targetW, windowH / targetH)));
+    this.scale = forcedScale > 0 ? Math.floor(forcedScale) : Math.max(1, Math.floor(Math.min(windowW / targetW, windowH / targetH)));
     this.width = Math.ceil(windowW / this.scale);
     this.height = Math.ceil(windowH / this.scale);
     this.offsetX = Math.floor((windowW - this.width * this.scale) / 2);

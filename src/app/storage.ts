@@ -94,16 +94,18 @@ export interface Settings {
   controls: 'auto' | 'touch' | 'tap';
   /** Ask phones for full screen when play starts. */
   fullscreen: boolean;
+  /** Pixel scale of the game frame: 0 picks it from the screen, otherwise a whole number. */
+  zoom: 0 | 1 | 2 | 3;
 }
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0, ...(JSON.parse(raw) as Partial<Settings>) };
   } catch {
     // ignore
   }
-  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true };
+  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0 };
 }
 
 export function saveSettings(s: Settings): void {
