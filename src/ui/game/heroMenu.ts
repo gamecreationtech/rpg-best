@@ -488,16 +488,18 @@ export class HeroMenu {
     attr('Dexterity', 'dex', d.dex);
     attr('Intelligence', 'int', d.int);
     attr('Vitality', 'vit', d.vit);
-    if (pendingTotal > 0) {
+    if (p.statPoints > 0) {
+      // The row is always there so the sheet does not jump when points go pending
       sheet.append(h('div', { class: 'px-row tight stat-confirm' },
         pbtn('Confirm', () => {
+          if (!pendingTotal) return;
           for (const key of ['str', 'dex', 'int', 'vit'] as const) for (let i = 0; i < pend[key]; i++) allocateStat(p, key);
           this.clearPending();
           w.markDirty();
           w.recomputeStats();
           rerender();
-        }, 'gold'),
-        pbtn('Cancel', () => { this.clearPending(); rerender(); }, 'dim'),
+        }, pendingTotal ? 'gold' : 'dim'),
+        pbtn('Cancel', () => { this.clearPending(); rerender(); }, pendingTotal ? 'btn' : 'dim'),
       ));
     }
     head('Offense');

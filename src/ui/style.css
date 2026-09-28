@@ -515,9 +515,11 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-stat-head { padding: 8px 0 2px; }
 .px-stat { display: flex; align-items: center; gap: 8px; padding: 1px 0; border-bottom: 1px solid #1e1e28; min-height: 20px; }
 .px-stat .pxb { min-height: 22px; padding: 0 6px; }
-.pxb.tiny { min-height: 20px; min-width: 20px; padding: 0 4px; justify-content: center; }
-.pxb.tiny .mt { font-size: 12px; line-height: 1; }
-.stat-confirm { padding: 6px 0 2px; justify-content: flex-end; }
+.pxb.tiny { min-height: 16px; height: 16px; min-width: 16px; width: 16px; padding: 0; justify-content: center; border-image-width: 3px; }
+.pxb.tiny .mt { font-size: 11px; line-height: 1; }
+.stat-confirm { padding: 4px 0 2px; justify-content: flex-end; min-height: 34px; }
+.stat-confirm .pxb { min-height: 24px; padding: 0 8px; }
+.stat-confirm .pxb .mt { font-size: 12px; }
 
 /* Bag */
 .px-grid { padding: 0; }
