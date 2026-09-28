@@ -361,6 +361,7 @@ export class Game {
         void this.autosave();
         break;
       case 'level_up':
+        this.hud?.banner(`Level ${ev.level}`);
         void this.autosave();
         break;
       case 'pledge_choice':
