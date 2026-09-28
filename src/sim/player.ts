@@ -88,6 +88,8 @@ export interface DerivedStats {
   cdr: number;
   magicFind: number;
   goldFind: number;
+  /** Scales every monster's chance to drop an item at all. */
+  itemFind: number;
   pierce: number;
   poisonChance: number;
   burnChance: number;
@@ -243,6 +245,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     cdr: Math.min(60, g('cdr')),
     magicFind: g('magicFind'),
     goldFind: g('goldFind'),
+    itemFind: g('itemFind'),
     pierce: g('pierce'),
     poisonChance: g('poisonChance'),
     burnChance: g('burnChance'),

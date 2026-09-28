@@ -30,6 +30,7 @@ const SLIDERS: DevSlider[] = [
   { key: 'projSpeed', label: 'Projectile speed', min: 0, max: 300, step: 5, unit: '%' },
   { key: 'goldFind', label: 'Gold find', min: 0, max: 500, step: 5, unit: '%' },
   { key: 'magicFind', label: 'Magic find', min: 0, max: 500, step: 5, unit: '%' },
+  { key: 'itemFind', label: 'Item find', min: 0, max: 500, step: 5, unit: '%' },
 ];
 
 /** Weapons the dev menu can hand out, one button each, in this order. */

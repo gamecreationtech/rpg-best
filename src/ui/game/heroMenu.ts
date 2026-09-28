@@ -528,6 +528,8 @@ export class HeroMenu {
     row('Pierce', String(d.pierce));
     row('Poison / burn chance', `${d.poisonChance}% / ${d.burnChance}%`);
     row('Magic find', `${d.magicFind}%`);
+    row('Item find', `${d.itemFind}%`);
+    row('Gold find', `${d.goldFind}%`);
     head('Defense');
     row('Life', `${Math.ceil(p.hp)} / ${d.maxHp}`);
     row('Mana', `${Math.floor(p.mana)} / ${d.maxMana}`);

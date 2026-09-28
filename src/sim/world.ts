@@ -1264,7 +1264,8 @@ export class World {
     if (e.def) {
       const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + MONSTER_RULES.goldPerLevel * (this.zone.level - 1)) * (1 + this.derived.goldFind / 100));
       this.addDrop(e.x + this.rng.range(-0.4, 0.4), e.z + this.rng.range(-0.4, 0.4), null, gold);
-      if (this.rng.next() * 100 < e.def.dropChance) {
+      // Item find scales the monster's own drop chance; magic find then decides the rarity
+      if (this.rng.next() * 100 < e.def.dropChance * (1 + this.derived.itemFind / 100)) {
         const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind });
         this.addDrop(e.x + this.rng.range(-0.6, 0.6), e.z + this.rng.range(-0.6, 0.6), item, 0);
       }

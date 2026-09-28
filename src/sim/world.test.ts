@@ -252,6 +252,30 @@ describe('bulk selling', () => {
   });
 });
 
+describe('item find', () => {
+  it('scales how often a kill drops an item, with magic find left to the rarity', () => {
+    const drops = (itemFind: number, seed: number) => {
+      const w = new World(createPlayer('knight', 'titan'), seed);
+      w.travel('arena');
+      w.devStats.itemFind = itemFind;
+      w.recomputeStats();
+      let items = 0;
+      for (let i = 0; i < 400; i++) {
+        const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 12, w.pz); // 22% drop chance
+        w.killEnemy(e, 0);
+        items += w.drops.filter((d) => d.alive && d.item).length;
+        for (const d of w.drops) d.alive = false;
+      }
+      return items;
+    };
+    const plain = drops(0, 71);
+    const lucky = drops(200, 71);
+    expect(plain).toBeGreaterThan(50);
+    expect(plain).toBeLessThan(130);
+    expect(lucky).toBeGreaterThan(plain * 2);
+  });
+});
+
 describe('pet', () => {
   it('the dev crab fetches loot within 300 px of the hero and leaves the rest', () => {
     const w = new World(createPlayer('knight', 'titan'), 61);
