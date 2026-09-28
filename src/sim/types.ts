@@ -78,6 +78,8 @@ export interface DamagePacket {
   healOnKillPct?: number;
   /** Counts as a weapon hit for life steal, mana on hit and Rite of Blood. */
   weaponHit: boolean;
+  /** Dealt by an item proc: never fires procs itself. */
+  fromProc?: boolean;
 }
 
 export interface Projectile {

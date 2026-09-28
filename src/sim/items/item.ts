@@ -1,5 +1,6 @@
 import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SET_BASES, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
 import type { StatKey, StatMap } from '../../data/stats';
+import { PROCS, type ItemProc } from '../../data/procs';
 import type { Rng } from '../../gen/rng';
 
 export interface ForgeStacks {
@@ -24,6 +25,8 @@ export interface Item {
   offhand?: OffhandKind;
   /** The set this piece belongs to, if any. */
   setId?: string;
+  /** Chance to fire a proc on every weapon hit. */
+  proc?: ItemProc;
   affixes: string[];
   forge: ForgeStacks;
   value: number;
@@ -81,6 +84,12 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     const key = k as StatKey;
     stats[key] = scaleStat(key, base.stats[key]!, multFor(key));
   }
+  // Ranged stats roll once, whole numbers; without a generator they sit at the midpoint
+  for (const k in base.rolls ?? {}) {
+    const key = k as StatKey;
+    const [lo, hi] = base.rolls![key]!;
+    stats[key] = Math.round(rng ? rng.range(lo, hi) : (lo + hi) / 2);
+  }
   const affixes: string[] = [];
   // Hand-written items (starters, set pieces, divine specials) never roll affixes either
   if (rng && !fixed && RARITIES[rarity].affixes > 0) {
@@ -109,6 +118,7 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     weapon,
     offhand: base.offhand,
     setId: base.setId,
+    proc: base.proc,
     affixes,
     forge: { dmg: 0, spd: 0, block: 0, armor: 0 },
     value: base.value ?? itemValue(rarity, base.size, ilvl),
@@ -176,6 +186,10 @@ export function describeItem(item: Item): string[] {
     lines.push(`${item.weapon.dmgMin}-${item.weapon.dmgMax} damage, ${item.weapon.atkSpd.toFixed(2)} attacks/s`);
     const tags = [item.weapon.type, item.weapon.ranged ? 'ranged' : 'melee', item.weapon.magic ? 'magic' : '', item.weapon.twoHanded ? 'two-handed' : ''].filter(Boolean);
     lines.push(tags.join(', '));
+  }
+  if (item.proc) {
+    const def = PROCS[item.proc.id];
+    if (def) lines.push(`${item.proc.chance}% chance to cast ${def.name} on attack`, def.description);
   }
   return lines;
 }

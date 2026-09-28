@@ -1,4 +1,4 @@
-import { ACCESSORY_BASES, SET_BASES, WEAPON_BASES } from '../../data/items';
+import { ACCESSORY_BASES, SET_BASES, SPECIAL_BASES, WEAPON_BASES } from '../../data/items';
 import type { StatKey } from '../../data/stats';
 import { makeItem } from '../../sim/items/item';
 import type { World } from '../../sim/world';
@@ -113,6 +113,8 @@ export class DevMenu {
       giveRow(GIVE_OFFHANDS, ACCESSORY_BASES),
       h('div', { class: 'dev-section' }, 'Give set piece'),
       giveRow(SET_BASES.map((b) => b.id), SET_BASES),
+      h('div', { class: 'dev-section' }, 'Give divine'),
+      giveRow(SPECIAL_BASES.map((b) => b.id), SPECIAL_BASES),
       note,
       h('div', { class: 'dev-actions' },
         button('Level up', () => {

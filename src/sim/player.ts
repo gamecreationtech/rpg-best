@@ -5,6 +5,7 @@ import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/profes
 import { passivesFor } from '../data/passives';
 import { PLEDGES } from '../data/pledges';
 import { SETS } from '../data/sets';
+import type { ItemProc } from '../data/procs';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
@@ -107,6 +108,8 @@ export interface DerivedStats {
   dmgMult: number;
   /** Seconds between casts for zero-cooldown spells. */
   castInterval: number;
+  /** On-hit procs from worn items. */
+  procs: ItemProc[];
 }
 
 export function createPlayer(classId: ClassId, pledgeId: string | null): PlayerState {
@@ -273,6 +276,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     weaponType: w?.type ?? null,
     hasShield,
     meleeRange: meleeRangeOverride || (w && !w.ranged ? baseRange : 80) + g('range'),
+    procs: p.equipment.all().flatMap((it) => (it.proc ? [it.proc] : [])),
     dmgMult: 1 + dmgPct / 100,
     castInterval,
   };

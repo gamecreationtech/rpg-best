@@ -252,6 +252,41 @@ describe('bulk selling', () => {
   });
 });
 
+describe('item procs', () => {
+  it('Cry of the Weak fires on about a quarter of weapon hits and strikes everything within 50 px', () => {
+    const w = new World(createPlayer('knight', 'titan'), 111);
+    w.travel('arena');
+    const amulet = makeItem(baseItem('weak_amulet'), 'divine', 100, null);
+    expect(w.player.equipment.equip(amulet, 100).ok).toBe(true);
+    w.recomputeStats();
+    expect(w.derived.procs).toEqual([{ id: 'cry_of_the_weak', chance: 25 }]);
+    const target = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1, w.pz);
+    const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px, w.pz + 1.2); // 38 px away
+    const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 4, w.pz); // 128 px away
+    const nearHp = near.hp;
+    const farHp = far.hp;
+    let fired = 0;
+    for (let i = 0; i < 400; i++) {
+      target.hp = 100000;
+      near.hp = nearHp;
+      w.events.length = 0;
+      hitEnemy(w, target, { amount: 10, element: 'physical', canCrit: false, skillId: null, weaponHit: true });
+      const aoe = w.events.filter((ev) => ev.type === 'aoe');
+      if (aoe.length) {
+        fired++;
+        expect(aoe.length).toBe(1);
+        expect(near.hp).toBe(nearHp - 10);
+        expect(target.hp).toBe(100000 - 20); // the target takes the blow and the cry
+      } else {
+        expect(near.hp).toBe(nearHp);
+      }
+    }
+    expect(fired).toBeGreaterThan(60);
+    expect(fired).toBeLessThan(140);
+    expect(far.hp).toBe(farHp);
+  });
+});
+
 describe('set drops', () => {
   it('set pieces drop only in the zones their set names', () => {
     const early = new World(createPlayer('knight', 'titan'), 101);

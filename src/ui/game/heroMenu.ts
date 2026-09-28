@@ -1,6 +1,7 @@
 import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { SETS, describeSetBonus } from '../../data/sets';
+import { PROCS } from '../../data/procs';
 import { COMBAT_RULES } from '../../data/status';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
@@ -392,6 +393,12 @@ export class HeroMenu {
       }
     }
     if (item.affixes.length > 1) out.push(pxText(item.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
+    if (item.proc && PROCS[item.proc.id]) {
+      const def = PROCS[item.proc.id]!;
+      out.push(rule());
+      out.push(pxText(`${item.proc.chance}% chance to cast ${def.name} on attack`, { color: GOLD, maxChars: 44 }));
+      out.push(pxText(def.description, { color: MUTED, maxChars: 44 }));
+    }
     if (set) {
       // The full-set bonus, lit up once every piece is on
       const full = worn >= set.pieces.length;
@@ -530,13 +537,14 @@ export class HeroMenu {
       ));
     }
     head('Offense');
-    row('Damage', `${attackDamageRange(d)[0]} - ${attackDamageRange(d)[1]}`);
+    const [dmgLo, dmgHi] = attackDamageRange(d);
+    row('Damage', `${dmgLo} - ${dmgHi}`);
+    row('Critical damage', `${Math.round((dmgLo * d.critDamage) / 100)} - ${Math.round((dmgHi * d.critDamage) / 100)}  (${Math.round(d.critDamage)}%)`);
     row('Bonus damage', `+${Math.round(d.bonusDamage)}`);
     row('Spell damage', `+${Math.round(d.spellDmg)}`);
     row('Attack speed', d.atkSpd.toFixed(2));
     row('Cast rate', `${(1 / d.castInterval).toFixed(1)} /s`);
     row('Critical chance', `${d.critChance.toFixed(1)}%`);
-    row('Critical damage', `${Math.round(d.critDamage)}%`);
     row('Cooldown reduction', `${d.cdr}%`);
     row('Pierce', String(d.pierce));
     row('Poison / burn chance', `${d.poisonChance}% / ${d.burnChance}%`);

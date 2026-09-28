@@ -1,4 +1,5 @@
-import type { StatMap } from './stats';
+import type { StatKey, StatMap } from './stats';
+import type { ItemProc } from './procs';
 
 export type EquipSlot =
   | 'weapon' | 'shield' | 'helmet' | 'chest' | 'gloves' | 'boots'
@@ -77,6 +78,10 @@ export interface BaseItem {
   setId?: string;
   /** Fixed level requirement for hand-written items; drops otherwise derive it from item level. */
   reqLevel?: number;
+  /** Stats rolled once when the item is made, inclusive ranges (a hand-written item with variety). */
+  rolls?: Partial<Record<StatKey, [number, number]>>;
+  /** Chance to fire a proc on every weapon hit. */
+  proc?: ItemProc;
   /** Fixed rarity for special items. */
   rarity?: Rarity;
   /** Starter and special items are not generated as drops. */
@@ -135,6 +140,7 @@ export const SPECIAL_BASES: BaseItem[] = [
   { id: 'rangers_relic', name: "Ranger's Relic", slot: 'relic', size: [1, 2], stats: { range: 100, projSpeed: 100 }, rarity: 'divine' },
   { id: 'fire_elemental_sword', name: 'Fire Elemental Sword', slot: 'weapon', size: [1, 3], stats: { critChance: 15, critDamage: 200, burnChance: 100 }, rarity: 'divine', weapon: { type: 'sword', dmgMin: 18, dmgMax: 30, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'vital_charm', name: 'Vital Charm', slot: 'charm', size: [1, 1], stats: { life: 500, mana: 500 }, rarity: 'divine' },
+  { id: 'weak_amulet', name: 'Weak Amulet', slot: 'amulet', size: [1, 1], stats: {}, rolls: { critChance: [10, 20], critDamage: [30, 50] }, proc: { id: 'cry_of_the_weak', chance: 25 }, rarity: 'divine', reqLevel: 100 },
 ];
 
 /**

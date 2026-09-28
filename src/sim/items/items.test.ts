@@ -40,6 +40,23 @@ describe('item generation', () => {
     expect(charm.stats.life).toBe(500);
   });
 
+  it('the Weak Amulet rolls its crit stats inside their ranges and carries its proc', () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const a = makeItem(baseItem('weak_amulet'), 'divine', 100, new Rng(seed));
+      expect(a.stats.critChance).toBeGreaterThanOrEqual(10);
+      expect(a.stats.critChance).toBeLessThanOrEqual(20);
+      expect(a.stats.critDamage).toBeGreaterThanOrEqual(30);
+      expect(a.stats.critDamage).toBeLessThanOrEqual(50);
+      expect(Number.isInteger(a.stats.critChance)).toBe(true);
+      expect(a.reqLevel).toBe(100);
+      expect(a.proc).toEqual({ id: 'cry_of_the_weak', chance: 25 });
+      expect(a.affixes).toEqual([]);
+    }
+    const mid = makeItem(baseItem('weak_amulet'), 'divine', 100, null);
+    expect(mid.stats.critChance).toBe(15);
+    expect(mid.stats.critDamage).toBe(40);
+  });
+
   it('every divine drop is one of the coded specials', () => {
     const rng = new Rng(11);
     const specials = new Set(SPECIAL_BASES.map((b) => b.id));
