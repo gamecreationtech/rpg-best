@@ -543,7 +543,7 @@ export class HeroMenu {
     const slotsUnlocked = unlockedSlots(p.level);
     const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
     const wrap = h('div', { class: 'px-skills' });
-    wrap.append(pxText(`${p.skillPoints} skill points, ${p.ultimatePoints} ultimate points. + adds a rank, \u2212 takes one back; at rank 5 the + goes Ultimate. Pick where a skill sits on the bar from its dropdown.`, { color: MUTED, maxChars: 90 }));
+    wrap.append(h('div', { class: 'px-row tight' }, pxText(`+${p.skillPoints} Unused Skill Points`, { color: p.skillPoints ? GOLD : MUTED }), p.ultimatePoints > 0 ? pxText(`[+${p.ultimatePoints} Unused Ultimate Skill Points]`, { color: '#ffdd44' }) : null));
     const slotBar = h('div', { class: 'px-row slotbar' });
     for (let i = 0; i < 6; i++) {
       const id = p.slots[i];
