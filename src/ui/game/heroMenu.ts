@@ -152,7 +152,7 @@ export class HeroMenu {
     );
     const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : '') });
     // The window goes into the page first so the inventory can measure the room it has
-    body.append(h('div', { class: 'px-window' }, tabs, content));
+    body.append(h('div', { class: 'px-window' + (this.mouse ? '' : ' touch') }, tabs, content));
     if (this.tab === 'inventory') this.renderInventory(w, content);
     else if (this.tab === 'stats') this.renderStats(w, content);
     else if (this.tab === 'skills') this.renderSkills(w, content);
