@@ -530,10 +530,10 @@ export class HeroMenu {
       const info = skillInfo(w, active, rank);
       // Every skill reads the same way: name and rank, then damage type, mana, cooldown and damage with its formula
       const line = (label: string, value: string, valueColor = TEXT) => h('div', { class: 'px-row tight skill-line' }, pxText(`${label} :`, { color: MUTED }), pxText(value, { color: valueColor }));
-      const tags = [ultOn ? 'Ultimate' : '', s.tier === 'pledge' ? PLEDGES[s.pledgeId!]!.name : '', (s.reqLevel ?? 1) > 1 ? `Level ${s.reqLevel}` : '', s.requires ? `needs a ${s.requires}` : ''].filter(Boolean).join(' \u00b7 ');
+      const tags = [s.tier === 'pledge' ? PLEDGES[s.pledgeId!]!.name : '', (s.reqLevel ?? 1) > 1 ? `Level ${s.reqLevel}` : '', s.requires ? `needs a ${s.requires}` : ''].filter(Boolean).join(' \u00b7 ');
       const element = active.element.charAt(0).toUpperCase() + active.element.slice(1);
       row.append(
-        h('div', { class: 'px-row between' }, h('span', { class: 'px-row tight' }, pxText(active.name, { color }), tags ? pxText(tags, { color: MUTED, scale: 1 }) : null), pxText(`[Rank ${rank}]`, { color: rank ? GOLD : MUTED })),
+        h('div', { class: 'px-row between' }, h('span', { class: 'px-row tight' }, pxText(active.name, { color }), tags ? pxText(tags, { color: MUTED, scale: 1 }) : null), pxText(ultOn ? '[Ultimate]' : `[Rank ${rank}]`, { color: ultOn ? '#ffdd44' : rank ? GOLD : MUTED })),
         line('Damage Type', element),
         line('Mana Cost', String(active.manaCost)),
         line('Cooldown', info.cooldown),
