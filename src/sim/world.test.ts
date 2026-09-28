@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { MONSTERS, MONSTER_RULES } from '../data/monsters';
 import { ZONES } from '../data/zones';
 import { SKILLS, skillsFor } from '../data/skills';
-import { makeStarterItem } from './items/item';
+import { makeItem, makeStarterItem } from './items/item';
+import { baseItem } from '../data/items';
 import { damagePlayer, hitEnemy } from './combat';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
@@ -212,6 +213,26 @@ describe('monster collision', () => {
     run(w, 1);
     expect(w.map.circleBlocked(bat.x, bat.z, bat.radius)).toBe(false);
     expect(w.map.lineBlocked(w.px, w.pz, bat.x, bat.z)).toBe(false);
+  });
+});
+
+describe('class weapons', () => {
+  it('a knight only equips swords, maces and bardiches', () => {
+    const w = new World(createPlayer('knight', 'titan'), 71);
+    const bow = makeItem(baseItem('bow'), 'common', 1, null);
+    const mace = makeItem(baseItem('mace'), 'common', 1, null);
+    w.player.inventory.add(bow);
+    w.player.inventory.add(mace);
+    const r = w.equipItem(bow);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toContain('Knights only use');
+    expect(w.player.inventory.has(bow)).toBe(true);
+    expect(w.equipItem(mace).ok).toBe(true);
+    // Other classes are not restricted
+    const s = new World(createPlayer('sorcerer', null), 72);
+    const sword = makeItem(baseItem('sword'), 'common', 1, null);
+    s.player.inventory.add(sword);
+    expect(s.equipItem(sword).ok).toBe(true);
   });
 });
 

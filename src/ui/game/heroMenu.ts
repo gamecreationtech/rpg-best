@@ -7,7 +7,7 @@ import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
-import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { ATTACK_SLOT, allocateStat, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -356,6 +356,8 @@ export class HeroMenu {
       pxText(kind, { color: MUTED }),
       pxText(`Required level ${item.reqLevel}`, { color: '#a8aec0' }),
     ];
+    const usable = canEquipItem(w.player, item);
+    if (!usable.ok) out.push(pxText(usable.reason!, { color: RED }));
     const diff = (d: number) => (d !== 0 ? pxText(`(${d > 0 ? '+' : ''}${Math.round(d * 100) / 100})`, { color: d > 0 ? GREEN : RED }) : null);
     const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
     if (item.weapon) {

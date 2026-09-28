@@ -28,6 +28,8 @@ export interface ClassDef {
   pledges: string[];
   /** Weapon families this class fights with; others still work but look odd. */
   preferredWeapons: WeaponType[];
+  /** When set, the only weapon types the class can equip. */
+  allowedWeapons?: WeaponType[];
 }
 
 export const CLASSES: Record<ClassId, ClassDef> = {
@@ -44,7 +46,8 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     manaPerInt: 10,
     startingGear: ['wooden_sword', 'wooden_shield'],
     pledges: ['paladin', 'titan', 'nightlord'],
-    preferredWeapons: ['sword', 'axe', 'mace', 'spear', 'bardiche', 'warpike'],
+    preferredWeapons: ['sword', 'mace', 'bardiche'],
+    allowedWeapons: ['sword', 'mace', 'bardiche'],
   },
   sorcerer: {
     id: 'sorcerer',

@@ -16,7 +16,7 @@ import { generateItem, type Item } from './items/item';
 import { buyPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
-import { ATTACK_SLOT, addXp, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
+import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
 import type { DamagePacket, Drop, Enemy, Interactable, Projectile, ProjectileShape, SimEvent, Zone, ZoneType } from './types';
@@ -640,6 +640,8 @@ export class World {
   /** Equips from the bag. Anything that comes off goes back in the bag; aborts if it cannot fit. */
   equipItem(item: Item, preferred?: EquipKey): { ok: boolean; reason?: string } {
     const inv = this.player.inventory;
+    const allowed = canEquipItem(this.player, item);
+    if (!allowed.ok) return { ok: false, reason: allowed.reason };
     const wasInBag = inv.has(item);
     if (wasInBag) inv.remove(item);
     const res = this.player.equipment.equip(item, this.player.level, preferred);

@@ -6,6 +6,7 @@ import { passivesFor } from '../data/passives';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
+import type { WeaponType } from '../data/items';
 import { ITEM_RULES } from '../data/items';
 import { PX } from '../data/units';
 import { Equipment } from './items/equipment';
@@ -290,6 +291,16 @@ export function allocateStat(p: PlayerState, stat: keyof BaseStats): boolean {
 
 export function skillRank(p: PlayerState, id: string): number {
   return p.skillRanks[id] ?? 0;
+}
+
+/** Class weapon rules: a knight only ever holds a sword, mace or bardiche. */
+export function canEquipItem(p: PlayerState, item: { weapon?: { type: WeaponType } }): { ok: boolean; reason?: string } {
+  const allowed = CLASSES[p.classId].allowedWeapons;
+  if (item.weapon && allowed && !allowed.includes(item.weapon.type)) {
+    const names = allowed.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
+    return { ok: false, reason: `${CLASSES[p.classId].name}s only use ${names}` };
+  }
+  return { ok: true };
 }
 
 export function canLearnSkill(p: PlayerState, id: string): { ok: boolean; reason?: string } {
