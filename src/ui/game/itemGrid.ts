@@ -1,5 +1,5 @@
 import { RARITIES } from '../../data/items';
-import { SETS } from '../../data/sets';
+import { SETS, describeSetBonus } from '../../data/sets';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { formatStat, type StatKey } from '../../data/stats';
 import type { Inventory } from '../../sim/items/inventory';
@@ -77,7 +77,7 @@ export function itemCard(item: Item, compareTo: Item | null = null, setWorn = 0)
   const setLines = set
     ? [
         h('div', { class: 'item-line', style: `color:${color}` }, `${set.name} (${setWorn} of ${set.pieces.length})`),
-        h('div', { class: 'item-line' + (full ? '' : ' dim'), style: full ? `color:${color}` : '' }, `Full set: ${(Object.entries(set.bonus) as [StatKey, number][]).map(([k, v]) => formatStat(k, v)).join(', ')}`),
+        h('div', { class: 'item-line' + (full ? '' : ' dim'), style: full ? `color:${color}` : '' }, `Full set: ${describeSetBonus(set).join(', ')}`),
       ]
     : [];
   return h(

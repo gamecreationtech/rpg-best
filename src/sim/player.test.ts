@@ -28,6 +28,23 @@ describe('sets', () => {
   });
 });
 
+describe('prisoner set', () => {
+  it("Prisoner's Nightmare halves speed and attack rate and triples damage with both pieces", () => {
+    const p = createPlayer('knight', null);
+    const one = deriveStats(p, [], {});
+    const [cuffs, ball] = SETS.prisoner!.pieces.map((id) => makeItem(baseItem(id), 'set', 12, null));
+    expect(cuffs!.affixes).toEqual([]);
+    expect(p.equipment.equip(cuffs!, 12).ok).toBe(true);
+    const half = deriveStats(p, [], {});
+    expect(half.dmgMult).toBe(1);
+    expect(p.equipment.equip(ball!, 12).ok).toBe(true);
+    const full = deriveStats(p, [], {});
+    expect(full.dmgMult).toBe(3);
+    expect(full.atkSpd).toBeCloseTo(half.atkSpd * 0.5, 5);
+    expect(full.moveSpeed).toBeCloseTo(one.moveSpeed * 0.5, 1);
+  });
+});
+
 describe('player', () => {
   it('starts the rogue with a bow in hand and a dagger in the bag', () => {
     const p = createPlayer('rogue', null);

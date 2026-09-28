@@ -257,7 +257,7 @@ describe('set drops', () => {
     const early = new World(createPlayer('knight', 'titan'), 101);
     early.travel('arena', 'proving_grounds');
     const late = new World(createPlayer('knight', 'titan'), 101);
-    late.travel('arena', 'ashen_marsh');
+    late.travel('arena', 'ember_foundry');
     const drops = (w: World) => {
       let sets = 0;
       for (let i = 0; i < 600; i++) {

@@ -147,6 +147,9 @@ export const SET_BASES: BaseItem[] = [
   { id: 'pilgrim_coat', name: "Pilgrim's Coat", slot: 'chest', size: [2, 3], stats: { armor: 24, vit: 3, str: 2, hpRegen: 1 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 200 },
   { id: 'pilgrim_gloves', name: "Pilgrim's Gloves", slot: 'gloves', size: [2, 2], stats: { armor: 6, int: 3, atkSpd: 0.1 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 100 },
   { id: 'pilgrim_boots', name: "Pilgrim's Boots", slot: 'boots', size: [2, 2], stats: { armor: 8, dex: 3, moveSpeed: 10 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 120 },
+  // Prisoner's Nightmare (levels 12-20): handcuffs and a ball and chain. Slow and heavy, hits like a wall.
+  { id: 'prisoner_cuffs', name: "Prisoner's Handcuffs", slot: 'gloves', size: [2, 2], stats: { armor: 8, str: 4, damage: 5 }, rarity: 'set', setId: 'prisoner', reqLevel: 12, value: 250 },
+  { id: 'prisoner_ball', name: "Prisoner's Ball and Chain", slot: 'boots', size: [2, 2], stats: { armor: 14, vit: 4, life: 20 }, rarity: 'set', setId: 'prisoner', reqLevel: 12, value: 250 },
 ];
 
 /** Starter gear: item level 1, common, worth nothing, named plainly after what it is. */

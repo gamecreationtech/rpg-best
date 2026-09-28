@@ -114,6 +114,9 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
   Pilgrim's Vestments (cap, coat, gloves, boots; level 4; Proving Grounds and
   Cursed Hollow at 2 out of 100) is the beginner set for every class: the full
   set gives +25% movement speed, +10 to all four stats and +25% gold find.
+  Prisoner's Nightmare (handcuffs and a ball and chain; level 12; Ashen Marsh
+  and Frozen Crypt at 2 out of 100) is a two-piece trade: -50% movement speed
+  and -50% attack speed for +200% damage.
 - **Divine items are all hand-written** (producer's call, 2026-09-28): a divine
   drop is always one of the coded specials, never an ordinary base rolled at
   divine rarity, and transmutation stops at set.

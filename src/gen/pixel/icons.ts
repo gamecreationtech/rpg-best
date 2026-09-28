@@ -10,8 +10,11 @@ const ICON = 14;
 const OUTLINE = hex(0x0a0a12);
 const cache = new Map<string, HTMLCanvasElement>();
 
+/** Hand-written items with a drawing of their own rather than the slot's. */
+const CUSTOM_ICONS = new Set(['prisoner_cuffs', 'prisoner_ball']);
+
 export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null = null, baseId = ''): HTMLCanvasElement {
-  const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}:${slot === 'shield' ? baseId : ''}`;
+  const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}:${slot === 'shield' || CUSTOM_ICONS.has(baseId) ? baseId : ''}`;
   let c = cache.get(key);
   if (!c) {
     c = draw(slot, weaponType, rarity, offhand, baseId);
@@ -28,6 +31,11 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, of
   const leather = ramp(0x6a4a34, 1);
   const o = 1;
   const M = r[1];
+  if (CUSTOM_ICONS.has(baseId)) {
+    drawCustom(b, baseId, r, steel, leather);
+    b.outline(OUTLINE);
+    return b.toCanvas();
+  }
   switch (slot) {
     case 'weapon':
       drawWeapon(b, weaponType ?? 'sword', r, steel, wood);
@@ -112,6 +120,36 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, of
 }
 
 type Ramp = ReturnType<typeof ramp>;
+
+/** Prisoner's Nightmare: a pair of handcuffs joined by a chain, and a boot dragging an iron ball. */
+function drawCustom(b: PixelBuffer, baseId: string, r: Ramp, steel: Ramp, leather: Ramp): void {
+  const o = 1;
+  const ring = (cx: number, cy: number) => {
+    for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) {
+      const d = Math.hypot(x, y);
+      if (d <= 3.4 && d >= 2) b.set(o + cx + x, o + cy + y, y < 0 ? steel[2] : steel[1]);
+    }
+  };
+  if (baseId === 'prisoner_cuffs') {
+    ring(3, 4);
+    ring(10, 10);
+    // Chain links between the cuffs, one in the rarity colour
+    b.rect(o + 5, o + 6, 2, 1, steel[0]);
+    b.rect(o + 6, o + 7, 2, 1, r[1]);
+    b.rect(o + 7, o + 8, 2, 1, steel[0]);
+  } else {
+    // Boot on the right, chain to the ankle, iron ball bottom left
+    b.rect(o + 8, o + 1, 4, 7, leather[1]);
+    b.rect(o + 8, o + 8, 6, 3, leather[1]);
+    b.rect(o + 8, o + 1, 4, 2, r[1]);
+    b.rect(o + 8, o + 10, 6, 1, leather[0]);
+    b.set(o + 7, o + 7, steel[0]);
+    b.set(o + 6, o + 8, steel[2]);
+    b.set(o + 5, o + 9, steel[0]);
+    b.ellipse(o + 3.5, o + 11, 3.2, 3, steel[0]);
+    b.set(o + 2, o + 9, steel[1]);
+  }
+}
 
 /** The four shields: round (wood), heater (kite, steel), tower (tall slab) and energy (a glowing disc). */
 function drawShield(b: PixelBuffer, baseId: string, r: Ramp, steel: Ramp, wood: Ramp): void {

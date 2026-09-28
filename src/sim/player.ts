@@ -212,6 +212,10 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
   let moveSpdPct = 0;
   let meleeRangeOverride = 0;
   const mods: BuffMods[] = [zoneMods, ...buffs.map((b) => b.mods)];
+  // A complete set's percentage modifiers count like a buff that never ends
+  for (const set of Object.values(SETS)) {
+    if (set.mods && setPiecesWorn(p, set.id) >= set.pieces.length) mods.push(set.mods);
+  }
   for (const m of mods) {
     armor += m.armor ?? 0;
     allRes += m.allResists ?? 0;

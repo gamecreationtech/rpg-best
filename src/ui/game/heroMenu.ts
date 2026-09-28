@@ -1,6 +1,6 @@
 import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
-import { SETS } from '../../data/sets';
+import { SETS, describeSetBonus } from '../../data/sets';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
@@ -396,7 +396,7 @@ export class HeroMenu {
       const full = worn >= set.pieces.length;
       out.push(rule());
       out.push(pxText(`Full set (${set.pieces.length} pieces):`, { color: full ? SET_COLOR : MUTED }));
-      for (const [k, v] of Object.entries(set.bonus) as [StatKey, number][]) out.push(pxText(formatStat(k, v).replace(/^(\S+)\s/, '$1 to '), { color: full ? SET_COLOR : MUTED }));
+      for (const line of describeSetBonus(set)) out.push(pxText(line.replace(/^(\S+)\s/, '$1 to '), { color: full ? SET_COLOR : MUTED }));
     }
     if (compare && compare !== item) {
       out.push(rule());

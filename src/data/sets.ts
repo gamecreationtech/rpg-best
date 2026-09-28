@@ -1,4 +1,5 @@
-import type { StatMap } from './stats';
+import type { BuffMods } from './skills';
+import { formatStat, type StatKey, type StatMap } from './stats';
 
 /**
  * Item sets: hand-written pieces that share a name, and a bonus for wearing
@@ -12,6 +13,8 @@ export interface SetDef {
   pieces: string[];
   /** Granted while every piece is worn. */
   bonus: StatMap;
+  /** Percentage modifiers granted with the full set, the same kind a buff carries (attack speed, damage, movement). */
+  mods?: BuffMods;
   /** Zone ids where the pieces can drop. */
   zones: string[];
   /** Weight out of 100 for a drop in those zones to be a set piece. */
@@ -29,7 +32,30 @@ export const SETS: Record<string, SetDef> = {
     dropWeight: 2,
     blurb: 'Travelling clothes for the first road out of town. Worn by every class.',
   },
+  prisoner: {
+    id: 'prisoner',
+    name: "Prisoner's Nightmare",
+    pieces: ['prisoner_cuffs', 'prisoner_ball'],
+    bonus: {},
+    mods: { moveSpdPct: -50, atkSpdPct: -50, dmgPct: 200 },
+    zones: ['ashen_marsh', 'frozen_crypt'],
+    dropWeight: 2,
+    blurb: 'Shackles that drag you down and slow your arm, and turn every blow into a hammer.',
+  },
 };
+
+/** The full-set bonus as card lines: stats first, then the percentage modifiers. */
+export function describeSetBonus(set: SetDef): string[] {
+  const lines = (Object.entries(set.bonus) as [StatKey, number][]).map(([k, v]) => formatStat(k, v));
+  const m = set.mods;
+  const pct = (v: number | undefined, name: string) => (v ? lines.push(`${v > 0 ? '+' : ''}${v}% ${name}`) : undefined);
+  if (m) {
+    pct(m.dmgPct, 'Damage');
+    pct(m.atkSpdPct, 'Attack Speed');
+    pct(m.moveSpdPct, 'Movement Speed');
+  }
+  return lines;
+}
 
 /** The sets whose pieces can drop in a zone. */
 export function setsForZone(zoneId: string): SetDef[] {
