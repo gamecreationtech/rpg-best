@@ -1,4 +1,4 @@
-import { ACCESSORY_BASES, WEAPON_BASES } from '../../data/items';
+import { ACCESSORY_BASES, SET_BASES, WEAPON_BASES } from '../../data/items';
 import type { StatKey } from '../../data/stats';
 import { makeItem } from '../../sim/items/item';
 import type { World } from '../../sim/world';
@@ -97,7 +97,7 @@ export class DevMenu {
         const base = pool.find((b) => b.id === id);
         if (!base) continue;
         give.appendChild(button(base.name, () => {
-          const item = makeItem(base, 'common', w.player.level, w.rng);
+          const item = makeItem(base, base.rarity ?? 'common', w.player.level, w.rng);
           const ok = w.player.inventory.add(item);
           note.textContent = ok ? `${base.name} added to the bag` : 'Bag is full';
           if (ok) w.markDirty();
@@ -111,6 +111,8 @@ export class DevMenu {
       giveRow(GIVE_WEAPONS, WEAPON_BASES),
       h('div', { class: 'dev-section' }, 'Give offhand'),
       giveRow(GIVE_OFFHANDS, ACCESSORY_BASES),
+      h('div', { class: 'dev-section' }, 'Give set piece'),
+      giveRow(SET_BASES.map((b) => b.id), SET_BASES),
       note,
       h('div', { class: 'dev-actions' },
         button('Level up', () => {

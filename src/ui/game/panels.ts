@@ -6,7 +6,7 @@ import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
 import { buyPrice, sellPrice } from '../../sim/items/vendor';
-import { canEquipItem, professionXpToNext } from '../../sim/player';
+import { canEquipItem, professionXpToNext, setPiecesWorn } from '../../sim/player';
 import type { World } from '../../sim/world';
 import type { Settings } from '../../app/storage';
 import { button, clear, h, hex } from '../dom';
@@ -172,7 +172,7 @@ export class Panels {
     const cls = 'selected-card' + (this.touch ? ' sticky' : '');
     if (!this.selected) return h('div', { class: cls }, h('div', { class: 'item-card dim' }, hint));
     const compare = this.selectedFrom !== 'equip' ? w.player.equipment.get(w.player.equipment.targetKey(this.selected)) : null;
-    const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null);
+    const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null, this.selected.setId ? setPiecesWorn(w.player, this.selected.setId) : 0);
     const usable = canEquipItem(w.player, this.selected);
     if (!usable.ok) card.append(h('div', { class: 'item-line down' }, usable.reason!));
     return h('div', { class: cls }, card, h('div', { class: 'actions' }, ...actions));

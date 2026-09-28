@@ -1,5 +1,6 @@
 import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
+import { SETS } from '../../data/sets';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
@@ -7,7 +8,7 @@ import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
-import { ATTACK_SLOT, allocateStat, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { ATTACK_SLOT, allocateStat, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -40,6 +41,7 @@ export const MUTED = '#8b93a8';
 export const TEXT = '#d9dce6';
 export const GOLD = '#e8b45a';
 const GREEN = '#6ae06a';
+const SET_COLOR = '#00ee66';
 const RED = '#ff6a6a';
 const BLUE = '#8fb8ff';
 
@@ -362,6 +364,9 @@ export class HeroMenu {
     ];
     const usable = canEquipItem(w.player, item);
     if (!usable.ok) out.push(pxText(usable.reason!, { color: RED }));
+    const set = item.setId ? SETS[item.setId] : null;
+    const worn = set ? setPiecesWorn(w.player, set.id) : 0;
+    if (set) out.push(pxText(`${set.name} (${worn} of ${set.pieces.length})`, { color: SET_COLOR, maxChars: 44 }));
     const diff = (d: number) => (d !== 0 ? pxText(`(${d > 0 ? '+' : ''}${Math.round(d * 100) / 100})`, { color: d > 0 ? GREEN : RED }) : null);
     const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
     if (item.weapon) {
@@ -386,6 +391,13 @@ export class HeroMenu {
       }
     }
     if (item.affixes.length > 1) out.push(pxText(item.affixes.slice(1).join(', '), { color: MUTED, maxChars: 44 }));
+    if (set) {
+      // The full-set bonus, lit up once every piece is on
+      const full = worn >= set.pieces.length;
+      out.push(rule());
+      out.push(pxText(`Full set (${set.pieces.length} pieces):`, { color: full ? SET_COLOR : MUTED }));
+      for (const [k, v] of Object.entries(set.bonus) as [StatKey, number][]) out.push(pxText(formatStat(k, v).replace(/^(\S+)\s/, '$1 to '), { color: full ? SET_COLOR : MUTED }));
+    }
     if (compare && compare !== item) {
       out.push(rule());
       out.push(pxText(`Worn: ${compare.name}`, { color: MUTED, maxChars: 44 }));

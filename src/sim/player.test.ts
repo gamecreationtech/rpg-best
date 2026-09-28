@@ -2,6 +2,31 @@ import { describe, expect, it } from 'vitest';
 import { LEVELING, xpForLevel, xpPerMinuteAt } from '../data/classes';
 import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlearnSkill, unlockUltimate, unlockedSlots } from './player';
 import { skillsFor } from '../data/skills';
+import { SETS } from '../data/sets';
+import { baseItem } from '../data/items';
+import { makeItem } from './items/item';
+
+describe('sets', () => {
+  it("Pilgrim's Vestments grant their bonus only with all four pieces on", () => {
+    const p = createPlayer('sorcerer', null);
+    const before = deriveStats(p, [], {});
+    const pieces = SETS.pilgrim!.pieces.map((id) => makeItem(baseItem(id), 'set', 5, null));
+    for (const piece of pieces) {
+      expect(piece.rarity).toBe('set');
+      expect(piece.reqLevel).toBe(4);
+      expect(piece.setId).toBe('pilgrim');
+    }
+    for (const piece of pieces.slice(0, 3)) expect(p.equipment.equip(piece, 5).ok).toBe(true);
+    const three = deriveStats(p, [], {});
+    expect(three.goldFind).toBe(0);
+    expect(p.equipment.equip(pieces[3]!, 5).ok).toBe(true);
+    const four = deriveStats(p, [], {});
+    expect(four.goldFind).toBe(25);
+    // +10 from the set on top of the pieces' own +3 intelligence
+    expect(four.maxMana - before.maxMana).toBe(13 * 10);
+    expect(four.moveSpeed).toBeGreaterThan(three.moveSpeed * 1.2);
+  });
+});
 
 describe('player', () => {
   it('starts the rogue with a bow in hand and a dagger in the bag', () => {

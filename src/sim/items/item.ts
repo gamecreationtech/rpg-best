@@ -1,4 +1,4 @@
-import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
+import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SET_BASES, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
 import type { StatKey, StatMap } from '../../data/stats';
 import type { Rng } from '../../gen/rng';
 
@@ -22,6 +22,8 @@ export interface Item {
   weapon?: WeaponProps;
   /** Lantern, skull or quiver: sits in the shield slot but is not a shield. */
   offhand?: OffhandKind;
+  /** The set this piece belongs to, if any. */
+  setId?: string;
   affixes: string[];
   forge: ForgeStacks;
   value: number;
@@ -69,7 +71,7 @@ export function reqLevelFor(ilvl: number): number {
 
 /** Builds an item from a base definition at a rarity and item level. */
 export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng | null): Item {
-  // Starters and the divine specials carry their numbers as written
+  // Starters, set pieces and the divine specials carry their numbers as written
   const fixed = base.noDrop || !!base.rarity;
   const mult = fixed ? 1 : statMultiplier(rarity, ilvl);
   const bonus = fixed ? 1 : bonusMultiplier(rarity, ilvl);
@@ -80,7 +82,8 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     stats[key] = scaleStat(key, base.stats[key]!, multFor(key));
   }
   const affixes: string[] = [];
-  if (rng && RARITIES[rarity].affixes > 0) {
+  // Hand-written items (starters, set pieces, divine specials) never roll affixes either
+  if (rng && !fixed && RARITIES[rarity].affixes > 0) {
     const pool = [...AFFIX_POOL];
     for (let i = 0; i < RARITIES[rarity].affixes && pool.length; i++) {
       const idx = rng.int(0, pool.length - 1);
@@ -100,11 +103,12 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     slot: base.slot,
     rarity,
     ilvl,
-    reqLevel: base.noDrop ? 1 : reqLevelFor(ilvl),
+    reqLevel: base.noDrop ? 1 : base.reqLevel ?? reqLevelFor(ilvl),
     size: [base.size[0], base.size[1]],
     stats,
     weapon,
     offhand: base.offhand,
+    setId: base.setId,
     affixes,
     forge: { dmg: 0, spd: 0, block: 0, armor: 0 },
     value: base.value ?? itemValue(rarity, base.size, ilvl),
@@ -117,11 +121,11 @@ export function makeStarterItem(id: string): Item {
   return makeItem(baseItem(id), 'common', 1, null);
 }
 
-/** Rolls a rarity. Magic find scales every weight above common. */
-export function rollRarity(rng: Rng, magicFind = 0, maxRarity: Rarity = 'divine'): Rarity {
+/** Rolls a rarity. Magic find scales every weight above common. Set has no weight of its own: the zone's sets supply one. */
+export function rollRarity(rng: Rng, magicFind = 0, maxRarity: Rarity = 'divine', setWeight = 0): Rarity {
   const maxIdx = RARITY_ORDER.indexOf(maxRarity);
   const mf = 1 + magicFind / 100;
-  const weights = RARITY_ORDER.map((r, i) => (i > maxIdx ? 0 : RARITIES[r].dropWeight * (r === 'common' ? 1 : mf)));
+  const weights = RARITY_ORDER.map((r, i) => (i > maxIdx ? 0 : (r === 'set' ? setWeight : RARITIES[r].dropWeight) * (r === 'common' ? 1 : mf)));
   const total = weights.reduce((a, b) => a + b, 0);
   let roll = rng.next() * total;
   for (let i = 0; i < weights.length; i++) {
@@ -137,6 +141,9 @@ export interface GenerateOptions {
   maxRarity?: Rarity;
   rarity?: Rarity;
   slot?: EquipSlot;
+  /** Sets whose pieces may drop here, and the weight out of 100 for a set piece. */
+  sets?: string[];
+  setWeight?: number;
 }
 
 const DROPPABLE = ALL_BASES.filter((b) => !b.noDrop && !b.rarity);
@@ -147,8 +154,8 @@ const DROPPABLE = ALL_BASES.filter((b) => !b.noDrop && !b.rarity);
  * settles for a mythic of that slot instead.
  */
 export function generateItem(rng: Rng, opts: GenerateOptions): Item {
-  let rarity = opts.rarity ?? rollRarity(rng, opts.magicFind ?? 0, opts.maxRarity ?? 'divine');
-  let pool = rarity === 'divine' ? SPECIAL_BASES : DROPPABLE;
+  let rarity = opts.rarity ?? rollRarity(rng, opts.magicFind ?? 0, opts.maxRarity ?? 'divine', opts.sets?.length ? opts.setWeight ?? 0 : 0);
+  let pool = rarity === 'divine' ? SPECIAL_BASES : rarity === 'set' ? SET_BASES.filter((b) => opts.sets?.includes(b.setId!)) : DROPPABLE;
   if (opts.slot) pool = pool.filter((b) => b.slot === opts.slot);
   if (!pool.length) {
     rarity = 'mythic';

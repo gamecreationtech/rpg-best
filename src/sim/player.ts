@@ -4,6 +4,7 @@ import { CONSUMABLES } from '../data/consumables';
 import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/professions';
 import { passivesFor } from '../data/passives';
 import { PLEDGES } from '../data/pledges';
+import { SETS } from '../data/sets';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
@@ -162,9 +163,20 @@ export function totalBaseStats(p: PlayerState): BaseStats {
 }
 
 /** Sum of stats from equipment and passives. */
+/** How many pieces of a set the hero wears. */
+export function setPiecesWorn(p: PlayerState, setId: string): number {
+  let n = 0;
+  for (const item of p.equipment.all()) if (item.setId === setId) n++;
+  return n;
+}
+
 export function gearStats(p: PlayerState): StatMap {
   const total: StatMap = {};
   for (const item of p.equipment.all()) addStats(total, item.stats);
+  // A full set adds its bonus once
+  for (const set of Object.values(SETS)) {
+    if (setPiecesWorn(p, set.id) >= set.pieces.length) addStats(total, set.bonus);
+  }
   for (const def of passivesFor(p.classId)) {
     const rank = p.passiveRanks[def.id] ?? 0;
     if (rank > 0) addStats(total, { [def.stat]: def.perRank } as StatMap, rank);

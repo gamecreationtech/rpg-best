@@ -73,6 +73,10 @@ export interface BaseItem {
   weapon?: WeaponProps;
   /** Set on the offhand items that live in the shield slot without being shields. */
   offhand?: OffhandKind;
+  /** Set pieces: the set they belong to (see `data/sets.ts`). */
+  setId?: string;
+  /** Fixed level requirement for hand-written items; drops otherwise derive it from item level. */
+  reqLevel?: number;
   /** Fixed rarity for special items. */
   rarity?: Rarity;
   /** Starter and special items are not generated as drops. */
@@ -133,6 +137,18 @@ export const SPECIAL_BASES: BaseItem[] = [
   { id: 'vital_charm', name: 'Vital Charm', slot: 'charm', size: [1, 1], stats: { life: 500, mana: 500 }, rarity: 'divine' },
 ];
 
+/**
+ * Set pieces: fixed numbers like the divines, tuned for the levels their set
+ * drops at. Pilgrim's Vestments (levels 5-15): a clear step over the first two
+ * zones' white and blue gear, behind rares by Ashen Marsh.
+ */
+export const SET_BASES: BaseItem[] = [
+  { id: 'pilgrim_cap', name: "Pilgrim's Cap", slot: 'helmet', size: [2, 2], stats: { armor: 10, vit: 3, life: 10 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 120 },
+  { id: 'pilgrim_coat', name: "Pilgrim's Coat", slot: 'chest', size: [2, 3], stats: { armor: 24, vit: 3, str: 2, hpRegen: 1 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 200 },
+  { id: 'pilgrim_gloves', name: "Pilgrim's Gloves", slot: 'gloves', size: [2, 2], stats: { armor: 6, int: 3, atkSpd: 0.1 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 100 },
+  { id: 'pilgrim_boots', name: "Pilgrim's Boots", slot: 'boots', size: [2, 2], stats: { armor: 8, dex: 3, moveSpeed: 10 }, rarity: 'set', setId: 'pilgrim', reqLevel: 4, value: 120 },
+];
+
 /** Starter gear: item level 1, common, worth nothing, named plainly after what it is. */
 export const STARTER_ITEMS: BaseItem[] = [
   { id: 'wooden_sword', name: 'Sword', slot: 'weapon', size: [1, 3], stats: {}, noDrop: true, value: 0, weapon: { type: 'sword', dmgMin: 2, dmgMax: 5, atkSpd: 1.1, ranged: false, magic: false, twoHanded: false, range: 30 } },
@@ -143,7 +159,7 @@ export const STARTER_ITEMS: BaseItem[] = [
   { id: 'starter_spear', name: 'Spear', slot: 'weapon', size: [1, 4], stats: { str: 3 }, noDrop: true, value: 0, weapon: { type: 'spear', dmgMin: 7, dmgMax: 13, atkSpd: 1.3, ranged: false, magic: false, twoHanded: true, range: 45 } },
 ];
 
-export const ALL_BASES: BaseItem[] = [...WEAPON_BASES, ...ARMOR_BASES, ...ACCESSORY_BASES, ...SPECIAL_BASES, ...STARTER_ITEMS];
+export const ALL_BASES: BaseItem[] = [...WEAPON_BASES, ...ARMOR_BASES, ...ACCESSORY_BASES, ...SPECIAL_BASES, ...SET_BASES, ...STARTER_ITEMS];
 
 export function baseItem(id: string): BaseItem {
   const b = ALL_BASES.find((x) => x.id === id);

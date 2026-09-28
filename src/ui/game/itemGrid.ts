@@ -1,4 +1,5 @@
 import { RARITIES } from '../../data/items';
+import { SETS } from '../../data/sets';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { formatStat, type StatKey } from '../../data/stats';
 import type { Inventory } from '../../sim/items/inventory';
@@ -66,11 +67,19 @@ export function itemIcon(item: Item, size: number): HTMLCanvasElement {
   return c;
 }
 
-/** Tooltip body for an item. */
-export function itemCard(item: Item, compareTo: Item | null = null): HTMLDivElement {
+/** Tooltip body for an item. `setWorn` is how many pieces of its set the hero wears, for the set lines. */
+export function itemCard(item: Item, compareTo: Item | null = null, setWorn = 0): HTMLDivElement {
   const color = hex(RARITIES[item.rarity].color);
   const lines = describeItem(item);
   const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
+  const set = item.setId ? SETS[item.setId] : null;
+  const full = !!set && setWorn >= set.pieces.length;
+  const setLines = set
+    ? [
+        h('div', { class: 'item-line', style: `color:${color}` }, `${set.name} (${setWorn} of ${set.pieces.length})`),
+        h('div', { class: 'item-line' + (full ? '' : ' dim'), style: full ? `color:${color}` : '' }, `Full set: ${(Object.entries(set.bonus) as [StatKey, number][]).map(([k, v]) => formatStat(k, v)).join(', ')}`),
+      ]
+    : [];
   return h(
     'div',
     { class: 'item-card' },
@@ -81,6 +90,7 @@ export function itemCard(item: Item, compareTo: Item | null = null): HTMLDivElem
       const delta = compareTo ? v - (compareTo.stats[k] ?? 0) : 0;
       return h('div', { class: 'item-line stat' }, formatStat(k, v), compareTo && delta !== 0 ? h('span', { class: delta > 0 ? 'up' : 'down' }, ` (${delta > 0 ? '+' : ''}${Math.round(delta * 100) / 100})`) : null);
     }),
+    ...setLines,
     item.affixes.length > 1 ? h('div', { class: 'item-line dim' }, item.affixes.slice(1).join(', ')) : null,
     Object.values(item.forge).some((n) => n > 0) ? h('div', { class: 'item-line dim' }, `Smelted ${Object.values(item.forge).reduce((a, b) => a + b, 0)} times`) : null,
   );

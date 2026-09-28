@@ -106,8 +106,14 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
 
 ### 4.5 Items
 
-- **Rarity tiers:** Common, Magic, Rare, Mythic, Set (from transmutation only)
-  and Divine, dropping 40/40/16/3.5/0/0.5 out of 100.
+- **Rarity tiers:** Common, Magic, Rare, Mythic, Set and Divine, dropping
+  40/40/16/3.5/0/0.5 out of 100. Set has no weight of its own: a set's pieces
+  drop only in the zones the set names, at the set's weight (transmutation
+  also reaches set).
+- **Sets** are hand-written like divines, with a bonus for wearing every piece.
+  Pilgrim's Vestments (cap, coat, gloves, boots; level 4; Proving Grounds and
+  Cursed Hollow at 2 out of 100) is the beginner set for every class: the full
+  set gives +25% movement speed, +10 to all four stats and +25% gold find.
 - **Divine items are all hand-written** (producer's call, 2026-09-28): a divine
   drop is always one of the coded specials, never an ordinary base rolled at
   divine rarity, and transmutation stops at set.

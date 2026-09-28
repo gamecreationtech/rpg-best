@@ -252,6 +252,29 @@ describe('bulk selling', () => {
   });
 });
 
+describe('set drops', () => {
+  it('set pieces drop only in the zones their set names', () => {
+    const early = new World(createPlayer('knight', 'titan'), 101);
+    early.travel('arena', 'proving_grounds');
+    const late = new World(createPlayer('knight', 'titan'), 101);
+    late.travel('arena', 'ashen_marsh');
+    const drops = (w: World) => {
+      let sets = 0;
+      for (let i = 0; i < 600; i++) {
+        const e = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 12, w.pz); // 70% drop chance
+        w.killEnemy(e, 0);
+        sets += w.drops.filter((d) => d.alive && d.item?.rarity === 'set').length;
+        for (const d of w.drops) d.alive = false;
+      }
+      return sets;
+    };
+    const a = drops(early);
+    expect(a).toBeGreaterThan(2);
+    expect(a).toBeLessThan(30);
+    expect(drops(late)).toBe(0);
+  });
+});
+
 describe('rogue shields', () => {
   it('a rogue carries no shield until sworn an Impaler, but offhands are fine', () => {
     const w = new World(createPlayer('rogue', null), 91);

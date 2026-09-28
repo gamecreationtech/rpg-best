@@ -17,6 +17,7 @@ import { buyPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
 import type { Rarity } from '../data/items';
+import { setsForZone } from '../data/sets';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
@@ -1319,7 +1320,8 @@ export class World {
       this.addDrop(e.x + this.rng.range(-0.4, 0.4), e.z + this.rng.range(-0.4, 0.4), null, gold);
       // Item find scales the monster's own drop chance; magic find then decides the rarity
       if (this.rng.next() * 100 < e.def.dropChance * (1 + this.derived.itemFind / 100)) {
-        const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind });
+        const sets = setsForZone(this.zone.id);
+        const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind, sets: sets.map((s) => s.id), setWeight: Math.max(0, ...sets.map((s) => s.dropWeight)) });
         this.addDrop(e.x + this.rng.range(-0.6, 0.6), e.z + this.rng.range(-0.6, 0.6), item, 0);
       }
     }

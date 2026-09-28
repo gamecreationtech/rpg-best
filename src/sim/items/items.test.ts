@@ -47,6 +47,7 @@ describe('item generation', () => {
       const item = generateItem(rng, { ilvl: 40, rarity: 'divine' });
       expect(specials.has(item.baseId), item.name).toBe(true);
       expect(item.rarity).toBe('divine');
+      expect(item.affixes).toEqual([]);
     }
     // A slot with no special settles for a mythic of that slot
     const boots = generateItem(rng, { ilvl: 40, rarity: 'divine', slot: 'boots' });
