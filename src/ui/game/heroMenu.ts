@@ -216,9 +216,11 @@ export class HeroMenu {
         }
         rerender();
       };
-      el.onmouseenter = (e) => this.showTip(w, item, 'equip', e.clientX, e.clientY);
-      el.onmousemove = (e) => this.moveTip(e.clientX, e.clientY);
-      el.onmouseleave = () => this.hideTip();
+      if (this.mouse) {
+        el.onmouseenter = (e) => this.showTip(w, item, 'equip', e.clientX, e.clientY);
+        el.onmousemove = (e) => this.moveTip(e.clientX, e.clientY);
+        el.onmouseleave = () => this.hideTip();
+      }
     } else {
       el.appendChild(pxText(key.startsWith('ring') ? 'Ring' : keyLabel(key), { color: '#3a3c48', scale: 1 }));
     }
@@ -375,6 +377,8 @@ export class HeroMenu {
   private tipItem: Item | null = null;
 
   private showTip(w: World, item: Item, from: 'bag' | 'equip', x: number, y: number): void {
+    // Touch devices show the item in its own box; phones also fake mouse events after a tap, so never float a card there
+    if (!this.mouse) return;
     if (this.tipItem === item && this.tip) {
       this.moveTip(x, y);
       return;
