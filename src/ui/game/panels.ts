@@ -172,7 +172,7 @@ export class Panels {
     const cls = 'selected-card' + (this.touch ? ' sticky' : '');
     if (!this.selected) return h('div', { class: cls }, h('div', { class: 'item-card dim' }, hint));
     const compare = this.selectedFrom !== 'equip' ? w.player.equipment.get(w.player.equipment.targetKey(this.selected)) : null;
-    const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null, this.selected.setId ? setPiecesWorn(w.player, this.selected.setId) : 0);
+    const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null, this.selected.setId ? setPiecesWorn(w.player, this.selected.setId) : 0, w.player.level);
     const usable = canEquipItem(w.player, this.selected);
     if (!usable.ok) card.append(h('div', { class: 'item-line down' }, usable.reason!));
     return h('div', { class: cls }, card, h('div', { class: 'actions' }, ...actions));

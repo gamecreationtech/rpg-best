@@ -68,7 +68,7 @@ export function itemIcon(item: Item, size: number): HTMLCanvasElement {
 }
 
 /** Tooltip body for an item. `setWorn` is how many pieces of its set the hero wears, for the set lines. */
-export function itemCard(item: Item, compareTo: Item | null = null, setWorn = 0): HTMLDivElement {
+export function itemCard(item: Item, compareTo: Item | null = null, setWorn = 0, playerLevel = Infinity): HTMLDivElement {
   const color = hex(RARITIES[item.rarity].color);
   const lines = describeItem(item);
   const stats = Object.entries(item.stats).filter(([, v]) => v) as [StatKey, number][];
@@ -84,7 +84,7 @@ export function itemCard(item: Item, compareTo: Item | null = null, setWorn = 0)
     'div',
     { class: 'item-card' },
     h('div', { class: 'item-name', style: `color:${color}` }, item.name),
-    h('div', { class: 'item-sub' }, `${RARITIES[item.rarity].name} ${item.slot}, level ${item.reqLevel}, ${item.value} gold`),
+    h('div', { class: 'item-sub' }, `${RARITIES[item.rarity].name} ${item.slot}, `, h('span', { style: item.reqLevel > playerLevel ? 'color:#ff6a6a' : '' }, `level ${item.reqLevel}`), `, ${item.value} gold`),
     ...lines.map((l) => h('div', { class: 'item-line' }, l)),
     ...stats.map(([k, v]) => {
       const delta = compareTo ? v - (compareTo.stats[k] ?? 0) : 0;

@@ -315,6 +315,16 @@ export function skillRank(p: PlayerState, id: string): number {
   return p.skillRanks[id] ?? 0;
 }
 
+/**
+ * What a basic attack lands for before crits: the weapon roll plus half of
+ * strength (intelligence and spell damage for a magic weapon) and flat bonus
+ * damage, times every +% damage. The stat sheet shows this range.
+ */
+export function attackDamageRange(d: DerivedStats): [number, number] {
+  const flat = d.isMagicWeapon ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage;
+  return [Math.max(1, Math.round((d.dmgMin + flat) * d.dmgMult)), Math.max(1, Math.round((d.dmgMax + flat) * d.dmgMult))];
+}
+
 /** Whether this hero may carry a real shield: rogues cannot, unless sworn to a pledge that allows it (the Impaler). */
 export function canUseShields(p: PlayerState): boolean {
   if (CLASSES[p.classId].shields !== false) return true;

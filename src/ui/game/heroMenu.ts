@@ -1,6 +1,7 @@
 import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { SETS, describeSetBonus } from '../../data/sets';
+import { COMBAT_RULES } from '../../data/status';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
@@ -8,7 +9,7 @@ import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
-import { ATTACK_SLOT, allocateStat, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { ATTACK_SLOT, allocateStat, attackDamageRange, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -360,7 +361,7 @@ export class HeroMenu {
     const out: HTMLElement[] = [
       h('div', { class: 'px-row between' }, pxText(item.name, { color }), pxText(`[${RARITIES[item.rarity].name}]`, { color })),
       pxText(kind, { color: MUTED }),
-      pxText(`Required level ${item.reqLevel}`, { color: '#a8aec0' }),
+      pxText(`Required level ${item.reqLevel}`, { color: item.reqLevel > w.player.level ? RED : '#a8aec0' }),
     ];
     const usable = canEquipItem(w.player, item);
     if (!usable.ok) out.push(pxText(usable.reason!, { color: RED }));
@@ -529,7 +530,7 @@ export class HeroMenu {
       ));
     }
     head('Offense');
-    row('Weapon damage', `${d.dmgMin} - ${d.dmgMax}`);
+    row('Damage', `${attackDamageRange(d)[0]} - ${attackDamageRange(d)[1]}`);
     row('Bonus damage', `+${Math.round(d.bonusDamage)}`);
     row('Spell damage', `+${Math.round(d.spellDmg)}`);
     row('Attack speed', d.atkSpd.toFixed(2));
@@ -545,15 +546,14 @@ export class HeroMenu {
     head('Defense');
     row('Life', `${Math.ceil(p.hp)} / ${d.maxHp}`);
     row('Mana', `${Math.floor(p.mana)} / ${d.maxMana}`);
-    row('Armor', `${Math.round(d.armor)}  (${Math.round((d.armor / (d.armor + 650)) * 100)}% less)`);
+    row('Armor', `${Math.round(d.armor)}  (${Math.round((d.armor / (d.armor + 650)) * 100)}% damage reduced)`);
     row('Dodge', `${d.dodge.toFixed(1)}%`);
     row('Block', `${d.block}%`);
     row('Life regen', `${d.hpRegen.toFixed(1)} /s`);
     row('Mana regen', `${d.manaRegen.toFixed(1)} /s`);
     row('Life on hit', String(d.lifeOnHit));
     row('Mana on hit', String(d.manaOnHit));
-    row('Life steal', `${d.lifeSteal}%`);
-    row('Move speed', `${Math.round(d.moveSpeed * 32)} px/s`);
+    row('Move speed', `${Math.round(((d.moveSpeed * 32) / COMBAT_RULES.baseMoveSpeedPx) * 100)}%`);
     head('Resistances');
     row('Fire', `${d.res.fire}%`);
     row('Cold', `${d.res.cold}%`);
