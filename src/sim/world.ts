@@ -1372,6 +1372,18 @@ export class World {
     }
   }
 
+  /** A hit on one monster wakes its neighbours: every living monster within MONSTER_RULES.alertRange px of it starts chasing too. */
+  alertNear(e: Enemy): void {
+    const r = MONSTER_RULES.alertRange * PX;
+    const r2 = r * r;
+    for (const o of this.enemies) {
+      if (o === e || o.aggro || !o.alive || o.dead || o.dummy) continue;
+      const dx = o.x - e.x;
+      const dz = o.z - e.z;
+      if (dx * dx + dz * dz <= r2) o.aggro = true;
+    }
+  }
+
   private think(e: Enemy, dist: number, hidden: boolean): void {
     e.moveX = 0;
     e.moveZ = 0;

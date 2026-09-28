@@ -312,6 +312,17 @@ describe('aggro', () => {
     hitEnemy(w, far, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: false });
     expect(far.aggro).toBe(true);
   });
+
+  it('a hit also wakes every monster within 100 px of the one hit', () => {
+    const w = new World(createPlayer('knight', 'titan'), 33);
+    w.travel('arena');
+    const hit = w.spawnEnemy(MONSTERS.ghoul!, w.px + 14, w.pz);
+    const near = w.spawnEnemy(MONSTERS.ghoul!, hit.x + 2.5, hit.z); // 80 px from the one hit
+    const far = w.spawnEnemy(MONSTERS.ghoul!, hit.x + 4, hit.z); // 128 px from it
+    hitEnemy(w, hit, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: false });
+    expect(near.aggro).toBe(true);
+    expect(far.aggro).toBe(false);
+  });
 });
 
 describe('touch attack button', () => {

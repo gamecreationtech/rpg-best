@@ -129,6 +129,8 @@ export const MONSTERS: Record<string, EnemyDef> = {
 export const MONSTER_RULES = {
   /** Monsters ignore the hero beyond this many px until hit. */
   aggroRange: 300,
+  /** Hitting a monster also wakes every monster within this many px of it. */
+  alertRange: 100,
   hpPerLevel: 0.12,
   dmgPerLevel: 0.055,
   xpPerLevel: 0.15,

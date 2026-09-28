@@ -49,6 +49,7 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   } else {
     e.hp -= amount;
     e.aggro = true;
+    w.alertNear(e);
   }
   w.emit({ type: 'damage', x: e.x, z: e.z, y: 1.6 * e.scale, amount, crit, element: p.element, target: 'enemy' });
   w.emit({ type: 'enemy_hit', id: e.id });
