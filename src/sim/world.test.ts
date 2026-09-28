@@ -253,13 +253,13 @@ describe('bulk selling', () => {
 });
 
 describe('item procs', () => {
-  it('Cry of the Weak fires on about a quarter of weapon hits and strikes everything within 50 px', () => {
+  it('Cry of the Weak fires on about half of weapon hits and strikes everything within 50 px', () => {
     const w = new World(createPlayer('knight', 'titan'), 111);
     w.travel('arena');
     const amulet = makeItem(baseItem('weak_amulet'), 'divine', 100, null);
     expect(w.player.equipment.equip(amulet, 100).ok).toBe(true);
     w.recomputeStats();
-    expect(w.derived.procs).toEqual([{ id: 'cry_of_the_weak', chance: 25 }]);
+    expect(w.derived.procs).toEqual([{ id: 'cry_of_the_weak', chance: 50 }]);
     const target = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1, w.pz);
     const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px, w.pz + 1.2); // 38 px away
     const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 4, w.pz); // 128 px away
@@ -281,8 +281,8 @@ describe('item procs', () => {
         expect(near.hp).toBe(nearHp);
       }
     }
-    expect(fired).toBeGreaterThan(60);
-    expect(fired).toBeLessThan(140);
+    expect(fired).toBeGreaterThan(150);
+    expect(fired).toBeLessThan(250);
     expect(far.hp).toBe(farHp);
   });
 });

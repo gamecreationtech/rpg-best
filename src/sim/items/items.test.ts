@@ -49,7 +49,7 @@ describe('item generation', () => {
       expect(a.stats.critDamage).toBeLessThanOrEqual(50);
       expect(Number.isInteger(a.stats.critChance)).toBe(true);
       expect(a.reqLevel).toBe(100);
-      expect(a.proc).toEqual({ id: 'cry_of_the_weak', chance: 25 });
+      expect(a.proc).toEqual({ id: 'cry_of_the_weak', chance: 50 });
       expect(a.affixes).toEqual([]);
     }
     const mid = makeItem(baseItem('weak_amulet'), 'divine', 100, null);
