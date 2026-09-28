@@ -1,12 +1,12 @@
 import { ARCANA_OPS, BLOOD_OPS, FORGE_OPS, STATIONS } from '../../data/crafting';
 import { PROFESSIONS, PROFESSION_PERKS } from '../../data/professions';
-import { RARITIES } from '../../data/items';
+import { ITEM_RULES, RARITIES } from '../../data/items';
 import { ZONES } from '../../data/zones';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
 import { buyPrice, sellPrice } from '../../sim/items/vendor';
-import { professionXpToNext } from '../../sim/player';
+import { canEquipItem, professionXpToNext } from '../../sim/player';
 import type { World } from '../../sim/world';
 import type { Settings } from '../../app/storage';
 import { button, clear, h, hex } from '../dom';
@@ -56,6 +56,8 @@ export class Panels {
   private selectedFrom: 'bag' | 'equip' | 'stash' | 'vendor' | null = null;
   private stashPage = 0;
   private cellSize = 30;
+  /** Which half of a two-part panel a phone shows: the stock or the bag, the gear or the bag. */
+  private half: 'left' | 'bag' = 'left';
 
   constructor(parent: HTMLElement, private readonly host: PanelHost) {
     this.titleEl = h('div', { class: 'panel-title' });
@@ -67,6 +69,21 @@ export class Panels {
     parent.appendChild(this.root);
     installPixelChrome();
     this.hero = new HeroMenu({ world: host.world, message: (t, c) => host.message(t, c), close: () => host.close() });
+  }
+
+  /** Phones and tablets: no hover, one column, big tap targets. */
+  private get touch(): boolean {
+    return !this.hero.mouse;
+  }
+
+  /** On touch a two-part panel shows one half at a time under a pair of tabs. */
+  private halves(left: string, leftEl: HTMLElement, bagEl: HTMLElement): HTMLElement[] {
+    if (!this.touch) return [h('div', { class: 'two-col' }, leftEl, bagEl)];
+    const tabs = h('div', { class: 'tabs halves' },
+      button(left, () => { this.half = 'left'; this.render(); }, 'btn small' + (this.half === 'left' ? ' on' : '')),
+      button('Bag', () => { this.half = 'bag'; this.render(); }, 'btn small' + (this.half === 'bag' ? ' on' : '')),
+    );
+    return [tabs, this.half === 'left' ? leftEl : bagEl];
   }
 
   /** The hero menu (Tab): inventory, gear and stats on one tab, skills and passives on the other. */
@@ -84,7 +101,9 @@ export class Panels {
     this.selectedFrom = null;
     this.root.style.display = 'flex';
     this.titleEl.textContent = TITLES[kind];
-    this.cellSize = Math.max(22, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / 12)));
+    // The bag is 18 wide: cells shrink so every column fits on a phone
+    this.cellSize = Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.inventoryCols)));
+    this.half = 'left';
     if (this.isHero) {
       this.hero.reset();
       this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : kind === 'character' && !this.hero.mouse ? 'stats' : 'inventory';
@@ -148,10 +167,15 @@ export class Panels {
     return h('div', { class: 'equip-list' }, h('div', { class: 'section-label' }, 'Equipped'), ...rows);
   }
 
-  private selectedCard(w: World, actions: HTMLElement[]): HTMLElement | null {
-    if (!this.selected) return h('div', { class: 'item-card dim' }, 'Tap an item to see it. Tap it again for actions.');
+  /** The tapped item with its stats and the actions for it; pinned at the top on touch so it is always in view. */
+  private selectedCard(w: World, actions: HTMLElement[], hint = 'Tap an item to see its stats.'): HTMLElement | null {
+    const cls = 'selected-card' + (this.touch ? ' sticky' : '');
+    if (!this.selected) return h('div', { class: cls }, h('div', { class: 'item-card dim' }, hint));
     const compare = this.selectedFrom !== 'equip' ? w.player.equipment.get(w.player.equipment.targetKey(this.selected)) : null;
-    return h('div', { class: 'selected' }, itemCard(this.selected, compare && compare !== this.selected ? compare : null), h('div', { class: 'actions' }, ...actions));
+    const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null);
+    const usable = canEquipItem(w.player, this.selected);
+    if (!usable.ok) card.append(h('div', { class: 'item-line down' }, usable.reason!));
+    return h('div', { class: cls }, card, h('div', { class: 'actions' }, ...actions));
   }
 
   private select(item: Item, from: 'bag' | 'equip' | 'stash' | 'vendor'): void {
@@ -169,12 +193,13 @@ export class Panels {
       onItemTap: (item) => { if (!w.moveBetween(item, page, w.player.inventory)) this.host.message('Bag is full', 0xff8080); this.render(); },
       onCellTap: () => {},
     });
-    stashGrid.setCellSize(this.cellSize);
+    // The stash is narrower than the bag, so its cells can be bigger
+    stashGrid.setCellSize(Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.stashCols))));
     stashGrid.render();
     this.body.append(
       h('div', { class: 'dim pad' }, 'Tap an item to move it between your bag and the stash.'),
       tabs,
-      h('div', { class: 'two-col' }, h('div', { class: 'grid-wrap' }, h('div', { class: 'section-label' }, `Stash page ${this.stashPage + 1}`), stashGrid.root), this.bagGrid(w, (item) => { if (!w.moveBetween(item, w.player.inventory, page)) this.host.message('Stash page is full', 0xff8080); this.render(); })),
+      ...this.halves('Stash', h('div', { class: 'grid-wrap' }, h('div', { class: 'section-label' }, `Stash page ${this.stashPage + 1}`), stashGrid.root), this.bagGrid(w, (item) => { if (!w.moveBetween(item, w.player.inventory, page)) this.host.message('Stash page is full', 0xff8080); this.render(); })),
     );
   }
 
@@ -182,7 +207,7 @@ export class Panels {
 
   private renderVendor(w: World): void {
     const stock = h('div', { class: 'stock' }, h('div', { class: 'section-label' }, 'For sale'), ...w.vendorStock.map((item) =>
-      h('div', { class: 'stock-row' + (item === this.selected ? ' selected' : '') },
+      h('div', { class: 'stock-row' + (item === this.selected ? ' selected' : '') + (canEquipItem(w.player, item).ok ? '' : ' unusable') },
         button('', () => this.select(item, 'vendor'), 'stock-name'),
         h('span', { class: 'price' }, `${buyPrice(item)}g`),
         button('Buy', () => { const r = w.buyItem(item); if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080); this.selected = null; this.render(); }, 'btn small' + (w.player.gold >= buyPrice(item) ? ' primary' : ' disabled')),
@@ -196,11 +221,14 @@ export class Panels {
     if (this.selected && this.selectedFrom === 'bag') {
       const sel = this.selected;
       actions.push(button(`Sell for ${sellPrice(sel)} gold`, () => { w.sellItem(sel); this.selected = null; this.render(); }, 'btn primary'));
+    } else if (this.selected && this.selectedFrom === 'vendor') {
+      const sel = this.selected;
+      actions.push(button(`Buy for ${buyPrice(sel)} gold`, () => { const r = w.buyItem(sel); if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080); this.selected = null; this.render(); }, 'btn primary' + (w.player.gold >= buyPrice(sel) ? '' : ' disabled')));
     }
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value.`),
-      h('div', { class: 'two-col' }, stock, this.bagGrid(w, (item) => this.select(item, 'bag'))),
-      this.selectedCard(w, actions)!,
+      this.selectedCard(w, actions, 'Tap something for sale or in your bag to see its stats, then buy or sell it here.')!,
+      ...this.halves('For sale', stock, this.bagGrid(w, (item) => this.select(item, 'bag'))),
     );
   }
 
@@ -262,8 +290,10 @@ export class Panels {
     }
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Pick an item from your bag or your equipment, then choose an operation.`),
-      h('div', { class: 'two-col' }, h('div', {}, this.equipList(w, (item) => this.select(item, 'equip')), ops), this.bagGrid(w, (item) => this.select(item, 'bag'))),
-      this.selectedCard(w, [])!,
+      this.selectedCard(w, [], 'Tap a worn item or one in your bag to see its stats, then choose an operation.')!,
+      ...(this.touch
+        ? [ops, ...this.halves('Equipped', this.equipList(w, (item) => this.select(item, 'equip')), this.bagGrid(w, (item) => this.select(item, 'bag')))]
+        : [h('div', { class: 'two-col' }, h('div', {}, this.equipList(w, (item) => this.select(item, 'equip')), ops), this.bagGrid(w, (item) => this.select(item, 'bag')))]),
     );
   }
 

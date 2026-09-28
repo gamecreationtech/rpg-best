@@ -68,7 +68,10 @@ joystick moves, which always cancels the target. Next to a merchant, station, wa
 or portal the same button turns gold and becomes the action button (Trade,
 Open, Travel, Enter); tapping it uses the thing. The hero menu on touch has
 four tabs, Inventory, Stats, Skills and Passives, since the stat sheet does not
-fit beside the bag on a phone. Tapping a skill casts it at the nearest
+fit beside the bag on a phone. The merchant, stash and crafting panels show one
+half at a time on touch (For sale or Bag, Stash or Bag, Equipped or Bag) under a
+pair of tabs, with the tapped item's card and its Buy or Sell button pinned at
+the top, and the bag's cells shrink so all 18 columns fit. Tapping a skill casts it at the nearest
 enemy; holding a skill repeats it; dragging from a skill aims it. Loot is
 picked up by walking over it. Loot labels, the merchant and
 the stations can be tapped directly too.
