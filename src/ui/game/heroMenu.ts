@@ -139,6 +139,10 @@ export class HeroMenu {
   }
 
   render(body: HTMLElement): void {
+    // The window is rebuilt on every action; keep the scroll where the player left it
+    const oldContent = body.querySelector<HTMLElement>('.px-content');
+    const keepScroll = oldContent && oldContent.dataset.tab === this.tab ? oldContent.scrollTop : 0;
+    const keepStats = body.querySelector<HTMLElement>('.px-stats')?.scrollTop ?? 0;
     clear(body);
     const w = this.host.world;
     const p = w.player;
@@ -161,10 +165,14 @@ export class HeroMenu {
     const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : '') });
     // The window goes into the page first so the inventory can measure the room it has
     body.append(h('div', { class: 'px-window' + (this.mouse ? '' : ' touch') }, tabs, content));
+    content.dataset.tab = this.tab;
     if (this.tab === 'inventory') this.renderInventory(w, content);
     else if (this.tab === 'stats') this.renderStats(w, content);
     else if (this.tab === 'skills') this.renderSkills(w, content);
     else this.renderPassives(w, content);
+    if (keepScroll) content.scrollTop = keepScroll;
+    const stats = content.querySelector<HTMLElement>('.px-stats');
+    if (stats && keepStats) stats.scrollTop = keepStats;
   }
 
   // ---------------------------------------------------------------- inventory
