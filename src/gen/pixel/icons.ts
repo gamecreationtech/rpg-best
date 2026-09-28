@@ -255,6 +255,20 @@ function drawWeapon(b: PixelBuffer, type: WeaponType, r: Ramp, steel: Ramp, wood
       b.rect(o + 7, o + 3, 1, 9, r[0]);
       b.rect(o + 5, o + 6, 4, 3, r[2]);
       break;
+    case 'warfork':
+      diag(o + 1, o + 13, o + 9, o + 5, wood[1], 2);
+      b.rect(o + 9, o + 1, 1, 5, steel[2]);
+      b.rect(o + 12, o + 1, 1, 5, steel[2]);
+      b.rect(o + 9, o + 5, 4, 1, steel[1]);
+      b.set(o + 10, o + 6, r[1]);
+      b.set(o + 11, o + 6, r[1]);
+      break;
+    case 'javelin':
+      diag(o + 1, o + 13, o + 10, o + 4, wood[1]);
+      diag(o + 13, o + 1, o + 11, o + 3, steel[2], 2);
+      b.set(o + 5, o + 9, r[1]);
+      b.set(o + 6, o + 8, r[1]);
+      break;
     case 'warpike':
       diag(o + 1, o + 13, o + 9, o + 5, wood[1], 2);
       diag(o + 13, o + 1, o + 8, o + 6, steel[2], 2);

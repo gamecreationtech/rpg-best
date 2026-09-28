@@ -81,7 +81,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     startingBag: ['starter_dagger'],
     shields: false,
     pledges: ['quiverbound', 'impaler', 'silverblade'],
-    preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear', 'warpike'],
+    preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear', 'warpike', 'warfork', 'javelin'],
   },
 };
 

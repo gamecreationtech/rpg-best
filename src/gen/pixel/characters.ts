@@ -556,6 +556,23 @@ const WEAPONS: Record<WeaponType, WeaponDrawer> = {
     d.buf.rect(x, hy - 2, 4, 5, cover);
     d.buf.rect(x + 1, hy - 1, 2, 3, page);
   },
+  warfork: (d, hx, hy, raise, facing) => {
+    // A short pole ending in two tines
+    const len = px(d.H * 0.5);
+    pole(d, hx, hy, raise, facing, len, 'wood');
+    const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
+    const s = base(d, 'steel');
+    d.buf.rect(tx - 1, ty - 3, 1, 4, s);
+    d.buf.rect(tx + 1, ty - 3, 1, 4, s);
+    d.buf.rect(tx - 1, ty, 3, 1, s);
+  },
+  javelin: (d, hx, hy, raise, facing) => {
+    // A light throwing spear: a thin shaft with a small steel head
+    const len = px(d.H * 0.55);
+    pole(d, hx, hy, raise, facing, len, 'wood');
+    const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
+    d.buf.rect(tx, ty - 2, 1, 3, base(d, 'steel'));
+  },
   warpike: (d, hx, hy, raise, facing) => {
     // Longest pole with a long leaf tip and a crossbar below it
     const len = px(d.H * 0.85);

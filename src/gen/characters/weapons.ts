@@ -72,6 +72,15 @@ export function addWeapon(b: PartBuilder, type: WeaponType, hand: Vec3, pivot: V
       b.box({ at: [hx, hy + 0.05, fz + 0.1], size: [0.34, 0.42, 0.1], color: 0x5a2a2a, part, pivot });
       b.box({ at: [hx, hy + 0.05, fz + 0.16], size: [0.28, 0.34, 0.02], color: BONE, part, pivot });
       break;
+    case 'warfork':
+      b.box({ at: [hx, hy + 0.3, fz], size: [0.05, 1.4, 0.05], color: WOOD, part, pivot });
+      b.box({ at: [hx - 0.07, hy + 1.15, fz], size: [0.04, 0.4, 0.04], color: STEEL, part, pivot });
+      b.box({ at: [hx + 0.07, hy + 1.15, fz], size: [0.04, 0.4, 0.04], color: STEEL, part, pivot });
+      break;
+    case 'javelin':
+      b.box({ at: [hx, hy + 0.4, fz], size: [0.035, 1.6, 0.035], color: WOOD, part, pivot });
+      b.box({ at: [hx, hy + 1.3, fz], size: [0.05, 0.25, 0.08], taper: [0.2, 0.15], color: STEEL, part, pivot });
+      break;
     case 'warpike':
       b.box({ at: [hx, hy + 0.6, fz], size: [0.06, 2.4, 0.06], color: WOOD, part, pivot });
       b.box({ at: [hx, hy + 1.95, fz], size: [0.1, 0.5, 0.06], taper: [0.2, 0.2], color: STEEL, part, pivot });

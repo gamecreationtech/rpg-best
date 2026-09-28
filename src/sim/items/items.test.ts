@@ -150,11 +150,20 @@ describe('equipment', () => {
     // A two-handed staff going on knocks the skull off like a shield
     expect(eq.equip(makeStarterItem('wooden_staff'), 1).removed).toContain(skull);
     expect(eq.equip(skull, 1).reason).toBe('Cannot use an offhand with a two-handed weapon');
-    // A bow takes a quiver and nothing else
-    expect(eq.equip(makeStarterItem('wooden_bow'), 1).ok).toBe(true);
+    // A bow is one-handed but takes a quiver and nothing else, not even a shield
+    const bow = makeStarterItem('wooden_bow');
+    expect(bow.weapon!.twoHanded).toBe(false);
+    expect(eq.equip(bow, 1).ok).toBe(true);
     expect(eq.equip(lantern, 1).reason).toBe('A bow only takes a quiver');
+    expect(eq.equip(makeStarterItem('wooden_shield'), 1).reason).toBe('A bow only takes a quiver');
     expect(eq.equip(quiver, 1).ok).toBe(true);
+    // One-handed javelin and warfork leave a hand free for a shield
+    expect(eq.equip(makeItem(baseItem('javelin'), 'common', 1, null), 1).removed).toContain(quiver);
+    expect(eq.equip(makeStarterItem('wooden_shield'), 1).ok).toBe(true);
+    expect(eq.equip(makeItem(baseItem('warfork'), 'common', 1, null), 1).removed).toEqual(expect.not.arrayContaining([expect.objectContaining({ slot: 'shield' })]));
     // A crossbow is two-handed with no exception: the quiver comes off and nothing goes back on
+    expect(eq.equip(bow, 1).removed).toEqual(expect.arrayContaining([expect.objectContaining({ slot: 'shield' })]));
+    expect(eq.equip(quiver, 1).ok).toBe(true);
     const crossbow = makeItem(baseItem('crossbow'), 'common', 1, null);
     expect(eq.equip(crossbow, 1).removed).toContain(quiver);
     expect(eq.equip(quiver, 1).reason).toBe('A quiver needs a bow');

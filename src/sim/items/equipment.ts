@@ -17,11 +17,12 @@ export function keysForSlot(slot: EquipSlot): EquipKey[] {
 
 /**
  * Whether the item in the shield slot cannot be held alongside this weapon.
- * Two-handed weapons leave no hand free for a shield, lantern or skull; a bow
- * is the one exception and takes a quiver, which needs a bow and nothing else.
+ * Two-handed weapons leave no hand free for a shield, lantern or skull. A bow
+ * (one-handed) takes a quiver and nothing else; a quiver needs a bow.
  */
 export function offhandConflict(off: Item, weapon: Item | null | undefined): boolean {
   if (off.offhand === 'quiver') return weapon?.weapon?.type !== 'bow';
+  if (weapon?.weapon?.type === 'bow') return true;
   return isTwoHanded(weapon);
 }
 
