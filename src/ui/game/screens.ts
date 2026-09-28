@@ -1,6 +1,9 @@
 import { CLASSES, CLASS_LIST, LEVELING, type ClassId } from '../../data/classes';
 import { pledgesFor } from '../../data/pledges';
 import { SKILLS } from '../../data/skills';
+import { PALETTES } from '../../gen/pixel/palettes';
+import { heroSheet, type HeroLook } from '../../gen/pixel/characters';
+import { isoTiles } from '../../gen/pixel/sprites';
 import { button, clear, h, hex } from '../dom';
 
 export interface ScreenHost {
@@ -9,6 +12,8 @@ export interface ScreenHost {
   showcase(): void;
   lab(): void;
   chooseClass(id: ClassId): void;
+  /** Phones: the zoom picked right after the class, before play starts. */
+  chooseZoom(classId: ClassId, zoom: 1 | 2): void;
   choosePledge(classId: ClassId, id: string): void;
   respawn(): void;
   cancelToTitle(): void;
@@ -68,6 +73,26 @@ export class Screens {
     this.show(h('h2', { class: 'screen-title' }, 'Choose your class'), h('div', { class: 'cards' }, ...cards), button('Back', () => this.host.cancelToTitle(), 'btn ghost'));
   }
 
+  /** Phones ask for the zoom after the class, with a live preview of each. */
+  zoomSelect(classId: ClassId): void {
+    const cls = CLASSES[classId];
+    const cards = ([1, 2] as const).map((z) =>
+      h(
+        'div',
+        { class: 'card zoom-card', style: `--c:${hex(cls.color)}` },
+        h('div', { class: 'card-title' }, `${z}x`),
+        zoomPreview(classId, z),
+        h('div', { class: 'card-text' }, z === 1 ? 'See more of the map around you. The hero is small.' : 'A closer view. The hero is twice as big and easier to follow.'),
+        button(`Play at ${z}x`, () => this.host.chooseZoom(classId, z), 'btn primary'),
+      ),
+    );
+    this.show(
+      h('h2', { class: 'screen-title' }, 'Choose your zoom'),
+      h('div', { class: 'title-note' }, 'How big the world is drawn on your screen. You can change it any time in Menu, under Screen.'),
+      h('div', { class: 'cards' }, ...cards),
+    );
+  }
+
   /** `forced`: the level-20 choice during play, with no way back. */
   pledgeSelect(classId: ClassId, forced = false): void {
     const cls = CLASSES[classId];
@@ -98,4 +123,40 @@ export class Screens {
   clearDead(): void {
     this.root.classList.remove('dead');
   }
+}
+
+/** A slice of town floor with the class's hero standing on it, drawn at the given whole scale. */
+function zoomPreview(classId: ClassId, scale: 1 | 2): HTMLCanvasElement {
+  const W = 200;
+  const H = 130;
+  const c = h('canvas', { class: 'zoom-preview' }) as HTMLCanvasElement;
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingEnabled = false;
+  const pal = PALETTES.find((p) => p.id === 'grim')!;
+  const tiles = isoTiles(pal, 'small', 11);
+  ctx.fillStyle = '#' + pal.background.toString(16).padStart(6, '0');
+  ctx.fillRect(0, 0, W, H);
+  // A diamond grid of floor tiles filling the box at this scale
+  const tw = tiles.tileW * scale;
+  const th = tiles.tileH * scale;
+  const cols = Math.ceil(W / tw) + 2;
+  const rows = Math.ceil(H / (th / 2)) + 2;
+  for (let r = -1; r < rows; r++) {
+    for (let col = -1; col < cols; col++) {
+      const x = col * tw + (r % 2 ? tw / 2 : 0) - tw / 2;
+      const y = r * (th / 2) - th / 2;
+      const tile = tiles.floor[(r * 7 + col * 3) & 3]!;
+      ctx.drawImage(tile, Math.round(x), Math.round(y), tw, th);
+    }
+  }
+  const look: HeroLook = { classId, pledgeId: null, weapon: classId === 'knight' ? 'sword' : classId === 'sorcerer' ? 'staff' : 'bow', shield: classId === 'knight' ? 'wooden' : null };
+  const sheet = heroSheet(look, pal, 'small', true);
+  const anim = sheet.front.idle;
+  const frame = anim.frames[0]!;
+  const fx = Math.round(W / 2 - anim.originX * scale);
+  const fy = Math.round(H * 0.62 - anim.originY * scale);
+  ctx.drawImage(frame, fx, fy, frame.width * scale, frame.height * scale);
+  return c;
 }

@@ -351,6 +351,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .card-sub { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-top: -6px; }
 .card-text { font-size: 13px; line-height: 1.45; }
 .card-stats { font-size: 12px; font-family: ui-monospace, Menlo, monospace; }
+.zoom-card { align-items: center; text-align: center; }
+.zoom-preview { width: 200px; height: 130px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 6px; background: #06070c; }
 .close { min-height: 34px; }
 
 /* Desktop bar */

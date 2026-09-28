@@ -64,7 +64,16 @@ export class Game {
         location.search = '?lab';
       },
       // Pledges are sworn at level 20, so a new hero starts right after the class pick
-      chooseClass: (id) => this.start(createPlayer(id, null), Math.floor(Math.random() * 1e9), true),
+      chooseClass: (id) => {
+        if (this.mobile) this.screens.zoomSelect(id);
+        else this.start(createPlayer(id, null), Math.floor(Math.random() * 1e9), true);
+      },
+      chooseZoom: (id, zoom) => {
+        this.settings.zoom = zoom;
+        saveSettings(this.settings);
+        this.start(createPlayer(id, null), Math.floor(Math.random() * 1e9), true);
+        this.hud?.message(`Playing at ${zoom}x. Change it any time in Menu, under Screen.`, 0xa0a8c0);
+      },
       choosePledge: (_classId, pledgeId) => {
         if (!this.world || !this.world.choosePledge(pledgeId)) return;
         this.screens.hide();
