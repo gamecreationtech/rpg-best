@@ -15,6 +15,7 @@ export interface ClassDef {
   color: number;
   description: string;
   base: BaseStats;
+  /** Automatic growth per level. Zero for every class since 2026-09-28: levels give five free points instead. */
   perLevel: BaseStats;
   baseHp: number;
   baseMana: number;
@@ -36,7 +37,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     color: 0x5588cc,
     description: 'A stalwart warrior clad in heavy plate. Absorbs punishment while crushing enemies with sword and shield.',
     base: { str: 10, dex: 5, int: 5, vit: 10 },
-    perLevel: { str: 2, dex: 0, int: 0, vit: 3 },
+    perLevel: { str: 0, dex: 0, int: 0, vit: 0 },
     baseHp: 100,
     baseMana: 100,
     hpPerVit: 10,
@@ -51,7 +52,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     color: 0xaa55ee,
     description: 'A master of arcane arts who bends elemental forces to devastating effect at range.',
     base: { str: 5, dex: 5, int: 10, vit: 10 },
-    perLevel: { str: 0, dex: 0, int: 4, vit: 1 },
+    perLevel: { str: 0, dex: 0, int: 0, vit: 0 },
     baseHp: 100,
     baseMana: 100,
     hpPerVit: 10,
@@ -66,7 +67,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     color: 0x44cc66,
     description: 'A swift shadow that strikes from range with deadly precision, weaving between foes.',
     base: { str: 10, dex: 10, int: 5, vit: 5 },
-    perLevel: { str: 0, dex: 4, int: 0, vit: 1 },
+    perLevel: { str: 0, dex: 0, int: 0, vit: 0 },
     baseHp: 100,
     baseMana: 100,
     hpPerVit: 10,

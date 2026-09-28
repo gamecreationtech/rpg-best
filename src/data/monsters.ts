@@ -65,68 +65,72 @@ export const MONSTERS: Record<string, EnemyDef> = {
   marsh_troll: M({ id: 'marsh_troll', name: 'Marsh Troll', look: 'troll', hp: 420, damage: 26, element: 'physical', speed: 46, xp: 40, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [25, 60], scale: 1.2, pack: [1, 1] }),
 
   // Frozen Crypt
-  frost_wraith: M({ id: 'frost_wraith', name: 'Frost Wraith', look: 'frostwraith', hp: 60, damage: 13, element: 'cold', speed: 55, xp: 10, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, glow: 0x9fe0ff, preferredRange: 190 }),
-  revenant: M({ id: 'revenant', name: 'Revenant Knight', look: 'revenant', hp: 180, damage: 18, element: 'physical', speed: 60, xp: 22, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [10, 30], scale: 1, pack: [1, 1] }),
-  necromancer: M({ id: 'necromancer', name: 'Necromancer', look: 'necromancer', hp: 90, damage: 15, element: 'poison', speed: 50, xp: 18, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [12, 34], scale: 1, pack: [1, 1], preferredRange: 210 }),
-  ice_golem: M({ id: 'ice_golem', name: 'Ice Golem', look: 'golem', hp: 700, damage: 30, element: 'cold', speed: 36, xp: 70, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [40, 90], scale: 1.25, pack: [1, 1], glow: 0x7fd8ff }),
+  frost_wraith: M({ id: 'frost_wraith', name: 'Frost Wraith', look: 'frostwraith', hp: 60, damage: 8, element: 'cold', speed: 55, xp: 10, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, glow: 0x9fe0ff, preferredRange: 190 }),
+  revenant: M({ id: 'revenant', name: 'Revenant Knight', look: 'revenant', hp: 180, damage: 11, element: 'physical', speed: 60, xp: 22, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [10, 30], scale: 1, pack: [1, 1] }),
+  necromancer: M({ id: 'necromancer', name: 'Necromancer', look: 'necromancer', hp: 90, damage: 9, element: 'poison', speed: 50, xp: 18, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [12, 34], scale: 1, pack: [1, 1], preferredRange: 210 }),
+  ice_golem: M({ id: 'ice_golem', name: 'Ice Golem', look: 'golem', hp: 700, damage: 18, element: 'cold', speed: 36, xp: 70, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [40, 90], scale: 1.25, pack: [1, 1], glow: 0x7fd8ff }),
 
   // Ember Foundry
-  cinder_bat: M({ id: 'cinder_bat', name: 'Cinder Bat', look: 'bat', hp: 30, damage: 8, element: 'fire', speed: 145, xp: 3, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 5], scale: 1, pack: [3, 6], hover: 14, glow: 0xff7030 }),
-  ash_ghoul: M({ id: 'ash_ghoul', name: 'Ash Ghoul', look: 'ghoul', hp: 50, damage: 10, element: 'fire', speed: 100, xp: 5, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [3, 8], scale: 1, pack: [2, 4] }),
-  magma_imp: M({ id: 'magma_imp', name: 'Magma Imp', look: 'wisp', hp: 40, damage: 15, element: 'fire', speed: 70, xp: 6, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [5, 14], scale: 1, pack: [1, 2], hover: 12, glow: 0xff8040, preferredRange: 180 }),
-  slag_brute: M({ id: 'slag_brute', name: 'Slag Brute', look: 'brute', hp: 260, damage: 22, element: 'fire', speed: 44, xp: 28, radius: 20, ai: 'melee', attackRange: 42, attackCooldown: 1800, dropChance: 45, gold: [18, 45], scale: 1.1, pack: [1, 1] }),
-  forge_golem: M({ id: 'forge_golem', name: 'Forge Golem', look: 'golem', hp: 800, damage: 38, element: 'fire', speed: 36, xp: 85, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [45, 100], scale: 1.25, pack: [1, 1], glow: 0xff6020 }),
+  cinder_bat: M({ id: 'cinder_bat', name: 'Cinder Bat', look: 'bat', hp: 30, damage: 4, element: 'fire', speed: 145, xp: 3, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 5], scale: 1, pack: [3, 6], hover: 14, glow: 0xff7030 }),
+  ash_ghoul: M({ id: 'ash_ghoul', name: 'Ash Ghoul', look: 'ghoul', hp: 50, damage: 5, element: 'fire', speed: 100, xp: 5, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [3, 8], scale: 1, pack: [2, 4] }),
+  magma_imp: M({ id: 'magma_imp', name: 'Magma Imp', look: 'wisp', hp: 40, damage: 8, element: 'fire', speed: 70, xp: 6, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [5, 14], scale: 1, pack: [1, 2], hover: 12, glow: 0xff8040, preferredRange: 180 }),
+  slag_brute: M({ id: 'slag_brute', name: 'Slag Brute', look: 'brute', hp: 260, damage: 11, element: 'fire', speed: 44, xp: 28, radius: 20, ai: 'melee', attackRange: 42, attackCooldown: 1800, dropChance: 45, gold: [18, 45], scale: 1.1, pack: [1, 1] }),
+  forge_golem: M({ id: 'forge_golem', name: 'Forge Golem', look: 'golem', hp: 800, damage: 19, element: 'fire', speed: 36, xp: 85, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [45, 100], scale: 1.25, pack: [1, 1], glow: 0xff6020 }),
 
   // Sunken Temple
-  drowned: M({ id: 'drowned', name: 'Drowned', look: 'ghoul', hp: 48, damage: 10, element: 'cold', speed: 90, xp: 5, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 900, dropChance: 24, gold: [3, 8], scale: 1, pack: [2, 4] }),
-  deep_spider: M({ id: 'deep_spider', name: 'Deep Spider', look: 'spider', hp: 42, damage: 9, element: 'poison', speed: 85, xp: 5, radius: 12, ai: 'melee', attackRange: 30, attackCooldown: 1100, dropChance: 26, gold: [3, 9], scale: 1, pack: [2, 3] }),
-  tide_wraith: M({ id: 'tide_wraith', name: 'Tide Wraith', look: 'wraith', hp: 44, damage: 14, element: 'cold', speed: 50, xp: 6, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2100, dropChance: 38, gold: [5, 14], scale: 1, pack: [1, 1], hover: 4, preferredRange: 195 }),
-  temple_guardian: M({ id: 'temple_guardian', name: 'Temple Guardian', look: 'revenant', hp: 220, damage: 26, element: 'physical', speed: 58, xp: 24, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [12, 34], scale: 1, pack: [1, 1] }),
-  sunken_troll: M({ id: 'sunken_troll', name: 'Sunken Troll', look: 'troll', hp: 460, damage: 30, element: 'cold', speed: 46, xp: 48, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [28, 66], scale: 1.2, pack: [1, 1] }),
+  drowned: M({ id: 'drowned', name: 'Drowned', look: 'ghoul', hp: 48, damage: 4, element: 'cold', speed: 90, xp: 5, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 900, dropChance: 24, gold: [3, 8], scale: 1, pack: [2, 4] }),
+  deep_spider: M({ id: 'deep_spider', name: 'Deep Spider', look: 'spider', hp: 42, damage: 4, element: 'poison', speed: 85, xp: 5, radius: 12, ai: 'melee', attackRange: 30, attackCooldown: 1100, dropChance: 26, gold: [3, 9], scale: 1, pack: [2, 3] }),
+  tide_wraith: M({ id: 'tide_wraith', name: 'Tide Wraith', look: 'wraith', hp: 44, damage: 6, element: 'cold', speed: 50, xp: 6, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2100, dropChance: 38, gold: [5, 14], scale: 1, pack: [1, 1], hover: 4, preferredRange: 195 }),
+  temple_guardian: M({ id: 'temple_guardian', name: 'Temple Guardian', look: 'revenant', hp: 220, damage: 12, element: 'physical', speed: 58, xp: 24, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [12, 34], scale: 1, pack: [1, 1] }),
+  sunken_troll: M({ id: 'sunken_troll', name: 'Sunken Troll', look: 'troll', hp: 460, damage: 14, element: 'cold', speed: 46, xp: 48, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [28, 66], scale: 1.2, pack: [1, 1] }),
 
   // Blighted Orchard
-  orchard_rat: M({ id: 'orchard_rat', name: 'Orchard Rat', look: 'rat', hp: 24, damage: 6, element: 'poison', speed: 125, xp: 3, radius: 8, ai: 'melee', attackRange: 22, attackCooldown: 600, dropChance: 10, gold: [2, 4], scale: 1, pack: [4, 7] }),
-  blighted_ghoul: M({ id: 'blighted_ghoul', name: 'Blighted Ghoul', look: 'ghoul', hp: 52, damage: 11, element: 'poison', speed: 100, xp: 6, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [3, 9], scale: 1, pack: [2, 4] }),
-  plague_archer: M({ id: 'plague_archer', name: 'Plague Archer', look: 'archer', hp: 46, damage: 12, element: 'poison', speed: 52, xp: 6, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [4, 12], scale: 1, pack: [1, 2], preferredRange: 220 }),
-  blight_crawler: M({ id: 'blight_crawler', name: 'Blight Crawler', look: 'crawler', hp: 160, damage: 16, element: 'poison', speed: 40, xp: 14, radius: 18, ai: 'melee', attackRange: 40, attackCooldown: 1600, dropChance: 40, gold: [10, 26], scale: 1, pack: [1, 1] }),
-  rot_troll: M({ id: 'rot_troll', name: 'Rot Troll', look: 'troll', hp: 500, damage: 32, element: 'poison', speed: 46, xp: 52, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [30, 70], scale: 1.2, pack: [1, 1] }),
+  orchard_rat: M({ id: 'orchard_rat', name: 'Orchard Rat', look: 'rat', hp: 24, damage: 3, element: 'poison', speed: 125, xp: 3, radius: 8, ai: 'melee', attackRange: 22, attackCooldown: 600, dropChance: 10, gold: [2, 4], scale: 1, pack: [4, 7] }),
+  blighted_ghoul: M({ id: 'blighted_ghoul', name: 'Blighted Ghoul', look: 'ghoul', hp: 52, damage: 4, element: 'poison', speed: 100, xp: 6, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [3, 9], scale: 1, pack: [2, 4] }),
+  plague_archer: M({ id: 'plague_archer', name: 'Plague Archer', look: 'archer', hp: 46, damage: 5, element: 'poison', speed: 52, xp: 6, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [4, 12], scale: 1, pack: [1, 2], preferredRange: 220 }),
+  blight_crawler: M({ id: 'blight_crawler', name: 'Blight Crawler', look: 'crawler', hp: 160, damage: 6, element: 'poison', speed: 40, xp: 14, radius: 18, ai: 'melee', attackRange: 40, attackCooldown: 1600, dropChance: 40, gold: [10, 26], scale: 1, pack: [1, 1] }),
+  rot_troll: M({ id: 'rot_troll', name: 'Rot Troll', look: 'troll', hp: 500, damage: 13, element: 'poison', speed: 46, xp: 52, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [30, 70], scale: 1.2, pack: [1, 1] }),
 
   // Obsidian Halls
-  crypt_bat: M({ id: 'crypt_bat', name: 'Crypt Bat', look: 'bat', hp: 30, damage: 7, element: 'physical', speed: 140, xp: 3, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 5], scale: 1, pack: [3, 6], hover: 14 }),
-  storm_wisp: M({ id: 'storm_wisp', name: 'Storm Wisp', look: 'wisp', hp: 40, damage: 18, element: 'lightning', speed: 72, xp: 6, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [5, 14], scale: 1, pack: [1, 2], hover: 16, glow: 0xc0a0ff, preferredRange: 180 }),
-  obsidian_knight: M({ id: 'obsidian_knight', name: 'Obsidian Knight', look: 'revenant', hp: 250, damage: 30, element: 'physical', speed: 60, xp: 27, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [14, 38], scale: 1, pack: [1, 2] }),
-  void_necromancer: M({ id: 'void_necromancer', name: 'Void Necromancer', look: 'necromancer', hp: 110, damage: 22, element: 'poison', speed: 50, xp: 20, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [15, 40], scale: 1, pack: [1, 1], preferredRange: 210 }),
-  obsidian_golem: M({ id: 'obsidian_golem', name: 'Obsidian Golem', look: 'golem', hp: 850, damage: 44, element: 'physical', speed: 36, xp: 90, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [50, 110], scale: 1.25, pack: [1, 1], glow: 0x8060ff }),
+  crypt_bat: M({ id: 'crypt_bat', name: 'Crypt Bat', look: 'bat', hp: 30, damage: 3, element: 'physical', speed: 140, xp: 3, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 5], scale: 1, pack: [3, 6], hover: 14 }),
+  storm_wisp: M({ id: 'storm_wisp', name: 'Storm Wisp', look: 'wisp', hp: 40, damage: 6, element: 'lightning', speed: 72, xp: 6, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [5, 14], scale: 1, pack: [1, 2], hover: 16, glow: 0xc0a0ff, preferredRange: 180 }),
+  obsidian_knight: M({ id: 'obsidian_knight', name: 'Obsidian Knight', look: 'revenant', hp: 250, damage: 10, element: 'physical', speed: 60, xp: 27, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [14, 38], scale: 1, pack: [1, 2] }),
+  void_necromancer: M({ id: 'void_necromancer', name: 'Void Necromancer', look: 'necromancer', hp: 110, damage: 8, element: 'poison', speed: 50, xp: 20, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [15, 40], scale: 1, pack: [1, 1], preferredRange: 210 }),
+  obsidian_golem: M({ id: 'obsidian_golem', name: 'Obsidian Golem', look: 'golem', hp: 850, damage: 15, element: 'physical', speed: 36, xp: 90, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [50, 110], scale: 1.25, pack: [1, 1], glow: 0x8060ff }),
 
   // Storm Peaks
-  thunder_bat: M({ id: 'thunder_bat', name: 'Thunder Bat', look: 'bat', hp: 34, damage: 9, element: 'lightning', speed: 150, xp: 4, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 6], scale: 1, pack: [3, 6], hover: 14, glow: 0xd0d0ff }),
-  frost_skeleton: M({ id: 'frost_skeleton', name: 'Frost Skeleton', look: 'skeleton', hp: 44, damage: 9, element: 'cold', speed: 58, xp: 5, radius: 13, ai: 'melee', attackRange: 32, attackCooldown: 1400, dropChance: 28, gold: [3, 10], scale: 1, pack: [2, 3] }),
-  sky_archer: M({ id: 'sky_archer', name: 'Sky Archer', look: 'archer', hp: 50, damage: 14, element: 'lightning', speed: 54, xp: 7, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [5, 14], scale: 1, pack: [1, 2], preferredRange: 220 }),
-  storm_wraith: M({ id: 'storm_wraith', name: 'Storm Wraith', look: 'frostwraith', hp: 70, damage: 20, element: 'lightning', speed: 56, xp: 11, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [8, 20], scale: 1, pack: [1, 2], hover: 4, glow: 0xe0e0ff, preferredRange: 190 }),
-  peak_brute: M({ id: 'peak_brute', name: 'Peak Brute', look: 'brute', hp: 300, damage: 26, element: 'physical', speed: 44, xp: 32, radius: 20, ai: 'melee', attackRange: 42, attackCooldown: 1800, dropChance: 45, gold: [20, 50], scale: 1.1, pack: [1, 1] }),
+  thunder_bat: M({ id: 'thunder_bat', name: 'Thunder Bat', look: 'bat', hp: 34, damage: 3, element: 'lightning', speed: 150, xp: 4, radius: 9, ai: 'melee', attackRange: 24, attackCooldown: 700, dropChance: 12, gold: [2, 6], scale: 1, pack: [3, 6], hover: 14, glow: 0xd0d0ff }),
+  frost_skeleton: M({ id: 'frost_skeleton', name: 'Frost Skeleton', look: 'skeleton', hp: 44, damage: 3, element: 'cold', speed: 58, xp: 5, radius: 13, ai: 'melee', attackRange: 32, attackCooldown: 1400, dropChance: 28, gold: [3, 10], scale: 1, pack: [2, 3] }),
+  sky_archer: M({ id: 'sky_archer', name: 'Sky Archer', look: 'archer', hp: 50, damage: 4, element: 'lightning', speed: 54, xp: 7, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [5, 14], scale: 1, pack: [1, 2], preferredRange: 220 }),
+  storm_wraith: M({ id: 'storm_wraith', name: 'Storm Wraith', look: 'frostwraith', hp: 70, damage: 6, element: 'lightning', speed: 56, xp: 11, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2000, dropChance: 40, gold: [8, 20], scale: 1, pack: [1, 2], hover: 4, glow: 0xe0e0ff, preferredRange: 190 }),
+  peak_brute: M({ id: 'peak_brute', name: 'Peak Brute', look: 'brute', hp: 300, damage: 8, element: 'physical', speed: 44, xp: 32, radius: 20, ai: 'melee', attackRange: 42, attackCooldown: 1800, dropChance: 45, gold: [20, 50], scale: 1.1, pack: [1, 1] }),
 
   // The Abyss
-  abyss_ghoul: M({ id: 'abyss_ghoul', name: 'Abyss Ghoul', look: 'ghoul', hp: 60, damage: 14, element: 'physical', speed: 105, xp: 7, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [4, 10], scale: 1, pack: [3, 5] }),
-  abyss_spider: M({ id: 'abyss_spider', name: 'Abyss Spider', look: 'spider', hp: 48, damage: 12, element: 'poison', speed: 85, xp: 6, radius: 12, ai: 'melee', attackRange: 30, attackCooldown: 1100, dropChance: 26, gold: [4, 10], scale: 1, pack: [2, 4] }),
-  void_wraith: M({ id: 'void_wraith', name: 'Void Wraith', look: 'wraith', hp: 60, damage: 20, element: 'cold', speed: 52, xp: 8, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2100, dropChance: 38, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, preferredRange: 195 }),
-  abyss_necromancer: M({ id: 'abyss_necromancer', name: 'Abyss Necromancer', look: 'necromancer', hp: 120, damage: 24, element: 'poison', speed: 50, xp: 22, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [16, 44], scale: 1, pack: [1, 1], preferredRange: 210 }),
-  abyssal_horror: M({ id: 'abyssal_horror', name: 'Abyssal Horror', look: 'troll', hp: 560, damage: 36, element: 'physical', speed: 48, xp: 58, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [34, 80], scale: 1.25, pack: [1, 1] }),
-  doom_golem: M({ id: 'doom_golem', name: 'Doom Golem', look: 'golem', hp: 950, damage: 50, element: 'fire', speed: 36, xp: 100, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [55, 120], scale: 1.3, pack: [1, 1], glow: 0xff3030 }),
+  abyss_ghoul: M({ id: 'abyss_ghoul', name: 'Abyss Ghoul', look: 'ghoul', hp: 60, damage: 4, element: 'physical', speed: 105, xp: 7, radius: 11, ai: 'melee', attackRange: 28, attackCooldown: 850, dropChance: 24, gold: [4, 10], scale: 1, pack: [3, 5] }),
+  abyss_spider: M({ id: 'abyss_spider', name: 'Abyss Spider', look: 'spider', hp: 48, damage: 3, element: 'poison', speed: 85, xp: 6, radius: 12, ai: 'melee', attackRange: 30, attackCooldown: 1100, dropChance: 26, gold: [4, 10], scale: 1, pack: [2, 4] }),
+  void_wraith: M({ id: 'void_wraith', name: 'Void Wraith', look: 'wraith', hp: 60, damage: 6, element: 'cold', speed: 52, xp: 8, radius: 13, ai: 'ranged', attackRange: 260, attackCooldown: 2100, dropChance: 38, gold: [6, 16], scale: 1, pack: [1, 2], hover: 4, preferredRange: 195 }),
+  abyss_necromancer: M({ id: 'abyss_necromancer', name: 'Abyss Necromancer', look: 'necromancer', hp: 120, damage: 7, element: 'poison', speed: 50, xp: 22, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [16, 44], scale: 1, pack: [1, 1], preferredRange: 210 }),
+  abyssal_horror: M({ id: 'abyssal_horror', name: 'Abyssal Horror', look: 'troll', hp: 560, damage: 10, element: 'physical', speed: 48, xp: 58, radius: 22, ai: 'melee', attackRange: 46, attackCooldown: 2000, dropChance: 55, gold: [34, 80], scale: 1.25, pack: [1, 1] }),
+  doom_golem: M({ id: 'doom_golem', name: 'Doom Golem', look: 'golem', hp: 950, damage: 14, element: 'fire', speed: 36, xp: 100, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [55, 120], scale: 1.3, pack: [1, 1], glow: 0xff3030 }),
 
   // Throne of the Fallen
-  fallen_archer: M({ id: 'fallen_archer', name: 'Fallen Archer', look: 'archer', hp: 56, damage: 16, element: 'physical', speed: 54, xp: 8, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [6, 16], scale: 1, pack: [1, 2], preferredRange: 220 }),
-  ember_wisp: M({ id: 'ember_wisp', name: 'Ember Wisp', look: 'wisp', hp: 50, damage: 22, element: 'fire', speed: 72, xp: 7, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [6, 16], scale: 1, pack: [1, 2], hover: 16, glow: 0xffb040, preferredRange: 180 }),
-  fallen_knight: M({ id: 'fallen_knight', name: 'Fallen Knight', look: 'revenant', hp: 300, damage: 34, element: 'physical', speed: 60, xp: 32, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [18, 46], scale: 1, pack: [1, 2] }),
-  royal_necromancer: M({ id: 'royal_necromancer', name: 'Royal Necromancer', look: 'necromancer', hp: 130, damage: 26, element: 'poison', speed: 50, xp: 24, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [18, 48], scale: 1, pack: [1, 1], preferredRange: 210 }),
-  throne_golem: M({ id: 'throne_golem', name: 'Throne Golem', look: 'golem', hp: 1100, damage: 54, element: 'physical', speed: 36, xp: 115, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [60, 140], scale: 1.3, pack: [1, 1], glow: 0xffc040 }),
+  fallen_archer: M({ id: 'fallen_archer', name: 'Fallen Archer', look: 'archer', hp: 56, damage: 4, element: 'physical', speed: 54, xp: 8, radius: 13, ai: 'ranged', attackRange: 300, attackCooldown: 1900, dropChance: 34, gold: [6, 16], scale: 1, pack: [1, 2], preferredRange: 220 }),
+  ember_wisp: M({ id: 'ember_wisp', name: 'Ember Wisp', look: 'wisp', hp: 50, damage: 6, element: 'fire', speed: 72, xp: 7, radius: 9, ai: 'ranged', attackRange: 240, attackCooldown: 1700, dropChance: 30, gold: [6, 16], scale: 1, pack: [1, 2], hover: 16, glow: 0xffb040, preferredRange: 180 }),
+  fallen_knight: M({ id: 'fallen_knight', name: 'Fallen Knight', look: 'revenant', hp: 300, damage: 8, element: 'physical', speed: 60, xp: 32, radius: 14, ai: 'melee', attackRange: 36, attackCooldown: 1300, dropChance: 45, gold: [18, 46], scale: 1, pack: [1, 2] }),
+  royal_necromancer: M({ id: 'royal_necromancer', name: 'Royal Necromancer', look: 'necromancer', hp: 130, damage: 6, element: 'poison', speed: 50, xp: 24, radius: 13, ai: 'ranged', attackRange: 280, attackCooldown: 2400, dropChance: 50, gold: [18, 48], scale: 1, pack: [1, 1], preferredRange: 210 }),
+  throne_golem: M({ id: 'throne_golem', name: 'Throne Golem', look: 'golem', hp: 1100, damage: 14, element: 'physical', speed: 36, xp: 115, radius: 24, ai: 'melee', attackRange: 50, attackCooldown: 2300, dropChance: 70, gold: [60, 140], scale: 1.3, pack: [1, 1], glow: 0xffc040 }),
 };
 
-/** How a monster's numbers grow with its zone's level. */
+/**
+ * How a monster's numbers grow with its zone's level. Base damage is kept
+ * roughly flat across zones (regulars 3-10, heavies up to 20) so this growth
+ * is the only ramp; heroes grow only through the five points a level and gear.
+ */
 export const MONSTER_RULES = {
   /** Monsters ignore the hero beyond this many px until hit. */
   aggroRange: 300,
-  hpPerLevel: 0.14,
-  dmgPerLevel: 0.08,
+  hpPerLevel: 0.12,
+  dmgPerLevel: 0.055,
   xpPerLevel: 0.15,
   goldPerLevel: 0.08,
 };

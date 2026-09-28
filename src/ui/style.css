@@ -515,6 +515,9 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-stat-head { padding: 8px 0 2px; }
 .px-stat { display: flex; align-items: center; gap: 8px; padding: 1px 0; border-bottom: 1px solid #1e1e28; min-height: 20px; }
 .px-stat .pxb { min-height: 22px; padding: 0 6px; }
+.pxb.tiny { min-height: 20px; min-width: 20px; padding: 0 4px; justify-content: center; }
+.pxb.tiny .mt { font-size: 12px; line-height: 1; }
+.stat-confirm { padding: 6px 0 2px; justify-content: flex-end; }
 
 /* Bag */
 .px-grid { padding: 0; }

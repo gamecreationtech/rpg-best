@@ -66,7 +66,7 @@ export class Screens {
         h('div', { class: 'card-title' }, c.name),
         h('div', { class: 'card-text' }, c.description),
         h('div', { class: 'card-stats' }, `STR ${c.base.str}  DEX ${c.base.dex}  INT ${c.base.int}  VIT ${c.base.vit}`),
-        h('div', { class: 'card-stats dim' }, `Per level: +${c.perLevel.str} STR, +${c.perLevel.dex} DEX, +${c.perLevel.int} INT, +${c.perLevel.vit} VIT`),
+        h('div', { class: 'card-stats dim' }, `Every level: +${LEVELING.statPointsPerLevel} points to spend on any stat`),
         button('Choose ' + c.name, () => this.host.chooseClass(c.id), 'btn primary'),
       ),
     );

@@ -62,8 +62,9 @@ Every feature must serve at least one of these. If it does not, cut it.
   moment: the hero is held in place and cannot be hurt until it is made.
 - **Skills:** base skills per class, pledge skills, and ultimates that replace
   a rank-5 base skill using the ultimate point earned at level 20. One skill
-  point, one passive point and five attribute points per level. The level cap
-  is 100.
+  point, one passive point and five attribute points per level; there is no
+  automatic stat growth, the five points are the only growth and are spent by
+  the player. The level cap is 100.
 - **Passives:** a general tree plus one tree per class, with prerequisites.
 - **Stats:** Strength, Dexterity, Intelligence, Vitality. Full formulas are in
   `docs/design/systems-reference.md` and the export they came from.

@@ -124,7 +124,15 @@ export class HeroMenu {
 
   constructor(private readonly host: HeroMenuHost) {}
 
+  /** Stat points placed with + and \u2212 but not yet confirmed. */
+  private readonly pending = { str: 0, dex: 0, int: 0, vit: 0 };
+
+  private clearPending(): void {
+    this.pending.str = this.pending.dex = this.pending.int = this.pending.vit = 0;
+  }
+
   reset(): void {
+    this.clearPending();
     this.selected = null;
     this.selectedFrom = null;
     this.hideTip();
@@ -455,19 +463,43 @@ export class HeroMenu {
     const sheet = h('div', { class: 'px-inset px-stats' });
     const head = (text: string) => sheet.append(h('div', { class: 'px-stat-head' }, pxText(text, { color: GOLD })));
     const row = (name: string, value: string, extra?: HTMLElement) => sheet.append(h('div', { class: 'px-stat' }, pxText(name, { color: MUTED }), h('span', { class: 'grow' }), pxText(value, { color: TEXT }), extra ?? null));
-    const plus = (key: 'str' | 'dex' | 'int' | 'vit') =>
-      p.statPoints > 0
-        ? pbtn('+', () => { allocateStat(p, key); w.markDirty(); w.recomputeStats(); rerender(); }, 'gold')
-        : undefined;
+    // Points go into a pending pile with + and \u2212 and only count once confirmed
+    const pend = this.pending;
+    const pendingTotal = pend.str + pend.dex + pend.int + pend.vit;
+    const left = p.statPoints - pendingTotal;
+    const attr = (name: string, key: 'str' | 'dex' | 'int' | 'vit', current: number) => {
+      const controls = h('span', { class: 'px-row tight' });
+      if (p.statPoints > 0) {
+        controls.append(
+          pbtn('\u2212', () => { if (pend[key] > 0) { pend[key]--; rerender(); } }, pend[key] > 0 ? 'red' : 'dim'),
+          pbtn('+', () => { if (left > 0) { pend[key]++; rerender(); } }, left > 0 ? 'gold' : 'dim'),
+        );
+        for (const b of controls.children) b.classList.add('tiny');
+      }
+      const value = pend[key] > 0 ? `${current + pend[key]}` : String(current);
+      sheet.append(h('div', { class: 'px-stat' }, pxText(name, { color: MUTED }), h('span', { class: 'grow' }), pxText(value, { color: pend[key] > 0 ? GREEN : TEXT }), controls));
+    };
     head(`Level ${p.level}`);
     row('Experience', `${p.xp} / ${p.xpToNext}`);
     row('Kills', String(p.kills));
     head('Attributes');
-    if (p.statPoints > 0) row('Points to spend', String(p.statPoints));
-    row('Strength', String(d.str), plus('str'));
-    row('Dexterity', String(d.dex), plus('dex'));
-    row('Intelligence', String(d.int), plus('int'));
-    row('Vitality', String(d.vit), plus('vit'));
+    if (p.statPoints > 0) row('Points to spend', pendingTotal ? `${left} (${pendingTotal} pending)` : String(left));
+    attr('Strength', 'str', d.str);
+    attr('Dexterity', 'dex', d.dex);
+    attr('Intelligence', 'int', d.int);
+    attr('Vitality', 'vit', d.vit);
+    if (pendingTotal > 0) {
+      sheet.append(h('div', { class: 'px-row tight stat-confirm' },
+        pbtn('Confirm', () => {
+          for (const key of ['str', 'dex', 'int', 'vit'] as const) for (let i = 0; i < pend[key]; i++) allocateStat(p, key);
+          this.clearPending();
+          w.markDirty();
+          w.recomputeStats();
+          rerender();
+        }, 'gold'),
+        pbtn('Cancel', () => { this.clearPending(); rerender(); }, 'dim'),
+      ));
+    }
     head('Offense');
     row('Weapon damage', `${d.dmgMin} - ${d.dmgMax}`);
     row('Bonus damage', `+${Math.round(d.bonusDamage)}`);

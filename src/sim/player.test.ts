@@ -33,8 +33,9 @@ describe('player', () => {
     expect(p.skillPoints).toBe(1);
     expect(p.passivePoints).toBe(1);
     const d = deriveStats(p, [], {});
-    // +4 INT per level: 14 INT -> 240 mana, wooden staff int 0
-    expect(d.maxMana).toBe(100 + 14 * 10);
+    // No automatic stat growth: 10 INT -> 200 mana, the level only grants free points
+    expect(d.maxMana).toBe(100 + 10 * 10);
+    expect(p.statPoints).toBe(LEVELING.statPointsPerLevel);
   });
 
   it('has a level curve that takes minutes early and under half an hour at the cap', () => {
