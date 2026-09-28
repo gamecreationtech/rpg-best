@@ -252,6 +252,27 @@ describe('bulk selling', () => {
   });
 });
 
+describe('rogue shields', () => {
+  it('a rogue carries no shield until sworn an Impaler, but offhands are fine', () => {
+    const w = new World(createPlayer('rogue', null), 91);
+    const shield = makeItem(baseItem('iron_shield'), 'common', 1, null);
+    const skull = makeItem(baseItem('skull'), 'common', 1, null);
+    w.player.inventory.add(shield);
+    w.player.inventory.add(skull);
+    w.equipItem(w.player.inventory.items.find((i) => i.name === 'Dagger')!);
+    const r = w.equipItem(shield);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toContain('carry no shield');
+    expect(w.equipItem(skull).ok).toBe(true);
+    w.player.pledgeId = 'impaler';
+    expect(w.equipItem(shield).ok).toBe(true);
+    expect(w.player.equipment.get('shield')).toBe(shield);
+    const silver = new World(createPlayer('rogue', 'silverblade'), 92);
+    silver.player.inventory.add(shield);
+    expect(silver.equipItem(shield).ok).toBe(false);
+  });
+});
+
 describe('picking up loot', () => {
   it('gold is walked over but an item waits for the action key', () => {
     const w = new World(createPlayer('knight', 'titan'), 81);

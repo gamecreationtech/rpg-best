@@ -3,6 +3,7 @@ import type { ConsumableId } from '../data/consumables';
 import { CONSUMABLES } from '../data/consumables';
 import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/professions';
 import { passivesFor } from '../data/passives';
+import { PLEDGES } from '../data/pledges';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
@@ -298,7 +299,13 @@ export function skillRank(p: PlayerState, id: string): number {
   return p.skillRanks[id] ?? 0;
 }
 
-/** Class weapon rules: a knight only ever holds a sword, mace or bardiche. */
+/** Whether this hero may carry a real shield: rogues cannot, unless sworn to a pledge that allows it (the Impaler). */
+export function canUseShields(p: PlayerState): boolean {
+  if (CLASSES[p.classId].shields !== false) return true;
+  return !!(p.pledgeId && PLEDGES[p.pledgeId]?.shields);
+}
+
+/** Class rules: a knight only ever holds a sword, mace or bardiche; a rogue carries no shield until sworn an Impaler. */
 export function canEquipItem(p: PlayerState, item: Item): { ok: boolean; reason?: string } {
   const allowed = CLASSES[p.classId].allowedWeapons;
   if (item.weapon && allowed && !allowed.includes(item.weapon.type)) {
@@ -306,6 +313,7 @@ export function canEquipItem(p: PlayerState, item: Item): { ok: boolean; reason?
     return { ok: false, reason: `${CLASSES[p.classId].name}s only use ${names}` };
   }
   if (item.slot === 'shield') {
+    if (!item.offhand && !canUseShields(p)) return { ok: false, reason: `${CLASSES[p.classId].name}s carry no shield${p.pledgeId ? '' : ' unless sworn an Impaler'}` };
     const weapon = p.equipment.get('weapon');
     if (offhandConflict(item, weapon)) return { ok: false, reason: offhandReason(item, weapon) };
   }

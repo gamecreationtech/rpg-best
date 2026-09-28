@@ -13,6 +13,8 @@ export interface PledgeDef {
   description: string;
   /** Skill ids unlocked by this pledge. */
   skills: string[];
+  /** True when the pledge lets a class that normally cannot carry a shield do so (the Impaler). */
+  shields?: boolean;
 }
 
 export const PLEDGES: Record<string, PledgeDef> = {
@@ -54,6 +56,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   impaler: {
     id: 'impaler', classId: 'rogue', name: 'Impaler', title: 'Lance of the Wilds', color: 0xff9a2a, armor: { plate: 0xb8621e, dark: 0x7a3a12, trim: 0xffb050 },
     description: 'Where others dodge and weave, the Impaler charges forward: skewering foes on steel with reckless ferocity.',
+    shields: true,
     skills: ['spear_wall', 'impale', 'reckless_charge'],
   },
   silverblade: {

@@ -30,6 +30,8 @@ export interface ClassDef {
   preferredWeapons: WeaponType[];
   /** When set, the only weapon types the class can equip. */
   allowedWeapons?: WeaponType[];
+  /** False when the class cannot carry a shield (offhands are still fine). A pledge with `shields: true` lifts it. */
+  shields?: boolean;
 }
 
 export const CLASSES: Record<ClassId, ClassDef> = {
@@ -77,6 +79,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     manaPerInt: 10,
     startingGear: ['wooden_bow'],
     startingBag: ['starter_dagger'],
+    shields: false,
     pledges: ['quiverbound', 'impaler', 'silverblade'],
     preferredWeapons: ['bow', 'crossbow', 'dagger', 'blowgun', 'spear', 'warpike'],
   },
