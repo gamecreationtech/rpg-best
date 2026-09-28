@@ -69,8 +69,9 @@ export function applyArcana(op: ArcanaOp, item: Item, rng: Rng): CraftResult {
       return { ok: true, message: `${item.name} gained ${affix.suffix}` };
     }
     case 'transmute': {
+      // Divine items are found, never made: the ladder ends at set
       const idx = RARITY_ORDER.indexOf(item.rarity);
-      if (idx >= RARITY_ORDER.length - 1) return { ok: false, reason: 'Already divine' };
+      if (idx >= RARITY_ORDER.indexOf('set')) return { ok: false, reason: item.rarity === 'divine' ? 'Divine items cannot change' : 'Divine items are found, never made' };
       const from = statMultiplier(item.rarity, item.ilvl);
       item.rarity = RARITY_ORDER[idx + 1]!;
       const to = statMultiplier(item.rarity, item.ilvl);

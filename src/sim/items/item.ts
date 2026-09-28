@@ -141,11 +141,19 @@ export interface GenerateOptions {
 
 const DROPPABLE = ALL_BASES.filter((b) => !b.noDrop && !b.rarity);
 
+/**
+ * Rolls a drop. Divine items are only ever the hand-written specials: no
+ * ordinary base is ever divine. A divine roll for a slot with no special
+ * settles for a mythic of that slot instead.
+ */
 export function generateItem(rng: Rng, opts: GenerateOptions): Item {
-  const rarity = opts.rarity ?? rollRarity(rng, opts.magicFind ?? 0, opts.maxRarity ?? 'divine');
-  let pool = DROPPABLE;
+  let rarity = opts.rarity ?? rollRarity(rng, opts.magicFind ?? 0, opts.maxRarity ?? 'divine');
+  let pool = rarity === 'divine' ? SPECIAL_BASES : DROPPABLE;
   if (opts.slot) pool = pool.filter((b) => b.slot === opts.slot);
-  if (rarity === 'divine' && !opts.slot && rng.next() < 0.5) pool = SPECIAL_BASES;
+  if (!pool.length) {
+    rarity = 'mythic';
+    pool = DROPPABLE.filter((b) => b.slot === opts.slot);
+  }
   const base = pool[rng.int(0, pool.length - 1)] ?? DROPPABLE[0]!;
   return makeItem(base, base.rarity ?? rarity, Math.max(1, opts.ilvl), rng);
 }

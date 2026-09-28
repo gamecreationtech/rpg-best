@@ -3,7 +3,7 @@ import { Rng } from '../../gen/rng';
 import { ARCANA_OPS, FORGE_OPS, applyArcana, applyForge } from './crafting';
 import { Equipment } from './equipment';
 import { Inventory } from './inventory';
-import { baseItem } from '../../data/items';
+import { SPECIAL_BASES, baseItem } from '../../data/items';
 import { generateItem, makeItem, makeStarterItem, rollRarity } from './item';
 import { generateStock, sellPrice } from './vendor';
 
@@ -38,6 +38,20 @@ describe('item generation', () => {
     // Divine specials carry their numbers as written
     const charm = makeItem(baseItem('vital_charm'), 'divine', 60, rng);
     expect(charm.stats.life).toBe(500);
+  });
+
+  it('every divine drop is one of the coded specials', () => {
+    const rng = new Rng(11);
+    const specials = new Set(SPECIAL_BASES.map((b) => b.id));
+    for (let i = 0; i < 200; i++) {
+      const item = generateItem(rng, { ilvl: 40, rarity: 'divine' });
+      expect(specials.has(item.baseId), item.name).toBe(true);
+      expect(item.rarity).toBe('divine');
+    }
+    // A slot with no special settles for a mythic of that slot
+    const boots = generateItem(rng, { ilvl: 40, rarity: 'divine', slot: 'boots' });
+    expect(boots.slot).toBe('boots');
+    expect(boots.rarity).toBe('mythic');
   });
 
   it('rarity weights roughly match the design', () => {
@@ -187,12 +201,13 @@ describe('crafting', () => {
     expect(sword.weapon!.dmgMax).toBeGreaterThanOrEqual(3);
   });
 
-  it('transmute climbs the rarity ladder and stops at divine', () => {
+  it('transmute climbs the rarity ladder and stops at set: divine is never made', () => {
     const item = generateItem(new Rng(4), { ilvl: 5, rarity: 'common', slot: 'helmet' });
     const rng = new Rng(5);
     const op = ARCANA_OPS.find((o) => o.id === 'transmute')!;
     const seen = [item.rarity];
     while (applyArcana(op, item, rng).ok) seen.push(item.rarity);
-    expect(seen).toEqual(['common', 'magic', 'rare', 'mythic', 'set', 'divine']);
+    expect(seen).toEqual(['common', 'magic', 'rare', 'mythic', 'set']);
+    expect(applyArcana(op, item, rng).reason).toBe('Divine items are found, never made');
   });
 });

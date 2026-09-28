@@ -108,8 +108,12 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
 
 - **Rarity tiers:** Common, Magic, Rare, Mythic, Set (from transmutation only)
   and Divine, dropping 40/40/16/3.5/0/0.5 out of 100.
+- **Divine items are all hand-written** (producer's call, 2026-09-28): a divine
+  drop is always one of the coded specials, never an ordinary base rolled at
+  divine rarity, and transmutation stops at set.
 - **Random affixes:** one for magic, two for rare, three for mythic and set,
-  four for divine, from a pool of eight, scaled by rarity and item level.
+  from a pool of eight, scaled by rarity and item level. Divine specials carry
+  their numbers as written.
 - **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
   rings, totem, relic, charm. An 18x14 bag and a three-page stash of 12x12.
 - **Offhands:** a lantern (attack and movement speed), a skull (critical
