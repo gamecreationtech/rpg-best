@@ -61,7 +61,7 @@ export interface WeaponProps {
   range: number;
 }
 
-/** Offhand items share the shield slot. A quiver needs a bow; a lantern or skull hangs from the belt, so any weapon will do. */
+/** Offhand items share the shield slot and, like shields, need a free hand: no two-handed weapons. A quiver is the exception, it needs a bow. */
 export type OffhandKind = 'lantern' | 'skull' | 'quiver';
 
 export interface BaseItem {
@@ -114,7 +114,7 @@ export const ACCESSORY_BASES: BaseItem[] = [
   { id: 'jade_amulet', name: 'Jade Amulet', slot: 'amulet', size: [1, 1], stats: { vit: 1, armor: 2 } },
   { id: 'wooden_shield_base', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 1, block: 8 } },
   { id: 'iron_shield', name: 'Iron Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 1, block: 15 } },
-  // Offhands: they take the shield's spot. A lantern or skull goes with any weapon, a quiver only with a bow.
+  // Offhands: they take the shield's spot. A lantern or skull needs a one-handed weapon, a quiver a bow, a crossbow takes nothing.
   { id: 'lantern', name: 'Lantern', slot: 'shield', size: [1, 2], stats: { atkSpd: 0.1, moveSpeed: 5 }, offhand: 'lantern' },
   { id: 'skull', name: 'Skull', slot: 'shield', size: [2, 2], stats: { critChance: 3, critDamage: 15 }, offhand: 'skull' },
   { id: 'quiver', name: 'Quiver', slot: 'shield', size: [1, 3], stats: { critChance: 2, critDamage: 10, atkSpd: 0.1 }, offhand: 'quiver' },

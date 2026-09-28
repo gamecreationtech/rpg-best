@@ -34,7 +34,7 @@ const SLIDERS: DevSlider[] = [
 ];
 
 /** Weapons the dev menu can hand out, one button each, in this order. */
-const GIVE_WEAPONS = ['sword', 'spear', 'mace', 'bardiche', 'wand', 'staff', 'dagger', 'bow', 'spellbook', 'warpike'];
+const GIVE_WEAPONS = ['sword', 'spear', 'mace', 'bardiche', 'wand', 'staff', 'dagger', 'bow', 'crossbow', 'spellbook', 'warpike'];
 /** Offhands and shields the dev menu can hand out. */
 const GIVE_OFFHANDS = ['wooden_shield_base', 'iron_shield', 'lantern', 'skull', 'quiver'];
 

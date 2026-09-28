@@ -6,10 +6,9 @@ import { passivesFor } from '../data/passives';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
-import type { OffhandKind, WeaponType } from '../data/items';
 import { ITEM_RULES } from '../data/items';
 import { PX } from '../data/units';
-import { Equipment } from './items/equipment';
+import { Equipment, offhandConflict, offhandReason } from './items/equipment';
 import { Inventory } from './items/inventory';
 import { makeStarterItem, type Item } from './items/item';
 
@@ -300,13 +299,16 @@ export function skillRank(p: PlayerState, id: string): number {
 }
 
 /** Class weapon rules: a knight only ever holds a sword, mace or bardiche. */
-export function canEquipItem(p: PlayerState, item: { weapon?: { type: WeaponType }; offhand?: OffhandKind }): { ok: boolean; reason?: string } {
+export function canEquipItem(p: PlayerState, item: Item): { ok: boolean; reason?: string } {
   const allowed = CLASSES[p.classId].allowedWeapons;
   if (item.weapon && allowed && !allowed.includes(item.weapon.type)) {
     const names = allowed.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
     return { ok: false, reason: `${CLASSES[p.classId].name}s only use ${names}` };
   }
-  if (item.offhand === 'quiver' && p.equipment.get('weapon')?.weapon?.type !== 'bow') return { ok: false, reason: 'A quiver needs a bow' };
+  if (item.slot === 'shield') {
+    const weapon = p.equipment.get('weapon');
+    if (offhandConflict(item, weapon)) return { ok: false, reason: offhandReason(item, weapon) };
+  }
   return { ok: true };
 }
 

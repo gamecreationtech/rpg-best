@@ -130,22 +130,32 @@ describe('equipment', () => {
     expect(eq.get('shield')).toBeNull();
   });
 
-  it('a lantern or skull sits in the shield slot even with a two-handed weapon', () => {
+  it('a lantern or skull needs a one-handed weapon; a bow takes only a quiver and a crossbow nothing', () => {
     const eq = new Equipment();
-    const staff = makeStarterItem('wooden_staff');
     const lantern = makeItem(baseItem('lantern'), 'common', 1, null);
     const skull = makeItem(baseItem('skull'), 'common', 1, null);
-    expect(eq.equip(staff, 1).ok).toBe(true);
-    expect(eq.equip(lantern, 1).ok).toBe(true);
+    const quiver = makeItem(baseItem('quiver'), 'common', 1, null);
     expect(lantern.stats.moveSpeed).toBe(5);
     expect(lantern.stats.atkSpd).toBe(0.1);
-    const res = eq.equip(skull, 1);
-    expect(res.ok).toBe(true);
-    expect(res.removed).toContain(lantern);
     expect(skull.stats.critChance).toBe(3);
     expect(skull.stats.critDamage).toBe(15);
-    // A two-handed weapon going on keeps the skull but would drop a real shield
-    expect(eq.equip(makeStarterItem('wooden_bow'), 1).removed).not.toContain(skull);
+    expect(eq.equip(makeStarterItem('wooden_sword'), 1).ok).toBe(true);
+    expect(eq.equip(lantern, 1).ok).toBe(true);
+    const swap = eq.equip(skull, 1);
+    expect(swap.ok).toBe(true);
+    expect(swap.removed).toContain(lantern);
+    // A two-handed staff going on knocks the skull off like a shield
+    expect(eq.equip(makeStarterItem('wooden_staff'), 1).removed).toContain(skull);
+    expect(eq.equip(skull, 1).reason).toBe('Cannot use an offhand with a two-handed weapon');
+    // A bow takes a quiver and nothing else
+    expect(eq.equip(makeStarterItem('wooden_bow'), 1).ok).toBe(true);
+    expect(eq.equip(lantern, 1).reason).toBe('A bow only takes a quiver');
+    expect(eq.equip(quiver, 1).ok).toBe(true);
+    // A crossbow is two-handed with no exception: the quiver comes off and nothing goes back on
+    const crossbow = makeItem(baseItem('crossbow'), 'common', 1, null);
+    expect(eq.equip(crossbow, 1).removed).toContain(quiver);
+    expect(eq.equip(quiver, 1).reason).toBe('A quiver needs a bow');
+    expect(eq.equip(skull, 1).ok).toBe(false);
   });
 
   it('enforces level requirements', () => {

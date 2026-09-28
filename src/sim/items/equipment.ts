@@ -1,4 +1,4 @@
-import { EQUIP_SLOTS, type EquipSlot } from '../../data/items';
+import { EQUIP_SLOTS, type EquipSlot, type OffhandKind } from '../../data/items';
 import { isTwoHanded, type Item } from './item';
 
 export type EquipKey = 'weapon' | 'shield' | 'helmet' | 'chest' | 'gloves' | 'boots' | 'belt' | 'amulet' | 'ring1' | 'ring2' | 'totem' | 'relic' | 'charm';
@@ -15,11 +15,21 @@ export function keysForSlot(slot: EquipSlot): EquipKey[] {
   return slot === 'ring' ? ['ring1', 'ring2'] : [slot];
 }
 
-/** Whether the item in the shield slot cannot be held alongside this weapon. */
+/**
+ * Whether the item in the shield slot cannot be held alongside this weapon.
+ * Two-handed weapons leave no hand free for a shield, lantern or skull; a bow
+ * is the one exception and takes a quiver, which needs a bow and nothing else.
+ */
 export function offhandConflict(off: Item, weapon: Item | null | undefined): boolean {
   if (off.offhand === 'quiver') return weapon?.weapon?.type !== 'bow';
-  if (off.offhand) return false;
   return isTwoHanded(weapon);
+}
+
+/** Why an offhand cannot go on with this weapon, for the refusal message and the item card. */
+export function offhandReason(off: { offhand?: OffhandKind }, weapon: Item | null | undefined): string {
+  if (off.offhand === 'quiver') return 'A quiver needs a bow';
+  if (weapon?.weapon?.type === 'bow') return 'A bow only takes a quiver';
+  return `Cannot use ${off.offhand ? 'an offhand' : 'a shield'} with a two-handed weapon`;
 }
 
 /** Worn items by slot key. */
@@ -45,9 +55,8 @@ export class Equipment {
 
   /**
    * Equips an item and returns everything that came off (the replaced item, the
-   * shield if a two-handed weapon was equipped, the quiver if the bow was swapped
-   * for anything else). The caller puts those back in the bag. Lanterns and skulls
-   * hang from the belt, so they stay on whatever the weapon.
+   * shield, lantern or skull if a two-handed weapon was equipped, the quiver if
+   * the bow was swapped for anything else). The caller puts those back in the bag.
    */
   equip(item: Item, level: number, preferred?: EquipKey): { ok: boolean; removed: Item[]; reason?: string } {
     if (item.reqLevel > level) return { ok: false, removed: [], reason: `Requires level ${item.reqLevel}` };
@@ -61,7 +70,7 @@ export class Equipment {
       this.slots.shield = null;
     }
     if (key === 'shield' && offhandConflict(item, this.slots.weapon)) {
-      return { ok: false, removed: [], reason: item.offhand === 'quiver' ? 'A quiver needs a bow' : 'Cannot use a shield with a two-handed weapon' };
+      return { ok: false, removed: [], reason: offhandReason(item, this.slots.weapon) };
     }
     this.slots[key] = item;
     return { ok: true, removed };

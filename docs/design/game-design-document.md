@@ -113,8 +113,9 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
 - **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
   rings, totem, relic, charm. An 18x14 bag and a three-page stash of 12x12.
 - **Offhands:** a lantern (attack and movement speed), a skull (critical
-  chance and damage) or a quiver (both crits and attack speed, bow only) can
-  take the shield's spot. Only a real shield blocks.
+  chance and damage) or a quiver (both crits and attack speed) can take the
+  shield's spot. Like a shield they need a one-handed weapon; a bow takes a
+  quiver and nothing else, a crossbow takes nothing. Only a real shield blocks.
 - **Crafting:** Forge of Heaven, Blood Fountain and Arcana Oracle in town.
 - **Visible gear:** weapons, shields and offhands change the hero's appearance;
   other slots later.
