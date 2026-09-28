@@ -138,7 +138,7 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
   means in practice.
 - **Style:** Isometric pixel art (decided 2026-09-27 after the art lab review;
   the earlier flat-shaded 3D look was dropped as "fake 3D"). A 640x360 frame
-  scaled up by a whole number so every pixel is a crisp square, 2:1 diamond
+  scaled up by a whole number of device pixels so every pixel is a crisp square, 2:1 diamond
   tiles of 32x16 pixels, a 22-pixel hero, dark outlines on every sprite, the
   Grim palette (cold stone, deep shadow, warm fire). Characters are drawn from
   three sides (side, front, back) so equipment can swap in and out.

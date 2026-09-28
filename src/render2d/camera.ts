@@ -40,15 +40,26 @@ export class IsoCamera implements Projector {
   private targetZ = 0;
 
   /** Chooses the frame size for the window: about 640x360 at a whole-number scale, always filling the window. */
-  /** Sizes the frame to the window: the largest whole scale that fits the target frame, or a forced one. */
-  fit(windowW: number, windowH: number, targetW = 640, targetH = 360, forcedScale = 0): void {
+  /** Whole device pixels per frame pixel; `scale` is the same in CSS pixels. */
+  devicePixels = 1;
+
+  /**
+   * Sizes the frame to the window (CSS pixels): the largest whole scale that
+   * fits the target frame, or a wanted one such as 1.5. Whatever is wanted is
+   * snapped to a whole number of device pixels per frame pixel, so every
+   * pixel stays a crisp square on a phone with two or three device pixels
+   * per CSS pixel.
+   */
+  fit(windowW: number, windowH: number, targetW = 640, targetH = 360, wantedScale = 0, dpr = 1): void {
     this.windowW = windowW;
     this.windowH = windowH;
-    this.scale = forcedScale > 0 ? Math.floor(forcedScale) : Math.max(1, Math.floor(Math.min(windowW / targetW, windowH / targetH)));
+    const wanted = wantedScale > 0 ? wantedScale : Math.max(1, Math.floor(Math.min(windowW / targetW, windowH / targetH)));
+    this.devicePixels = Math.max(1, Math.round(wanted * dpr));
+    this.scale = this.devicePixels / dpr;
     this.width = Math.ceil(windowW / this.scale);
     this.height = Math.ceil(windowH / this.scale);
-    this.offsetX = Math.floor((windowW - this.width * this.scale) / 2);
-    this.offsetY = Math.floor((windowH - this.height * this.scale) / 2);
+    this.offsetX = Math.floor((windowW * dpr - this.width * this.devicePixels) / 2) / dpr;
+    this.offsetY = Math.floor((windowH * dpr - this.height * this.devicePixels) / 2) / dpr;
   }
 
   snapTo(x: number, z: number): void {

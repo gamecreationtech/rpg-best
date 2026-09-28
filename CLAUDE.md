@@ -14,7 +14,7 @@ before making changes. They hold the decisions; do not relitigate them in code.
   Sprites, tiles, animation, effects, UI icons and sounds are generated at
   runtime by code in `src/gen/`, `src/render2d/`, `src/audio/` or `src/ui/`.
 - **The look is isometric pixel art.** A 640x360 frame scaled by a whole
-  number, 32x16 diamond tiles, a 22px hero, outlines, the Grim palette,
+  number of device pixels, 32x16 diamond tiles, a 22px hero, outlines, the Grim palette,
   dithered torchlight. Draw at integer pixel positions; never scale a sprite
   by a fraction or blur one. `src/gen/pixel/` holds the generators.
 - **Performance is a feature.** 60 fps with 200 monsters on a 2021 mid-range

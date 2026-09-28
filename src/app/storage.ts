@@ -94,8 +94,8 @@ export interface Settings {
   controls: 'auto' | 'touch' | 'tap';
   /** Ask phones for full screen when play starts. */
   fullscreen: boolean;
-  /** Pixel scale of the game frame: 0 picks it from the screen, otherwise a whole number. */
-  zoom: 0 | 1 | 2 | 3;
+  /** Pixel scale of the game frame in CSS pixels: 0 picks it from the screen. Snapped to whole device pixels when drawn. */
+  zoom: 0 | 1 | 1.5 | 2 | 3;
 }
 
 export function loadSettings(): Settings {

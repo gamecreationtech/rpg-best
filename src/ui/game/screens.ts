@@ -13,7 +13,7 @@ export interface ScreenHost {
   lab(): void;
   chooseClass(id: ClassId): void;
   /** Phones: the zoom picked right after the class, before play starts. */
-  chooseZoom(classId: ClassId, zoom: 1 | 2): void;
+  chooseZoom(classId: ClassId, zoom: 1 | 1.5): void;
   choosePledge(classId: ClassId, id: string): void;
   respawn(): void;
   cancelToTitle(): void;
@@ -76,13 +76,13 @@ export class Screens {
   /** Phones ask for the zoom after the class, with a live preview of each. */
   zoomSelect(classId: ClassId): void {
     const cls = CLASSES[classId];
-    const cards = ([1, 2] as const).map((z) =>
+    const cards = ([1, 1.5] as const).map((z) =>
       h(
         'div',
         { class: 'card zoom-card', style: `--c:${hex(cls.color)}` },
         h('div', { class: 'card-title' }, `${z}x`),
         zoomPreview(classId, z),
-        h('div', { class: 'card-text' }, z === 1 ? 'See more of the map around you. The hero is small.' : 'A closer view. The hero is twice as big and easier to follow.'),
+        h('div', { class: 'card-text' }, z === 1 ? 'See more of the map around you. The hero is small.' : 'A closer view. The hero is half again as big and easier to follow.'),
         button(`Play at ${z}x`, () => this.host.chooseZoom(classId, z), 'btn primary'),
       ),
     );
@@ -126,9 +126,11 @@ export class Screens {
 }
 
 /** A slice of town floor with the class's hero standing on it, drawn at the given whole scale. */
-function zoomPreview(classId: ClassId, scale: 1 | 2): HTMLCanvasElement {
-  const W = 200;
-  const H = 130;
+function zoomPreview(classId: ClassId, zoom: 1 | 1.5): HTMLCanvasElement {
+  // Drawn at twice the CSS size so 1.5x is a whole 3 pixels per game pixel, as it is on a phone screen
+  const scale = zoom * 2;
+  const W = 400;
+  const H = 260;
   const c = h('canvas', { class: 'zoom-preview' }) as HTMLCanvasElement;
   c.width = W;
   c.height = H;

@@ -63,17 +63,33 @@ void main() {
   outColor = vec4(c * b * t * amb, 1.0);
 }`;
 
+const BLIT_FRAG = `#version 300 es
+precision mediump float;
+uniform sampler2D uLit;
+in vec2 vUv;
+out vec4 outColor;
+void main() {
+  outColor = texture(uLit, vUv);
+}`;
+
 /**
  * Puts the low-resolution frame on the screen: uploads it as a texture, lights it
- * with a handful of point lights, quantises the light into dithered bands and
- * scales it up by a whole number with nearest-neighbour sampling. Falls back to
- * a plain 2D copy without lighting where WebGL2 is unavailable.
+ * with a handful of point lights and quantises the light into dithered bands,
+ * all at frame size, then scales the lit frame up by a whole number of device
+ * pixels with nearest-neighbour sampling into a canvas sized in device pixels.
+ * Falls back to a plain 2D copy without lighting where WebGL2 is unavailable.
  */
 export class Compositor {
   private gl: WebGL2RenderingContext | null;
   private ctx2d: CanvasRenderingContext2D | null = null;
   private program: WebGLProgram | null = null;
+  private blitProgram: WebGLProgram | null = null;
   private texture: WebGLTexture | null = null;
+  /** The lit frame, rendered off screen at frame size. */
+  private lit: WebGLTexture | null = null;
+  private fbo: WebGLFramebuffer | null = null;
+  private litW = 0;
+  private litH = 0;
   private readonly uniforms = new Map<string, WebGLUniformLocation | null>();
   private readonly lightData = new Float32Array(MAX_LIGHTS * 4);
   private readonly colorData = new Float32Array(MAX_LIGHTS * 3);
@@ -118,35 +134,77 @@ export class Compositor {
     const loc = gl.getAttribLocation(program, 'aPos');
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const nearest = () => {
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    };
     this.texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    nearest();
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    // The blit: the lit frame to the screen, one fetch per device pixel
+    const blit = gl.createProgram()!;
+    gl.attachShader(blit, compile(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(blit, compile(gl.FRAGMENT_SHADER, BLIT_FRAG));
+    gl.linkProgram(blit);
+    if (!gl.getProgramParameter(blit, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(blit) ?? 'link');
+    this.blitProgram = blit;
+    const blitLoc = gl.getAttribLocation(blit, 'aPos');
+    gl.enableVertexAttribArray(blitLoc);
+    gl.vertexAttribPointer(blitLoc, 2, gl.FLOAT, false, 0, 0);
+    gl.useProgram(blit);
+    gl.uniform1i(gl.getUniformLocation(blit, 'uLit'), 0);
+    this.lit = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.lit);
+    nearest();
+    this.fbo = gl.createFramebuffer();
     gl.uniform1i(this.uniforms.get('uScene')!, 0);
   }
 
-  /** Draws `frame` scaled by `scale` at (offsetX, offsetY) in a window-sized canvas. */
+  /**
+   * Draws `frame` scaled by `scale` CSS pixels at (offsetX, offsetY). The
+   * canvas is sized in device pixels, so the scale lands on whole device
+   * pixels as the camera arranged.
+   */
   present(frame: HTMLCanvasElement, scale: number, offsetX: number, offsetY: number): void {
     const W = window.innerWidth;
     const H = window.innerHeight;
-    if (this.canvas.width !== W || this.canvas.height !== H) {
-      this.canvas.width = W;
-      this.canvas.height = H;
+    const dpr = window.devicePixelRatio || 1;
+    const bw = Math.round(W * dpr);
+    const bh = Math.round(H * dpr);
+    if (this.canvas.width !== bw || this.canvas.height !== bh) {
+      this.canvas.width = bw;
+      this.canvas.height = bh;
     }
+    const ox = Math.round(offsetX * dpr);
+    const oy = Math.round(offsetY * dpr);
+    const ow = Math.round(frame.width * scale * dpr);
+    const oh = Math.round(frame.height * scale * dpr);
     const gl = this.gl;
     if (!gl) {
       const c = this.ctx2d;
       if (!c) return;
       c.imageSmoothingEnabled = false;
       c.fillStyle = '#000';
-      c.fillRect(0, 0, W, H);
-      c.drawImage(frame, offsetX, offsetY, frame.width * scale, frame.height * scale);
+      c.fillRect(0, 0, bw, bh);
+      c.drawImage(frame, ox, oy, ow, oh);
       return;
     }
-    gl.viewport(0, 0, W, H);
+    // Pass 1: light the frame at its own size, off screen
+    if (this.litW !== frame.width || this.litH !== frame.height) {
+      this.litW = frame.width;
+      this.litH = frame.height;
+      gl.bindTexture(gl.TEXTURE_2D, this.lit);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, frame.width, frame.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.lit, 0);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+    gl.viewport(0, 0, frame.width, frame.height);
     gl.clearColor(this.background[0], this.background[1], this.background[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(this.program);
@@ -173,8 +231,14 @@ export class Compositor {
     gl.uniform1f(this.uniforms.get('uLevels')!, this.levels);
     gl.uniform1f(this.uniforms.get('uTint')!, this.tint);
     gl.uniform1f(this.uniforms.get('uDim')!, this.dim);
-    // The frame fills its scaled rectangle; the rest of the window keeps the clear colour
-    gl.viewport(offsetX, H - offsetY - frame.height * scale, frame.width * scale, frame.height * scale);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    // Pass 2: the lit frame to the screen. It fills its scaled rectangle; the rest keeps the clear colour
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, bw, bh);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(this.blitProgram);
+    gl.bindTexture(gl.TEXTURE_2D, this.lit);
+    gl.viewport(ox, bh - oy - oh, ow, oh);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }

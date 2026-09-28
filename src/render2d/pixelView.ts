@@ -124,6 +124,7 @@ export class PixelView {
   private lastW = 0;
   private lastH = 0;
   private lastZoom = 0;
+  private lastDpr = 0;
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement, private readonly world: World, private readonly mobile: boolean, onPickDrop: (id: number) => void) {
     this.pal = PALETTES.find((p) => p.id === 'grim')!;
@@ -172,12 +173,14 @@ export class PixelView {
   private fit(): void {
     const W = window.innerWidth;
     const H = window.innerHeight;
-    if (W === this.lastW && H === this.lastH && this.zoom === this.lastZoom) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (W === this.lastW && H === this.lastH && this.zoom === this.lastZoom && dpr === this.lastDpr) return;
     this.lastW = W;
     this.lastH = H;
     this.lastZoom = this.zoom;
+    this.lastDpr = dpr;
     // Phones aim for fewer pixels across, though a narrow screen still lands on 1x unless the zoom is set
-    this.view.fit(W, H, this.mobile ? 400 : 640, this.mobile ? 225 : 360, this.zoom);
+    this.view.fit(W, H, this.mobile ? 400 : 640, this.mobile ? 225 : 360, this.zoom, dpr);
     this.frame.width = this.view.width;
     this.frame.height = this.view.height;
   }
