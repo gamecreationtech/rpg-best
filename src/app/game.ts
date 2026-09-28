@@ -190,6 +190,7 @@ export class Game {
     this.world = new World(player, seed);
     this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
     this.view.zoom = this.settings.zoom;
+    if (this.settings.pet) this.world.togglePet(true);
     this.buildHud();
     // Development menu: stat sliders and a level-up button, shown with F4 or ?dev
     this.dev = new DevMenu(this.gameUi, this.world, () => this.hud?.update(0));
@@ -204,6 +205,7 @@ export class Game {
         this.music.setVolume(this.settings.music);
         if (this.hud && this.hud.touch !== this.touchControls) this.buildHud();
         if (this.view) this.view.zoom = this.settings.zoom;
+        if (this.world && this.world.pet.active !== this.settings.pet) this.world.togglePet(this.settings.pet);
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),

@@ -35,6 +35,7 @@ arrives.
 | Audio | `src/audio/` | Sixteen synthesised effects from the export table plus a generative drone score |
 | Save | `src/sim/save.ts`, `src/app/storage.ts` | IndexedDB with a localStorage fallback, autosave on level up, travel and every 45 seconds, and a copyable save code |
 | Zoom | `src/app/storage.ts` `Settings.zoom`, `IsoCamera.fit`, `src/render2d/compositor.ts` | Menu > Screen > Zoom: Automatic, 1x, 1.5x, 2x or 3x, in CSS pixels. Automatic takes the largest whole scale that fits a 640x360 frame (400x225 on phones), so phones usually get 1x. Whatever is chosen is snapped to a whole number of device pixels per frame pixel (1.5x on a 2x-density phone is exactly 3), the canvas is sized in device pixels, and the frame grows or shrinks to fill the screen. The lighting pass runs at frame size and the result is blitted up with nearest sampling. Phones ask for 1x or 1.5x right after the class pick, with a live preview of each, and the log then says it can be changed under Screen |
+| Pet | `Settings.pet`, `World.pet`, `crabSheet` | Menu > Pet: a small crab trots behind the hero and fetches gold and items that drop within 300 px of the hero (gold to the purse, items to the bag when they fit). Saved with the settings |
 | Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
 | Rendering | `src/render2d/pixelView.ts`, `src/gen/pixel/` | Isometric pixel art: 32x16 tiles, 22px hero, Grim palette, dithered torchlight; sprites for heroes (class, pledge colour, weapon, shield), four placeholder monsters, dummies, the merchant, stations, projectiles, loot and spell effects, all generated at start-up |
 | Interface | `src/ui/game/` | HUD, hero menu (inventory, gear, stats, skills, passives), stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
@@ -89,9 +90,7 @@ strip on the left (`src/ui/game/devMenu.ts`) with a slider and Apply button
 for movement speed, cooldown reduction, cast rate, crit, resistances, armour,
 block, evasion, range, projectile speed, gold find and magic find, a
 Give weapon row (a common Sword, Spear, Mace, Bardiche, Wand, Staff, Dagger, Bow,
-Spellbook or Warpike dropped into the bag), a Level up button and a Pet
-toggle: a small crab that trots behind the hero and fetches gold and items
-that drop within 300 px (`World.pet`, never saved). The bonuses live in `World.devStats`, add to the character
+Spellbook or Warpike dropped into the bag) and a Level up button. The bonuses live in `World.devStats`, add to the character
 sheet and are never saved. Delete the file and the key before release.
 
 ## Known gaps

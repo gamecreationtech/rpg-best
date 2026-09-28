@@ -109,11 +109,6 @@ export class DevMenu {
           w.devLevelUp();
           this.onChange();
         }, 'btn small primary'),
-        button(w.pet.active ? 'Pet: on' : 'Pet: off', () => {
-          w.togglePet();
-          this.onChange();
-          this.render();
-        }, 'btn small' + (w.pet.active ? ' on' : ' ghost')),
         button('Reset all', () => {
           for (const k of Object.keys(w.devStats) as StatKey[]) delete w.devStats[k];
           w.markDirty();

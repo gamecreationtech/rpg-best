@@ -96,16 +96,18 @@ export interface Settings {
   fullscreen: boolean;
   /** Pixel scale of the game frame in CSS pixels: 0 picks it from the screen. Snapped to whole device pixels when drawn. */
   zoom: 0 | 1 | 1.5 | 2 | 3;
+  /** The crab that fetches loot. */
+  pet: boolean;
 }
 
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0, pet: false, ...(JSON.parse(raw) as Partial<Settings>) };
   } catch {
     // ignore
   }
-  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0 };
+  return { music: 0.4, sfx: 0.7, showDamage: true, controls: 'auto', fullscreen: true, zoom: 0, pet: false };
 }
 
 export function saveSettings(s: Settings): void {
