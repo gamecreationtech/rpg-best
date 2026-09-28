@@ -1,6 +1,6 @@
 import { xpForLevel } from '../data/classes';
 import type { ClassId } from '../data/classes';
-import { ITEM_RULES } from '../data/items';
+import { ITEM_RULES, STARTER_ITEMS } from '../data/items';
 import { EQUIP_KEYS, Equipment, type EquipKey } from './items/equipment';
 import { Inventory } from './items/inventory';
 import { resetItemUids, type Item } from './items/item';
@@ -48,7 +48,11 @@ export function deserialize(data: SaveData): PlayerState {
   const equipment = new Equipment();
   let maxUid = 0;
   const seen = (i: Item | null | undefined) => {
-    if (i) maxUid = Math.max(maxUid, i.uid);
+    if (!i) return;
+    maxUid = Math.max(maxUid, i.uid);
+    // Starter gear saved under an older name ("Wooden Sword", "Starter Dagger") takes its current plain name
+    const starter = STARTER_ITEMS.find((b) => b.id === i.baseId);
+    if (starter && !i.affixes.length) i.name = starter.name;
   };
   for (const k of EQUIP_KEYS) {
     const it = src.equipment[k] ?? null;
