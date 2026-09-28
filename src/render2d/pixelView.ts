@@ -3,13 +3,16 @@ import { RARITIES } from '../data/items';
 import { PLEDGES } from '../data/pledges';
 import { SKILLS } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
-import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind } from '../gen/pixel/characters';
+import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
 import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, type Prop } from '../gen/pixel/props';
 import { zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
 import type { Drop, Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types';
+
+/** Which shield drawing each shield base gets on the hero. */
+const SHIELD_LOOKS: Record<string, OffhandLook> = { wooden_shield: 'wooden', wooden_shield_base: 'wooden', iron_shield: 'iron', tower_shield: 'tower', energy_shield: 'energy' };
 import type { World } from '../sim/world';
 import { IsoCamera, RING_RX, RING_RY, TILE_H, TILE_W } from './camera';
 import { Compositor, type Light } from './compositor';
@@ -195,7 +198,7 @@ export class PixelView {
     const p = this.world.player;
     const weapon = p.equipment.get('weapon')?.weapon?.type ?? null;
     const off = p.equipment.get('shield');
-    const offhand = off ? (off.offhand ?? (off.baseId.includes('wooden') ? 'wooden' : 'iron')) : null;
+    const offhand = off ? (off.offhand ?? SHIELD_LOOKS[off.baseId] ?? 'iron') : null;
     return { classId: p.classId, pledgeId: p.pledgeId, weapon, offhand };
   }
 

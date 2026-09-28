@@ -128,8 +128,26 @@ function anim(frames: HTMLCanvasElement[], W: number, H: number, frameTime: numb
 /** Weapon drawer: hand position, how far the arm is raised (0..1.6) and the facing. */
 type WeaponDrawer = (d: Doll, hx: number, hy: number, raise: number, facing: Facing, pal: Palette) => void;
 
-/** What hangs in the shield slot: a shield of either kind, or one of the offhands. */
-export type OffhandLook = 'wooden' | 'iron' | 'lantern' | 'skull' | 'quiver';
+/** What hangs in the shield slot: one of the four shields, or one of the offhands. */
+export type OffhandLook = 'wooden' | 'iron' | 'tower' | 'energy' | 'lantern' | 'skull' | 'quiver';
+
+type ShieldLook = 'wooden' | 'iron' | 'tower' | 'energy';
+const ENERGY_GLOW = hex(0x6fd0ff);
+const ENERGY_CORE = hex(0xc8f0ff);
+
+function isShield(o: OffhandLook | null): o is ShieldLook {
+  return o === 'wooden' || o === 'iron' || o === 'tower' || o === 'energy';
+}
+
+/** Face colour, boss colour and how tall each shield is relative to the hero. */
+function shieldStyle(d: Doll, kind: ShieldLook): { face: [number, number, number]; boss: [number, number, number]; tall: number; wide: number } {
+  switch (kind) {
+    case 'wooden': return { face: base(d, 'wood'), boss: base(d, 'steel'), tall: 0.3, wide: 1 };
+    case 'iron': return { face: base(d, 'steel'), boss: base(d, 'wood'), tall: 0.3, wide: 1 };
+    case 'tower': return { face: base(d, 'steelDark'), boss: base(d, 'steel'), tall: 0.46, wide: 1.3 };
+    default: return { face: ENERGY_GLOW, boss: ENERGY_CORE, tall: 0.3, wide: 1 };
+  }
+}
 
 const LANTERN_GLOW = hex(0xffd868);
 
@@ -194,9 +212,10 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   };
   if (!look.robe) drawLeg(pose.legR, true);
   drawArm(-1, pose.armB);
-  if (offhand === 'wooden' || offhand === 'iron') {
+  if (isShield(offhand)) {
     // The shield hangs on the back arm, a sliver shows behind the body
-    d.buf.rect(px(ox + hw - W * 0.5 + lean), oy + px(H * 0.34), px(W * 0.25), px(H * 0.3), offhand === 'wooden' ? base(d, 'wood') : base(d, 'steel'));
+    const st = shieldStyle(d, offhand);
+    d.buf.rect(px(ox + hw - W * 0.5 + lean), oy + px(H * 0.34), px(W * 0.25 * st.wide), px(H * st.tall), st.face);
   } else if (offhand) {
     drawOffhandSide(d, offhand, px(ox + hw - W * 0.5 + lean), oy);
   }
@@ -382,12 +401,12 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
   const hx = px(cx);
   const hy = oy + px(H * 0.17);
   frontHead(d, pal, look, hx, hy, headR, back);
-  if (offhand === 'wooden' || offhand === 'iron') {
-    const c = offhand === 'wooden' ? base(d, 'wood') : base(d, 'steel');
-    const sw = px(W * 0.3);
-    const sh = px(H * 0.3);
-    d.buf.rect(shieldX - (back ? 0 : sw - armW), oy + armTop + 1, sw, sh, c);
-    d.buf.set(shieldX - (back ? 0 : sw - armW) + (sw >> 1), oy + armTop + 1 + (sh >> 1), offhand === 'wooden' ? base(d, 'steel') : base(d, 'wood'));
+  if (isShield(offhand)) {
+    const st = shieldStyle(d, offhand);
+    const sw = px(W * 0.3 * st.wide);
+    const sh = px(H * st.tall);
+    d.buf.rect(shieldX - (back ? 0 : sw - armW), oy + armTop + 1, sw, sh, st.face);
+    d.buf.set(shieldX - (back ? 0 : sw - armW) + (sw >> 1), oy + armTop + 1 + (sh >> 1), st.boss);
   } else if (offhand === 'quiver') {
     if (back) drawQuiver(d, px(tx + torsoW * 0.55), oy + torsoTop + 1, px(H * 0.3));
   } else if (offhand) {

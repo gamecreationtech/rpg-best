@@ -1,6 +1,6 @@
 import { xpForLevel } from '../data/classes';
 import type { ClassId } from '../data/classes';
-import { ITEM_RULES, STARTER_ITEMS } from '../data/items';
+import { ALL_BASES, ITEM_RULES } from '../data/items';
 import { EQUIP_KEYS, Equipment, type EquipKey } from './items/equipment';
 import { Inventory } from './items/inventory';
 import { resetItemUids, type Item } from './items/item';
@@ -50,9 +50,9 @@ export function deserialize(data: SaveData): PlayerState {
   const seen = (i: Item | null | undefined) => {
     if (!i) return;
     maxUid = Math.max(maxUid, i.uid);
-    // Starter gear saved under an older name ("Wooden Sword", "Starter Dagger") takes its current plain name
-    const starter = STARTER_ITEMS.find((b) => b.id === i.baseId);
-    if (starter && !i.affixes.length) i.name = starter.name;
+    // Items saved under an older name ("Wooden Sword", "Iron Shield of Haste") take their base's current name
+    const base = ALL_BASES.find((b) => b.id === i.baseId);
+    if (base) i.name = i.affixes.length ? `${base.name} ${i.affixes[0]}` : base.name;
   };
   for (const k of EQUIP_KEYS) {
     const it = src.equipment[k] ?? null;

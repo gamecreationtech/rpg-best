@@ -112,8 +112,11 @@ export const ACCESSORY_BASES: BaseItem[] = [
   { id: 'war_belt', name: 'War Belt', slot: 'belt', size: [1, 2], stats: { armor: 6, str: 1, vit: 1 } },
   { id: 'amulet', name: 'Amulet', slot: 'amulet', size: [1, 1], stats: { int: 1, mana: 10 } },
   { id: 'jade_amulet', name: 'Jade Amulet', slot: 'amulet', size: [1, 1], stats: { vit: 1, armor: 2 } },
-  { id: 'wooden_shield_base', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 1, block: 8 } },
-  { id: 'iron_shield', name: 'Iron Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 1, block: 15 } },
+  // Shields: the round one is light, the heater blocks best, the tower keeps you alive, the energy shield feeds spells
+  { id: 'wooden_shield_base', name: 'Round Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 1, block: 8 } },
+  { id: 'iron_shield', name: 'Heater Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 1, block: 15 } },
+  { id: 'tower_shield', name: 'Tower Shield', slot: 'shield', size: [2, 3], stats: { armor: 16, block: 12, life: 15, hpRegen: 1 } },
+  { id: 'energy_shield', name: 'Energy Shield', slot: 'shield', size: [2, 2], stats: { armor: 4, block: 6, mana: 15, manaRegen: 1 } },
   // Offhands: they take the shield's spot. A lantern or skull needs a one-handed weapon, a quiver a bow, a crossbow takes nothing.
   { id: 'lantern', name: 'Lantern', slot: 'shield', size: [1, 2], stats: { atkSpd: 0.1, moveSpeed: 5 }, offhand: 'lantern' },
   { id: 'skull', name: 'Skull', slot: 'shield', size: [2, 2], stats: { critChance: 3, critDamage: 15 }, offhand: 'skull' },

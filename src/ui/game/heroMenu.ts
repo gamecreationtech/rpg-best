@@ -247,7 +247,7 @@ export class HeroMenu {
   }
 
   private icon(item: Item, scale: number): HTMLCanvasElement {
-    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null);
+    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
     const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
     c.width = sprite.width;
     c.height = sprite.height;
@@ -332,7 +332,7 @@ export class HeroMenu {
       el.style.width = `${item.size[0] * cell}px`;
       el.style.height = `${item.size[1] * cell}px`;
       el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
-      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null);
+      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
       el.appendChild(this.icon(item, Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / sprite.width))));
       inner.appendChild(el);
     }

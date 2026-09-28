@@ -10,17 +10,17 @@ const ICON = 14;
 const OUTLINE = hex(0x0a0a12);
 const cache = new Map<string, HTMLCanvasElement>();
 
-export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null = null): HTMLCanvasElement {
-  const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}`;
+export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null = null, baseId = ''): HTMLCanvasElement {
+  const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}:${slot === 'shield' ? baseId : ''}`;
   let c = cache.get(key);
   if (!c) {
-    c = draw(slot, weaponType, rarity, offhand);
+    c = draw(slot, weaponType, rarity, offhand, baseId);
     cache.set(key, c);
   }
   return c;
 }
 
-function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null): HTMLCanvasElement {
+function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null, baseId: string): HTMLCanvasElement {
   const b = new PixelBuffer(ICON + 2, ICON + 2);
   const r = ramp(RARITIES[rarity].color, 1);
   const steel = ramp(0x8e94a2, 1);
@@ -37,13 +37,7 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, of
         drawOffhand(b, offhand, r, steel, wood, leather);
         break;
       }
-      // Kite shield with a rarity-coloured boss
-      for (let y = 0; y < 13; y++) {
-        const half = y < 8 ? 5 : 5 - Math.round(((y - 8) / 5) * 4);
-        b.rect(o + 7 - half, o + y, half * 2, 1, y < 2 ? steel[2] : steel[1]);
-      }
-      b.rect(o + 6, o + 3, 2, 6, M);
-      b.rect(o + 4, o + 5, 6, 2, M);
+      drawShield(b, baseId, r, steel, wood);
       break;
     case 'helmet':
       b.ellipse(o + 7, o + 6, 5.5, 5, steel[1]);
@@ -118,6 +112,39 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, of
 }
 
 type Ramp = ReturnType<typeof ramp>;
+
+/** The four shields: round (wood), heater (kite, steel), tower (tall slab) and energy (a glowing disc). */
+function drawShield(b: PixelBuffer, baseId: string, r: Ramp, steel: Ramp, wood: Ramp): void {
+  const o = 1;
+  const M = r[1];
+  if (baseId === 'wooden_shield' || baseId === 'wooden_shield_base') {
+    b.ellipse(o + 7, o + 7, 6, 6, wood[1]);
+    b.ellipse(o + 7, o + 7, 6, 2, wood[2]);
+    b.rect(o + 6, o + 6, 3, 3, steel[1]);
+    b.set(o + 7, o + 7, M);
+  } else if (baseId === 'tower_shield') {
+    b.rect(o + 3, o + 0, 9, 14, steel[1]);
+    b.rect(o + 3, o + 0, 9, 2, steel[2]);
+    b.rect(o + 4, o + 3, 7, 10, steel[0]);
+    b.rect(o + 7, o + 3, 1, 10, M);
+    b.rect(o + 4, o + 7, 7, 1, M);
+  } else if (baseId === 'energy_shield') {
+    const glow = ramp(0x6fd0ff, 1);
+    for (let y = 0; y < 13; y++) for (let x = 0; x < 13; x++) {
+      const d = Math.hypot(x - 6, y - 6);
+      if (d <= 6.3) b.set(o + 1 + x, o + 1 + y, d > 4.6 ? glow[2] : d > 2.2 ? glow[1] : glow[3]);
+    }
+    b.set(o + 7, o + 7, M);
+  } else {
+    // Heater shield: the kite with a rarity-coloured cross
+    for (let y = 0; y < 13; y++) {
+      const half = y < 8 ? 5 : 5 - Math.round(((y - 8) / 5) * 4);
+      b.rect(o + 7 - half, o + y, half * 2, 1, y < 2 ? steel[2] : steel[1]);
+    }
+    b.rect(o + 6, o + 3, 2, 6, M);
+    b.rect(o + 4, o + 5, 6, 2, M);
+  }
+}
 
 /** Lantern, skull and quiver: the offhands that share the shield slot. */
 function drawOffhand(b: PixelBuffer, kind: OffhandKind, r: Ramp, steel: Ramp, wood: Ramp, leather: Ramp): void {
