@@ -47,9 +47,12 @@ describe('item generation', () => {
       const r = rollRarity(rng);
       counts[r] = (counts[r] ?? 0) + 1;
     }
-    expect(counts.common! / 20000).toBeCloseTo(0.55, 1);
+    expect(counts.common! / 20000).toBeCloseTo(0.4, 1);
+    expect(counts.magic! / 20000).toBeCloseTo(0.4, 1);
+    expect(counts.rare! / 20000).toBeCloseTo(0.16, 1);
     expect(counts.set ?? 0).toBe(0);
-    expect(counts.divine!).toBeGreaterThan(100);
+    expect(counts.divine!).toBeGreaterThan(50);
+    expect(counts.divine!).toBeLessThan(160);
   });
 
   it('vendor stock never exceeds magic', () => {

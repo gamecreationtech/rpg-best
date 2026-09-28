@@ -39,12 +39,12 @@ export interface RarityDef {
 }
 
 export const RARITIES: Record<Rarity, RarityDef> = {
-  common: { id: 'common', name: 'Common', color: 0xcccccc, mult: 1.0, gold: 8, dropWeight: 55, affixes: 0, bonus: 1.0 },
-  magic: { id: 'magic', name: 'Magic', color: 0x4488ff, mult: 1.6, gold: 40, dropWeight: 25, affixes: 1, bonus: 1.25 },
-  rare: { id: 'rare', name: 'Rare', color: 0xffdd00, mult: 2.4, gold: 120, dropWeight: 14, affixes: 2, bonus: 1.5 },
-  mythic: { id: 'mythic', name: 'Mythic', color: 0xcc44ff, mult: 3.8, gold: 350, dropWeight: 5, affixes: 3, bonus: 2.0 },
+  common: { id: 'common', name: 'Common', color: 0xcccccc, mult: 1.0, gold: 8, dropWeight: 40, affixes: 0, bonus: 1.0 },
+  magic: { id: 'magic', name: 'Magic', color: 0x4488ff, mult: 1.6, gold: 40, dropWeight: 40, affixes: 1, bonus: 1.25 },
+  rare: { id: 'rare', name: 'Rare', color: 0xffdd00, mult: 2.4, gold: 120, dropWeight: 16, affixes: 2, bonus: 1.5 },
+  mythic: { id: 'mythic', name: 'Mythic', color: 0xcc44ff, mult: 3.8, gold: 350, dropWeight: 3.5, affixes: 3, bonus: 2.0 },
   set: { id: 'set', name: 'Set', color: 0x00ee66, mult: 3.2, gold: 500, dropWeight: 0, affixes: 3, bonus: 1.8 },
-  divine: { id: 'divine', name: 'Divine', color: 0xff8800, mult: 5.5, gold: 900, dropWeight: 1, affixes: 4, bonus: 2.5 },
+  divine: { id: 'divine', name: 'Divine', color: 0xff8800, mult: 5.5, gold: 900, dropWeight: 0.5, affixes: 4, bonus: 2.5 },
 };
 
 export const RARITY_ORDER: Rarity[] = ['common', 'magic', 'rare', 'mythic', 'set', 'divine'];

@@ -107,7 +107,7 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
 ### 4.5 Items
 
 - **Rarity tiers:** Common, Magic, Rare, Mythic, Set (from transmutation only)
-  and Divine, dropping 55/25/14/5/0/1 out of 100.
+  and Divine, dropping 40/40/16/3.5/0/0.5 out of 100.
 - **Random affixes:** one for magic, two for rare, three for mythic and set,
   four for divine, from a pool of eight, scaled by rarity and item level.
 - **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
