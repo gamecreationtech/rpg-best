@@ -509,6 +509,12 @@ export class HeroMenu {
           pbtn('+', () => { if (left > 0) { pend[key]++; rerender(); } }, left > 0 ? 'gold' : 'dim'),
         );
         for (const b of controls.children) b.classList.add('tiny');
+        if (!this.mouse) {
+          // Phones: a +10 that spends ten points, or whatever is left, in one tap
+          const ten = pbtn('+10', () => { if (left > 0) { pend[key] += Math.min(10, left); rerender(); } }, left > 0 ? 'gold' : 'dim');
+          ten.classList.add('tiny-wide');
+          controls.append(ten);
+        }
       }
       const value = pend[key] > 0 ? `${current + pend[key]}` : String(current);
       sheet.append(h('div', { class: 'px-stat' }, pxText(name, { color: MUTED }), h('span', { class: 'grow' }), pxText(value, { color: pend[key] > 0 ? GREEN : TEXT }), controls));
