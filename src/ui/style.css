@@ -530,6 +530,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-chip { display: flex; gap: 8px; align-items: center; padding: 2px 8px; }
 .px-chip.locked { opacity: 0.5; }
 .px-skill { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; box-shadow: inset 6px 0 0 var(--c); }
+.skill-line { flex-wrap: wrap; align-items: baseline; }
+.skill-line .mt:first-child { min-width: 96px; }
 .px-skill.unlearned { opacity: 0.8; }
 .px-passives { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .px-zones { display: flex; flex-direction: column; gap: 8px; max-width: 1000px; margin: 0 auto; }

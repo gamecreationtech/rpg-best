@@ -86,16 +86,16 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
     else if (eff.kind === 'aoe') extra = ` to everything within ${eff.radius} px`;
     else if (eff.kind === 'melee' && eff.arc) extra = ` in a ${eff.arc}\u00b0 arc`;
     else if (eff.kind === 'zone') extra = ` per tick`;
-    return { cooldown, damage: `Damage ${lo} to ${hi} ${def.element}${extra}${when}`, formula: chain(mult) };
+    return { cooldown, damage: `${lo} to ${hi}${extra}${when}`, formula: chain(mult) };
   }
   if (eff.kind === 'beam') {
     const [lo, hi] = hit(eff.drainMult);
-    return { cooldown, damage: `Damage ${lo} to ${hi} ${def.element} every ${(eff.interval / 1000).toFixed(1)}s for ${(eff.duration / 1000).toFixed(0)}s${when}`, formula: chain(eff.drainMult) };
+    return { cooldown, damage: `${lo} to ${hi} every ${(eff.interval / 1000).toFixed(1)}s for ${(eff.duration / 1000).toFixed(0)}s${when}`, formula: chain(eff.drainMult) };
   }
-  if (eff.kind === 'curse') return { cooldown, damage: `Damage ${eff.pctPerSec}% of the target's life per second for ${(eff.duration / 1000).toFixed(0)}s; kills below ${eff.executeBelowPct}% life`, formula: 'Scales with the target\'s life, not your gear' };
-  if (eff.kind === 'melee' && eff.bleed) return { cooldown, damage: `Damage ${eff.bleed.pctOfMaxHp}% of the target's life over ${(eff.bleed.duration / 1000).toFixed(0)}s`, formula: 'Scales with the target\'s life, not your gear' };
-  if (eff.kind === 'buff') return { cooldown, damage: `No damage: a ${(eff.duration / 1000).toFixed(0)}s buff`, formula: null };
-  return { cooldown, damage: 'No direct damage', formula: null };
+  if (eff.kind === 'curse') return { cooldown, damage: `${eff.pctPerSec}% of the target's life per second for ${(eff.duration / 1000).toFixed(0)}s, kills below ${eff.executeBelowPct}% life`, formula: 'scales with the target\'s life, not your gear' };
+  if (eff.kind === 'melee' && eff.bleed) return { cooldown, damage: `${eff.bleed.pctOfMaxHp}% of the target's life over ${(eff.bleed.duration / 1000).toFixed(0)}s`, formula: 'scales with the target\'s life, not your gear' };
+  if (eff.kind === 'buff') return { cooldown, damage: `none, a ${(eff.duration / 1000).toFixed(0)}s buff`, formula: null };
+  return { cooldown, damage: 'none', formula: null };
 }
 
 /**
@@ -528,13 +528,18 @@ export class HeroMenu {
       const row = h('div', { class: 'px-inset px-skill' + (rank ? '' : ' unlearned') });
       row.style.setProperty('--c', color);
       const info = skillInfo(w, active, rank);
+      // Every skill reads the same way: name and rank, then damage type, mana, cooldown and damage with its formula
+      const line = (label: string, value: string, valueColor = TEXT) => h('div', { class: 'px-row tight skill-line' }, pxText(`${label} :`, { color: MUTED }), pxText(value, { color: valueColor }));
+      const tags = [ultOn ? 'Ultimate' : '', s.tier === 'pledge' ? PLEDGES[s.pledgeId!]!.name : '', (s.reqLevel ?? 1) > 1 ? `Level ${s.reqLevel}` : '', s.requires ? `needs a ${s.requires}` : ''].filter(Boolean).join(' \u00b7 ');
+      const element = active.element.charAt(0).toUpperCase() + active.element.slice(1);
       row.append(
-        h('div', { class: 'px-row' }, pxText(`${active.name}  Rank ${rank}/5`, { color }), ultOn ? pxText('ULTIMATE', { color: '#ffdd44', scale: 1 }) : null, s.tier === 'pledge' ? pxText(PLEDGES[s.pledgeId!]!.name, { color: MUTED, scale: 1 }) : null, h('span', { class: 'grow' }), (s.reqLevel ?? 1) > 1 ? pxText(`Level ${s.reqLevel}`, { color: MUTED, scale: 1 }) : null),
-        pxText(active.description, { color: TEXT, maxChars: 80 }),
-        pxText(`Cooldown ${info.cooldown}  \u00b7  ${active.manaCost} mana${s.requires ? `  \u00b7  needs a ${s.requires}` : ''}`, { color: MUTED }),
-        pxText(info.damage, { color: rank ? TEXT : MUTED }),
+        h('div', { class: 'px-row between' }, h('span', { class: 'px-row tight' }, pxText(active.name, { color }), tags ? pxText(tags, { color: MUTED, scale: 1 }) : null), pxText(`[Rank ${rank}]`, { color: rank ? GOLD : MUTED })),
+        line('Damage Type', element),
+        line('Mana Cost', String(active.manaCost)),
+        line('Cooldown', info.cooldown),
+        line('Damage', info.formula ? `${info.damage} (${info.formula})` : info.damage, rank ? TEXT : MUTED),
+        pxText(active.description, { color: MUTED, scale: 1 }),
       );
-      if (info.formula) row.append(pxText(info.formula, { color: MUTED, scale: 1 }));
       const actions = h('div', { class: 'px-row actions' });
       actions.append(pbtn(rank ? `Rank up (${p.skillPoints})` : `Learn (${p.skillPoints})`, () => {
         if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
