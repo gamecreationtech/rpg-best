@@ -247,7 +247,7 @@ export class HeroMenu {
   }
 
   private icon(item: Item, scale: number): HTMLCanvasElement {
-    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null);
     const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
     c.width = sprite.width;
     c.height = sprite.height;
@@ -332,7 +332,7 @@ export class HeroMenu {
       el.style.width = `${item.size[0] * cell}px`;
       el.style.height = `${item.size[1] * cell}px`;
       el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
-      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null);
       el.appendChild(this.icon(item, Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / sprite.width))));
       inner.appendChild(el);
     }
@@ -352,7 +352,9 @@ export class HeroMenu {
     const rule = () => h('div', { class: 'px-rule' });
     const kind = item.weapon
       ? `${item.weapon.twoHanded ? 'Two-handed' : 'One-handed'} ${item.weapon.ranged ? 'ranged ' : ''}weapon`
-      : EQUIP_SLOTS.find((e) => e.id === item.slot)?.label ?? item.slot;
+      : item.offhand
+        ? `Offhand${item.offhand === 'quiver' ? ' (needs a bow)' : ''}`
+        : EQUIP_SLOTS.find((e) => e.id === item.slot)?.label ?? item.slot;
     const out: HTMLElement[] = [
       h('div', { class: 'px-row between' }, pxText(item.name, { color }), pxText(`[${RARITIES[item.rarity].name}]`, { color })),
       pxText(kind, { color: MUTED }),

@@ -6,7 +6,7 @@ import { passivesFor } from '../data/passives';
 import { SKILLS, SKILL_RULES, skillsFor, type BuffMods } from '../data/skills';
 import { COMBAT_RULES } from '../data/status';
 import { addStats, type StatKey, type StatMap } from '../data/stats';
-import type { WeaponType } from '../data/items';
+import type { OffhandKind, WeaponType } from '../data/items';
 import { ITEM_RULES } from '../data/items';
 import { PX } from '../data/units';
 import { Equipment } from './items/equipment';
@@ -207,6 +207,9 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     if (m.meleeRange) meleeRangeOverride = Math.max(meleeRangeOverride, m.meleeRange);
   }
 
+  // Only a real shield blocks; a lantern, skull or quiver in the slot does not
+  const shieldItem = p.equipment.get('shield');
+  const hasShield = !!shieldItem && !shieldItem.offhand;
   const moveSpeedPercent = 100 + g('moveSpeed') + dex * COMBAT_RULES.moveSpeedPerDex;
   const moveSpeedPx = Math.round(COMBAT_RULES.baseMoveSpeedPx * (moveSpeedPercent / 100)) * (1 + moveSpdPct / 100);
   const baseAtkSpd = (w?.atkSpd ?? 1.0) + g('atkSpd');
@@ -230,7 +233,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     critChance: COMBAT_RULES.baseCritChance + g('critChance') + dex * COMBAT_RULES.critPerDex,
     critDamage: COMBAT_RULES.baseCritDamage + g('critDamage'),
     dodge: g('dodge') + dex * COMBAT_RULES.dodgePerDex,
-    block: p.equipment.get('shield') ? g('block') : 0,
+    block: hasShield ? g('block') : 0,
     lifeSteal: g('lifeSteal'),
     lifeOnHit: g('lifeOnHit'),
     manaOnHit: g('manaOnHit'),
@@ -249,7 +252,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     isMagicWeapon: !!w?.magic,
     isRanged: !!w?.ranged,
     weaponType: w?.type ?? null,
-    hasShield: !!p.equipment.get('shield'),
+    hasShield,
     meleeRange: meleeRangeOverride || (w && !w.ranged ? baseRange : 80) + g('range'),
     dmgMult: 1 + dmgPct / 100,
     castInterval,
@@ -294,12 +297,13 @@ export function skillRank(p: PlayerState, id: string): number {
 }
 
 /** Class weapon rules: a knight only ever holds a sword, mace or bardiche. */
-export function canEquipItem(p: PlayerState, item: { weapon?: { type: WeaponType } }): { ok: boolean; reason?: string } {
+export function canEquipItem(p: PlayerState, item: { weapon?: { type: WeaponType }; offhand?: OffhandKind }): { ok: boolean; reason?: string } {
   const allowed = CLASSES[p.classId].allowedWeapons;
   if (item.weapon && allowed && !allowed.includes(item.weapon.type)) {
     const names = allowed.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
     return { ok: false, reason: `${CLASSES[p.classId].name}s only use ${names}` };
   }
+  if (item.offhand === 'quiver' && p.equipment.get('weapon')?.weapon?.type !== 'bow') return { ok: false, reason: 'A quiver needs a bow' };
   return { ok: true };
 }
 

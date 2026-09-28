@@ -192,9 +192,9 @@ export class PixelView {
   private heroLook(): HeroLook {
     const p = this.world.player;
     const weapon = p.equipment.get('weapon')?.weapon?.type ?? null;
-    const shieldItem = p.equipment.get('shield');
-    const shield = shieldItem ? (shieldItem.baseId.includes('wooden') ? 'wooden' : 'iron') : null;
-    return { classId: p.classId, pledgeId: p.pledgeId, weapon, shield };
+    const off = p.equipment.get('shield');
+    const offhand = off ? (off.offhand ?? (off.baseId.includes('wooden') ? 'wooden' : 'iron')) : null;
+    return { classId: p.classId, pledgeId: p.pledgeId, weapon, offhand };
   }
 
   private heroSheetFor(): CharacterSheet {

@@ -1,4 +1,4 @@
-import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type Rarity, type WeaponProps } from '../../data/items';
+import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
 import type { StatKey, StatMap } from '../../data/stats';
 import type { Rng } from '../../gen/rng';
 
@@ -20,6 +20,8 @@ export interface Item {
   size: [number, number];
   stats: StatMap;
   weapon?: WeaponProps;
+  /** Lantern, skull or quiver: sits in the shield slot but is not a shield. */
+  offhand?: OffhandKind;
   affixes: string[];
   forge: ForgeStacks;
   value: number;
@@ -102,6 +104,7 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     size: [base.size[0], base.size[1]],
     stats,
     weapon,
+    offhand: base.offhand,
     affixes,
     forge: { dmg: 0, spd: 0, block: 0, armor: 0 },
     value: base.value ?? itemValue(rarity, base.size, ilvl),

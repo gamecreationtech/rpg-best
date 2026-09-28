@@ -61,6 +61,9 @@ export interface WeaponProps {
   range: number;
 }
 
+/** Offhand items share the shield slot. A quiver needs a bow; a lantern or skull hangs from the belt, so any weapon will do. */
+export type OffhandKind = 'lantern' | 'skull' | 'quiver';
+
 export interface BaseItem {
   id: string;
   name: string;
@@ -68,6 +71,8 @@ export interface BaseItem {
   size: [number, number];
   stats: StatMap;
   weapon?: WeaponProps;
+  /** Set on the offhand items that live in the shield slot without being shields. */
+  offhand?: OffhandKind;
   /** Fixed rarity for special items. */
   rarity?: Rarity;
   /** Starter and special items are not generated as drops. */
@@ -109,6 +114,10 @@ export const ACCESSORY_BASES: BaseItem[] = [
   { id: 'jade_amulet', name: 'Jade Amulet', slot: 'amulet', size: [1, 1], stats: { vit: 1, armor: 2 } },
   { id: 'wooden_shield_base', name: 'Wooden Shield', slot: 'shield', size: [2, 2], stats: { armor: 6, vit: 1, block: 8 } },
   { id: 'iron_shield', name: 'Iron Shield', slot: 'shield', size: [2, 2], stats: { armor: 12, str: 1, block: 15 } },
+  // Offhands: they take the shield's spot. A lantern or skull goes with any weapon, a quiver only with a bow.
+  { id: 'lantern', name: 'Lantern', slot: 'shield', size: [1, 2], stats: { atkSpd: 0.1, moveSpeed: 5 }, offhand: 'lantern' },
+  { id: 'skull', name: 'Skull', slot: 'shield', size: [2, 2], stats: { critChance: 3, critDamage: 15 }, offhand: 'skull' },
+  { id: 'quiver', name: 'Quiver', slot: 'shield', size: [1, 3], stats: { critChance: 2, critDamage: 10, atkSpd: 0.1 }, offhand: 'quiver' },
 ];
 
 /** Divine-only specials. They can drop at the divine weight and are never scaled down. */
@@ -147,10 +156,10 @@ export interface Affix {
 export const AFFIX_POOL: Affix[] = [
   { stat: 'damage', delta: 3, suffix: 'of Fury' },
   { stat: 'armor', delta: 6, suffix: 'of Warding' },
-  { stat: 'str', delta: 2, suffix: 'of Strength' },
-  { stat: 'dex', delta: 2, suffix: 'of Swiftness' },
-  { stat: 'int', delta: 2, suffix: 'of Wisdom' },
-  { stat: 'vit', delta: 2, suffix: 'of Endurance' },
+  { stat: 'str', delta: 1, suffix: 'of Strength' },
+  { stat: 'dex', delta: 1, suffix: 'of Swiftness' },
+  { stat: 'int', delta: 1, suffix: 'of Wisdom' },
+  { stat: 'vit', delta: 1, suffix: 'of Endurance' },
   { stat: 'critChance', delta: 0.1, suffix: 'of Precision' },
   { stat: 'atkSpd', delta: 0.15, suffix: 'of Haste' },
 ];

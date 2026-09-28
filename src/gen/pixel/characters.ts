@@ -128,10 +128,43 @@ function anim(frames: HTMLCanvasElement[], W: number, H: number, frameTime: numb
 /** Weapon drawer: hand position, how far the arm is raised (0..1.6) and the facing. */
 type WeaponDrawer = (d: Doll, hx: number, hy: number, raise: number, facing: Facing, pal: Palette) => void;
 
+/** What hangs in the shield slot: a shield of either kind, or one of the offhands. */
+export type OffhandLook = 'wooden' | 'iron' | 'lantern' | 'skull' | 'quiver';
+
+const LANTERN_GLOW = hex(0xffd868);
+
+/** A lantern or skull held low in the off hand: x is the hand's column, y its top. */
+function drawOffhandHand(d: Doll, kind: 'lantern' | 'skull', x: number, y: number): void {
+  const w = Math.max(2, px(d.W * 0.16));
+  if (kind === 'lantern') {
+    d.buf.rect(x, y, w, 1, base(d, 'steel'));
+    d.buf.rect(x, y + 1, w, Math.max(2, px(d.H * 0.12)), base(d, 'steelDark'));
+    d.buf.set(x + (w >> 1), y + 2, LANTERN_GLOW);
+  } else {
+    d.buf.rect(x, y, w, w, base(d, 'bone'));
+    d.buf.set(x, y + 1, base(d, 'steelDark'));
+  }
+}
+
+/** Side view: the offhand sits on the back arm, x is the column just behind the body. */
+function drawOffhandSide(d: Doll, kind: 'lantern' | 'skull' | 'quiver', x: number, oy: number): void {
+  if (kind === 'quiver') drawQuiver(d, x, oy + px(d.H * 0.28), px(d.H * 0.34));
+  else drawOffhandHand(d, kind, x, oy + px(d.H * 0.5));
+}
+
+/** A quiver: a wooden tube with two bone arrow tips poking out of the top. */
+function drawQuiver(d: Doll, x: number, y: number, h: number): void {
+  const w = Math.max(2, px(d.W * 0.16));
+  d.buf.rect(x, y, w, h, base(d, 'wood'));
+  d.buf.rect(x, y + (h >> 1), w, 1, base(d, 'leather'));
+  d.buf.set(x, y - 1, base(d, 'bone'));
+  d.buf.set(x + w - 1, y - 2, base(d, 'bone'));
+}
+
 // ---------------------------------------------------------------- the body
 
 /** Side view: the body faces right; the front arm and leg overlap the back ones. */
-function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null): void {
+function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, offhand: OffhandLook | null): void {
   const { H, W } = d;
   const ox = 2;
   const oy = 1 + pose.bob + d.top;
@@ -161,9 +194,11 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
   };
   if (!look.robe) drawLeg(pose.legR, true);
   drawArm(-1, pose.armB);
-  if (shield) {
+  if (offhand === 'wooden' || offhand === 'iron') {
     // The shield hangs on the back arm, a sliver shows behind the body
-    d.buf.rect(px(ox + hw - W * 0.5 + lean), oy + px(H * 0.34), px(W * 0.25), px(H * 0.3), shield === 'wooden' ? base(d, 'wood') : base(d, 'steel'));
+    d.buf.rect(px(ox + hw - W * 0.5 + lean), oy + px(H * 0.34), px(W * 0.25), px(H * 0.3), offhand === 'wooden' ? base(d, 'wood') : base(d, 'steel'));
+  } else if (offhand) {
+    drawOffhandSide(d, offhand, px(ox + hw - W * 0.5 + lean), oy);
   }
   if (look.cape) d.buf.rect(px(ox + hw - W * 0.34 + lean), oy + px(H * 0.3), px(W * 0.36), px(H * 0.42), base(d, look.cape));
   // Torso: broad shoulders, narrower waist, a belt where the legs start
@@ -257,7 +292,7 @@ function sideHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, hea
 }
 
 /** Front and back views share one drawing; the back has no face and shows the cape. */
-function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null, back: boolean): void {
+function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponDrawer | null, offhand: OffhandLook | null, back: boolean): void {
   const { H, W } = d;
   const ox = 2;
   const oy = 1 + pose.bob + d.top;
@@ -278,6 +313,8 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
   const weaponX = back ? px(tx - armW) : px(tx + torsoW + 1);
   const shieldX = back ? px(tx + torsoW) : px(tx - armW - 1);
   if (back && weapon) weapon(d, weaponX, oy + armTop + armLen, raise, 'back', pal);
+  // A quiver rides on the back: seen from the front only the arrow tips show over the shoulder
+  if (offhand === 'quiver' && !back) drawQuiver(d, px(tx + torsoW * 0.6), oy + torsoTop, px(H * 0.3));
   // Legs side by side; a walking leg lifts
   const drawLeg = (side: number, lift: number) => {
     const x = px(cx + side * (gap / 2 + legW / 2) - legW / 2);
@@ -345,12 +382,16 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
   const hx = px(cx);
   const hy = oy + px(H * 0.17);
   frontHead(d, pal, look, hx, hy, headR, back);
-  if (shield) {
-    const c = shield === 'wooden' ? base(d, 'wood') : base(d, 'steel');
+  if (offhand === 'wooden' || offhand === 'iron') {
+    const c = offhand === 'wooden' ? base(d, 'wood') : base(d, 'steel');
     const sw = px(W * 0.3);
     const sh = px(H * 0.3);
     d.buf.rect(shieldX - (back ? 0 : sw - armW), oy + armTop + 1, sw, sh, c);
-    d.buf.set(shieldX - (back ? 0 : sw - armW) + (sw >> 1), oy + armTop + 1 + (sh >> 1), shield === 'wooden' ? base(d, 'steel') : base(d, 'wood'));
+    d.buf.set(shieldX - (back ? 0 : sw - armW) + (sw >> 1), oy + armTop + 1 + (sh >> 1), offhand === 'wooden' ? base(d, 'steel') : base(d, 'wood'));
+  } else if (offhand === 'quiver') {
+    if (back) drawQuiver(d, px(tx + torsoW * 0.55), oy + torsoTop + 1, px(H * 0.3));
+  } else if (offhand) {
+    drawOffhandHand(d, offhand, shieldX, oy + armTop + armLen);
   }
   if (!back && weapon) weapon(d, weaponX, oy + armTop + armLen - Math.round(raise * px(H * 0.12)), raise, 'front', pal);
 }
@@ -559,13 +600,13 @@ function bowShape(d: Doll, hx: number, hy: number, facing: Facing, pal: Palette,
 
 // ---------------------------------------------------------------- sheets
 
-function sheet(pal: Palette, H: number, W: number, outline: boolean, materials: Record<string, number>, look: Look, weapon: WeaponDrawer | null, shield: 'wooden' | 'iron' | null, extra?: (d: Doll, facing: Facing, frame: number) => void, speed = 1): CharacterSheet {
+function sheet(pal: Palette, H: number, W: number, outline: boolean, materials: Record<string, number>, look: Look, weapon: WeaponDrawer | null, offhand: OffhandLook | null, extra?: (d: Doll, facing: Facing, frame: number) => void, speed = 1): CharacterSheet {
   const top = look.wizardHat ? Math.round(H * 0.32) : 0;
   const make = (facing: Facing, poses: Pose[]) =>
     poses.map((p, i) => {
       const d = doll(H, W, pal, outline, materials, top);
-      if (facing === 'side') sideBody(d, pal, look, p, weapon, shield);
-      else frontBody(d, pal, look, p, weapon, shield, facing === 'back');
+      if (facing === 'side') sideBody(d, pal, look, p, weapon, offhand);
+      else frontBody(d, pal, look, p, weapon, offhand, facing === 'back');
       extra?.(d, facing, i);
       return finish(d, hex(pal.outline));
     });
@@ -581,11 +622,12 @@ export interface HeroLook {
   classId: ClassId;
   pledgeId: string | null;
   weapon: WeaponType | null;
-  shield: 'wooden' | 'iron' | null;
+  /** The shield or offhand in the shield slot. */
+  offhand: OffhandLook | null;
 }
 
 export function heroLookKey(look: HeroLook): string {
-  return `${look.classId}:${look.pledgeId ?? ''}:${look.weapon ?? ''}:${look.shield ?? ''}`;
+  return `${look.classId}:${look.pledgeId ?? ''}:${look.weapon ?? ''}:${look.offhand ?? ''}`;
 }
 
 function darken(hex6: number, k: number): number {
@@ -595,7 +637,7 @@ function darken(hex6: number, k: number): number {
   return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
 }
 
-/** A hero: class silhouette, pledge colour on the cloth and trim, the equipped weapon and shield. */
+/** A hero: class silhouette, pledge colour on the cloth and trim, the equipped weapon and shield or offhand. */
 export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outline: boolean): CharacterSheet {
   const H = size === 'large' ? 44 : 22;
   const W = Math.round(H * 0.7);
@@ -625,7 +667,7 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leatherDark', arms: 'skin', trim: 'trim', hood: true };
   // Only what is actually equipped is drawn: no weapon means empty hands
   const weapon = look.weapon ? WEAPONS[look.weapon] : null;
-  return sheet(pal, H, W, outline, materials, heroLook, weapon, look.shield);
+  return sheet(pal, H, W, outline, materials, heroLook, weapon, look.offhand);
 }
 
 export type MonsterKind = MonsterLook;

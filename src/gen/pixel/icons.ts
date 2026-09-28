@@ -1,4 +1,4 @@
-import { RARITIES, type EquipSlot, type Rarity, type WeaponType } from '../../data/items';
+import { RARITIES, type EquipSlot, type OffhandKind, type Rarity, type WeaponType } from '../../data/items';
 import { PixelBuffer, hex, ramp } from './pixel';
 
 /**
@@ -10,17 +10,17 @@ const ICON = 14;
 const OUTLINE = hex(0x0a0a12);
 const cache = new Map<string, HTMLCanvasElement>();
 
-export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity): HTMLCanvasElement {
-  const key = `${slot}:${weaponType ?? ''}:${rarity}`;
+export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null = null): HTMLCanvasElement {
+  const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}`;
   let c = cache.get(key);
   if (!c) {
-    c = draw(slot, weaponType, rarity);
+    c = draw(slot, weaponType, rarity, offhand);
     cache.set(key, c);
   }
   return c;
 }
 
-function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity): HTMLCanvasElement {
+function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null): HTMLCanvasElement {
   const b = new PixelBuffer(ICON + 2, ICON + 2);
   const r = ramp(RARITIES[rarity].color, 1);
   const steel = ramp(0x8e94a2, 1);
@@ -33,6 +33,10 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity): H
       drawWeapon(b, weaponType ?? 'sword', r, steel, wood);
       break;
     case 'shield':
+      if (offhand) {
+        drawOffhand(b, offhand, r, steel, wood, leather);
+        break;
+      }
       // Kite shield with a rarity-coloured boss
       for (let y = 0; y < 13; y++) {
         const half = y < 8 ? 5 : 5 - Math.round(((y - 8) / 5) * 4);
@@ -114,6 +118,42 @@ function draw(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity): H
 }
 
 type Ramp = ReturnType<typeof ramp>;
+
+/** Lantern, skull and quiver: the offhands that share the shield slot. */
+function drawOffhand(b: PixelBuffer, kind: OffhandKind, r: Ramp, steel: Ramp, wood: Ramp, leather: Ramp): void {
+  const o = 1;
+  const M = r[1];
+  if (kind === 'lantern') {
+    const glow = ramp(0xffc850, 1);
+    // Handle, a steel frame, warm glass and a rarity-coloured base
+    b.rect(o + 6, o + 1, 2, 1, steel[2]);
+    b.set(o + 5, o + 2, steel[2]);
+    b.set(o + 8, o + 2, steel[2]);
+    b.rect(o + 4, o + 3, 6, 9, steel[1]);
+    b.rect(o + 5, o + 4, 4, 7, glow[1]);
+    b.rect(o + 6, o + 6, 2, 3, glow[2]);
+    b.rect(o + 4, o + 12, 6, 1, M);
+  } else if (kind === 'skull') {
+    const bone = ramp(0xe8e0d0, 1);
+    b.ellipse(o + 7, o + 6, 5, 5, bone[1]);
+    b.rect(o + 5, o + 10, 5, 3, bone[1]);
+    b.rect(o + 4, o + 5, 2, 2, OUTLINE);
+    b.rect(o + 8, o + 5, 2, 2, OUTLINE);
+    b.set(o + 4, o + 5, M);
+    b.set(o + 8, o + 5, M);
+    b.set(o + 7, o + 8, OUTLINE);
+    b.set(o + 6, o + 12, OUTLINE);
+    b.set(o + 8, o + 12, OUTLINE);
+  } else {
+    // Quiver: a leather tube with a rarity band and two arrows standing in it
+    b.rect(o + 5, o + 5, 5, 8, leather[1]);
+    b.rect(o + 5, o + 7, 5, 1, M);
+    b.rect(o + 6, o + 2, 1, 3, wood[1]);
+    b.rect(o + 8, o + 1, 1, 4, wood[1]);
+    b.set(o + 6, o + 1, steel[2]);
+    b.set(o + 8, o + 0, steel[2]);
+  }
+}
 
 function drawWeapon(b: PixelBuffer, type: WeaponType, r: Ramp, steel: Ramp, wood: Ramp): void {
   const o = 1;

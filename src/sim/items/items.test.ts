@@ -24,8 +24,9 @@ describe('item generation', () => {
       const rng = new Rng(seed);
       const low = generateItem(rng, { ilvl: 2, rarity: 'magic' });
       for (const k of attrs) expect(low.stats[k] ?? 0, `${low.name} ${k}`).toBeLessThanOrEqual(4);
+      // A rare can stack a base attribute with a matching affix (a Staff of Wisdom), so it gets a little more room
       const rare = generateItem(rng, { ilvl: 2, rarity: 'rare' });
-      for (const k of attrs) expect(rare.stats[k] ?? 0, `${rare.name} ${k}`).toBeLessThanOrEqual(6);
+      for (const k of attrs) expect(rare.stats[k] ?? 0, `${rare.name} ${k}`).toBeLessThanOrEqual(8);
     }
     const rng = new Rng(5);
     const high = makeItem(baseItem('axe'), 'mythic', 100, null);
@@ -114,6 +115,37 @@ describe('equipment', () => {
     const high = makeItem(base, 'common', 50, null).stats.moveSpeed!;
     expect(high).toBeGreaterThan(15);
     expect(high).toBeLessThan(25);
+  });
+
+  it('a quiver needs a bow and comes off when the bow does', () => {
+    const eq = new Equipment();
+    const quiver = makeItem(baseItem('quiver'), 'common', 1, null);
+    const bow = makeStarterItem('wooden_bow');
+    const sword = makeStarterItem('wooden_sword');
+    expect(eq.equip(quiver, 1).ok).toBe(false);
+    expect(eq.equip(bow, 1).ok).toBe(true);
+    expect(eq.equip(quiver, 1).ok).toBe(true);
+    const res = eq.equip(sword, 1);
+    expect(res.removed).toContain(quiver);
+    expect(eq.get('shield')).toBeNull();
+  });
+
+  it('a lantern or skull sits in the shield slot even with a two-handed weapon', () => {
+    const eq = new Equipment();
+    const staff = makeStarterItem('wooden_staff');
+    const lantern = makeItem(baseItem('lantern'), 'common', 1, null);
+    const skull = makeItem(baseItem('skull'), 'common', 1, null);
+    expect(eq.equip(staff, 1).ok).toBe(true);
+    expect(eq.equip(lantern, 1).ok).toBe(true);
+    expect(lantern.stats.moveSpeed).toBe(5);
+    expect(lantern.stats.atkSpd).toBe(0.1);
+    const res = eq.equip(skull, 1);
+    expect(res.ok).toBe(true);
+    expect(res.removed).toContain(lantern);
+    expect(skull.stats.critChance).toBe(3);
+    expect(skull.stats.critDamage).toBe(15);
+    // A two-handed weapon going on keeps the skull but would drop a real shield
+    expect(eq.equip(makeStarterItem('wooden_bow'), 1).removed).not.toContain(skull);
   });
 
   it('enforces level requirements', () => {

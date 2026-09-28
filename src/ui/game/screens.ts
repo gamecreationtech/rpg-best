@@ -153,7 +153,7 @@ function zoomPreview(classId: ClassId, zoom: 1 | 1.5): HTMLCanvasElement {
       ctx.drawImage(tile, Math.round(x), Math.round(y), tw, th);
     }
   }
-  const look: HeroLook = { classId, pledgeId: null, weapon: classId === 'knight' ? 'sword' : classId === 'sorcerer' ? 'staff' : 'bow', shield: classId === 'knight' ? 'wooden' : null };
+  const look: HeroLook = { classId, pledgeId: null, weapon: classId === 'knight' ? 'sword' : classId === 'sorcerer' ? 'staff' : 'bow', offhand: classId === 'knight' ? 'wooden' : null };
   const sheet = heroSheet(look, pal, 'small', true);
   const anim = sheet.front.idle;
   const frame = anim.frames[0]!;

@@ -54,7 +54,7 @@ export class ItemGrid {
 
 /** The item's pixel icon, scaled by a whole number to roughly `size` pixels. */
 export function itemIcon(item: Item, size: number): HTMLCanvasElement {
-  const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity);
+  const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null);
   const c = document.createElement('canvas');
   c.className = 'px-icon';
   c.width = sprite.width;

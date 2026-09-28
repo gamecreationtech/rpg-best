@@ -15,6 +15,13 @@ export function keysForSlot(slot: EquipSlot): EquipKey[] {
   return slot === 'ring' ? ['ring1', 'ring2'] : [slot];
 }
 
+/** Whether the item in the shield slot cannot be held alongside this weapon. */
+export function offhandConflict(off: Item, weapon: Item | null | undefined): boolean {
+  if (off.offhand === 'quiver') return weapon?.weapon?.type !== 'bow';
+  if (off.offhand) return false;
+  return isTwoHanded(weapon);
+}
+
 /** Worn items by slot key. */
 export class Equipment {
   readonly slots: Record<EquipKey, Item | null> = {
@@ -37,8 +44,10 @@ export class Equipment {
   }
 
   /**
-   * Equips an item and returns everything that came off (the replaced item, and the
-   * shield if a two-handed weapon was equipped). The caller puts those back in the bag.
+   * Equips an item and returns everything that came off (the replaced item, the
+   * shield if a two-handed weapon was equipped, the quiver if the bow was swapped
+   * for anything else). The caller puts those back in the bag. Lanterns and skulls
+   * hang from the belt, so they stay on whatever the weapon.
    */
   equip(item: Item, level: number, preferred?: EquipKey): { ok: boolean; removed: Item[]; reason?: string } {
     if (item.reqLevel > level) return { ok: false, removed: [], reason: `Requires level ${item.reqLevel}` };
@@ -46,12 +55,13 @@ export class Equipment {
     const removed: Item[] = [];
     const prev = this.slots[key];
     if (prev) removed.push(prev);
-    if (key === 'weapon' && isTwoHanded(item) && this.slots.shield) {
-      removed.push(this.slots.shield);
+    const off = this.slots.shield;
+    if (key === 'weapon' && off && offhandConflict(off, item)) {
+      removed.push(off);
       this.slots.shield = null;
     }
-    if (key === 'shield' && isTwoHanded(this.slots.weapon)) {
-      return { ok: false, removed: [], reason: 'Cannot use a shield with a two-handed weapon' };
+    if (key === 'shield' && offhandConflict(item, this.slots.weapon)) {
+      return { ok: false, removed: [], reason: item.offhand === 'quiver' ? 'A quiver needs a bow' : 'Cannot use a shield with a two-handed weapon' };
     }
     this.slots[key] = item;
     return { ok: true, removed };

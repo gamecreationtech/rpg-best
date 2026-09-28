@@ -130,7 +130,7 @@ export class Scene2D {
     this.tiles = config.projection === 'iso' ? isoTiles(pal, size, seed) : topTiles(pal, size, seed);
     this.props = propSprites(pal, size, outline);
     this.fx = effectSprites(pal, size);
-    this.heroLook = heroSheet({ classId: config.heroClass, pledgeId: null, weapon: null, shield: null }, pal, size, outline);
+    this.heroLook = heroSheet({ classId: config.heroClass, pledgeId: null, weapon: null, offhand: null }, pal, size, outline);
     this.monsterLooks = {
       ghoul: monsterSheet('ghoul', pal, size, outline),
       skeleton: monsterSheet('skeleton', pal, size, outline),
