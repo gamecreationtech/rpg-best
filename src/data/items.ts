@@ -97,7 +97,7 @@ export const ARMOR_BASES: BaseItem[] = [
   { id: 'chest_armor', name: 'Chest Armor', slot: 'chest', size: [2, 3], stats: { armor: 10, vit: 1 } },
   { id: 'leather_armor', name: 'Leather Armor', slot: 'chest', size: [2, 3], stats: { armor: 6, dex: 1 } },
   { id: 'gauntlets', name: 'Gauntlets', slot: 'gloves', size: [2, 2], stats: { armor: 2, dex: 1 } },
-  { id: 'boots', name: 'Boots', slot: 'boots', size: [2, 2], stats: { armor: 3, dex: 1 } },
+  { id: 'boots', name: 'Boots', slot: 'boots', size: [2, 2], stats: { armor: 3, dex: 1, moveSpeed: 5 } },
 ];
 
 export const ACCESSORY_BASES: BaseItem[] = [

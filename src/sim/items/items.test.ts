@@ -107,6 +107,15 @@ describe('equipment', () => {
     expect(eq.equip(shield, 1).ok).toBe(false);
   });
 
+  it('boots always carry movement speed, 5% at level 1 and more as they scale', () => {
+    const base = baseItem('boots');
+    expect(makeItem(base, 'common', 1, null).stats.moveSpeed).toBe(5);
+    expect(makeItem(base, 'magic', 1, null).stats.moveSpeed).toBe(6);
+    const high = makeItem(base, 'common', 50, null).stats.moveSpeed!;
+    expect(high).toBeGreaterThan(15);
+    expect(high).toBeLessThan(25);
+  });
+
   it('enforces level requirements', () => {
     const eq = new Equipment();
     const item = generateItem(new Rng(2), { ilvl: 20, rarity: 'magic', slot: 'boots' });
