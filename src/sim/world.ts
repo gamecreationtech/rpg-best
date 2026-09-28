@@ -824,14 +824,14 @@ export class World {
       // Fetched: gold to the purse, an item to the bag if it fits
       if (target.gold > 0) {
         this.player.gold += target.gold;
-        this.emit({ type: 'pickup', item: null, gold: target.gold });
+        this.emit({ type: 'pickup', item: null, gold: target.gold, by: 'pet', x: pet.x, z: pet.z });
         this.emit({ type: 'sound', id: 'coin' });
       } else if (target.item) {
         if (!this.player.inventory.add(target.item)) {
           this.petIgnore.add(target.id);
           return;
         }
-        this.emit({ type: 'pickup', item: target.item, gold: 0 });
+        this.emit({ type: 'pickup', item: target.item, gold: 0, by: 'pet', x: pet.x, z: pet.z });
         this.emit({ type: 'sound', id: 'itemPickup' });
       }
       target.alive = false;

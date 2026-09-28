@@ -226,6 +226,7 @@ button.chip.spell.bolt { color: #cfd6ff; }
 .dmg.heal { color: #6ae06a; }
 .dmg.miss { color: #a0a8c0; font-size: 12px; font-weight: normal; }
 .dmg.absorb { color: #8fd0ff; }
+.dmg.gold { color: #ffd060; font-size: 13px; }
 .dmg.el-fire { color: #ff9a50; }
 .dmg.el-cold { color: #9fe0ff; }
 .dmg.el-lightning { color: #c8d8ff; }

@@ -509,7 +509,9 @@ export class PixelView {
         this.levelUp(w.px, w.pz);
         break;
       case 'pickup':
-        if (ev.item) pt.burst(w.px, 0.6, w.pz, 8, 1.2, RARITIES[ev.item.rarity].color, 0.5, { up: 1.5, priority: 0.5 });
+        if (ev.item) pt.burst(ev.x ?? w.px, 0.6, ev.z ?? w.pz, 8, 1.2, RARITIES[ev.item.rarity].color, 0.5, { up: 1.5, priority: 0.5 });
+        // The crab shows what it brought in over its head
+        if (ev.by === 'pet' && ev.gold > 0) this.numbers.show(`+${ev.gold}`, ev.x ?? w.px, 0.5, ev.z ?? w.pz, 'gold', 1.1);
         break;
       case 'kick':
         this.view.kick(ev.k);

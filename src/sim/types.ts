@@ -191,7 +191,7 @@ export type SimEvent =
   | { type: 'message'; text: string; color?: number }
   | { type: 'level_up'; level: number }
   | { type: 'pledge_choice' }
-  | { type: 'pickup'; item: Item | null; gold: number }
+  | { type: 'pickup'; item: Item | null; gold: number; /** Set when the pet fetched it, with where it stood. */ by?: 'pet'; x?: number; z?: number }
   | { type: 'drop_spawn'; id: number }
   | { type: 'sound'; id: string }
   | { type: 'open'; panel: InteractableKind }
