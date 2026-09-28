@@ -798,6 +798,44 @@ function spiderSheet(pal: Palette, scale: number, outline: boolean): CharacterSh
 }
 
 /** A rat: long body, pointed head, a curling tail. */
+/** The dev-menu pet: a small red crab, legs scuttling on alternate frames, claws out front. */
+export function crabSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
+  const W = 14 * scale;
+  const H = 8 * scale;
+  const materials = { shell: 0xc84a2a, dark: 0x8a2e1a, claw: 0xe06a3a };
+  const frame = (step: number) => {
+    const d = doll(H, W, pal, outline, materials);
+    const shell = base(d, 'shell');
+    const dark = base(d, 'dark');
+    const claw = base(d, 'claw');
+    const cx = 2 + W * 0.5;
+    const cy = 1 + H * 0.55;
+    // Legs: three a side, the front and back pairs lifting on alternate steps
+    for (let k = 0; k < 3; k++) {
+      const lift = (k % 2 === 0 ? step : 1 - step) * px(H * 0.2);
+      for (const side of [-1, 1]) {
+        const lx = px(cx + side * W * (0.22 + k * 0.1));
+        d.buf.line(px(cx + side * W * 0.18), px(cy), lx, px(cy + H * 0.35) - lift, dark);
+      }
+    }
+    d.buf.ellipse(cx, cy, px(W * 0.28), px(H * 0.3), shell);
+    d.buf.rect(px(cx - W * 0.12), px(cy - H * 0.3), px(W * 0.24), 1, dark);
+    // Claws out in front, one open on each step
+    d.buf.rect(px(cx + W * 0.28), px(cy - H * 0.15), px(W * 0.14), 2, claw);
+    d.buf.rect(px(cx + W * 0.36), px(cy - H * 0.15) - (step > 0.5 ? 1 : 0), 2, 1, claw);
+    d.buf.rect(px(cx - W * 0.42), px(cy - H * 0.15), px(W * 0.14), 2, claw);
+    // Eyes on stalks
+    d.buf.set(px(cx - 1), px(cy - H * 0.55), dark);
+    d.buf.set(px(cx + 1), px(cy - H * 0.55), dark);
+    d.buf.set(px(cx - 1), px(cy - H * 0.55) - 1, [0xf0, 0xf0, 0xf0]);
+    d.buf.set(px(cx + 1), px(cy - H * 0.55) - 1, [0xf0, 0xf0, 0xf0]);
+    return finish(d, hex(pal.outline));
+  };
+  const idle = [frame(0.5)];
+  const walk = [frame(0), frame(1)];
+  return beastSheet(W, H, { idle, walk, attack: walk }, [0.4, 0.09, 0.1]);
+}
+
 function ratSheet(pal: Palette, scale: number, outline: boolean): CharacterSheet {
   const W = 16 * scale;
   const H = 8 * scale;

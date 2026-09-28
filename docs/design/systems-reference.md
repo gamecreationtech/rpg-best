@@ -89,7 +89,9 @@ strip on the left (`src/ui/game/devMenu.ts`) with a slider and Apply button
 for movement speed, cooldown reduction, cast rate, crit, resistances, armour,
 block, evasion, range, projectile speed, gold find and magic find, a
 Give weapon row (a common Sword, Spear, Mace, Bardiche, Wand, Staff, Dagger, Bow,
-Spellbook or Warpike dropped into the bag) and a Level up button. The bonuses live in `World.devStats`, add to the character
+Spellbook or Warpike dropped into the bag), a Level up button and a Pet
+toggle: a small crab that trots behind the hero and fetches gold and items
+that drop within 300 px (`World.pet`, never saved). The bonuses live in `World.devStats`, add to the character
 sheet and are never saved. Delete the file and the key before release.
 
 ## Known gaps

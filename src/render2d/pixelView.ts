@@ -3,7 +3,7 @@ import { RARITIES } from '../data/items';
 import { PLEDGES } from '../data/pledges';
 import { SKILLS } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
-import { dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind } from '../gen/pixel/characters';
+import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
 import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, type Prop } from '../gen/pixel/props';
 import { zoneById } from '../data/zones';
@@ -111,6 +111,8 @@ export class PixelView {
   private readonly decor = new Map<string, Prop[]>();
   private readonly puppets = new Map<number, Puppet>();
   private hero: Puppet;
+  /** The dev-menu crab. */
+  private pet: Puppet | null = null;
   private heroKey = '';
   private areaKey = '';
   private readonly placed: Placed[] = [];
@@ -610,6 +612,13 @@ export class PixelView {
     this.view.lookAt(w.px + Math.sin(w.pyaw) * lead, w.pz + Math.cos(w.pyaw) * lead);
     this.view.update(dt);
     this.syncHero(dt);
+    if (w.pet.active) {
+      if (!this.pet) this.pet = { sheet: crabSheet(this.pal, 1, OUTLINE), anim: 'idle', animT: 0, facing: 'side', faceLeft: false, flash: 0, dying: -1 };
+      const c = this.pet;
+      this.face(c, Math.sin(w.pet.yaw), Math.cos(w.pet.yaw));
+      c.facing = 'side';
+      this.advance(c, dt, w.pet.moving);
+    }
     this.syncEnemies(dt);
     this.syncZoneParticles(dt);
     this.effects.update(dt);
@@ -753,6 +762,7 @@ export class PixelView {
       heroY = w.leap.arc ? Math.sin(Math.min(1, k) * Math.PI) * 1.6 : 0;
     }
     this.pushPuppet(this.hero, w.px, heroY, w.pz, w.invisible ? 0.45 : 1, null);
+    if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
     drawn++;
 
     // Enemies

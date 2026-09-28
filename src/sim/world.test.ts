@@ -215,6 +215,25 @@ describe('monster collision', () => {
   });
 });
 
+describe('pet', () => {
+  it('the dev crab fetches loot within 300 px of the hero and leaves the rest', () => {
+    const w = new World(createPlayer('knight', 'titan'), 61);
+    w.travel('arena');
+    w.togglePet(true);
+    const gold = w.player.gold;
+    w.addDrop(w.px + 6, w.pz, null, 25); // 192 px away
+    w.addDrop(w.px + 12, w.pz, null, 40); // 384 px away
+    run(w, 6);
+    expect(w.player.gold).toBe(gold + 25);
+    expect(w.drops.filter((d) => d.alive).length).toBe(1);
+    // It heels near the hero when there is nothing to fetch
+    expect(w.dist(w.pet.x, w.pet.z)).toBeLessThan(2.5);
+    w.togglePet(false);
+    run(w, 1);
+    expect(w.drops.filter((d) => d.alive).length).toBe(1);
+  });
+});
+
 describe('messages', () => {
   it('drops a repeated line within half a second so a held button cannot flood the log', () => {
     const w = new World(createPlayer('sorcerer', null), 51);

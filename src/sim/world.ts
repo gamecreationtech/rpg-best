@@ -26,6 +26,9 @@ const ENEMY_POOL = 256;
 const PROJ_POOL = 256;
 const PLAYER_RADIUS = 0.38;
 const PICKUP_RADIUS = 0.9;
+/** The dev-menu pet fetches loot this far from the hero, in tiles (300 px). */
+const PET_REACH = 300 * PX;
+const PET_SPEED = 5.5;
 
 export type Area = 'town' | 'arena';
 
@@ -753,11 +756,91 @@ export class World {
     this.tickProjectiles(dt);
     this.tickZones(dt);
     this.tickDrops(dt);
+    this.tickPet(dt);
     this.tickSpawner(dt);
   }
 
   /** Stat bonuses from the development menu; never saved. */
   readonly devStats: StatMap = {};
+
+  /** The development menu's crab: trots behind the hero and fetches loot within PET_REACH. Never saved. */
+  readonly pet = { active: false, x: 0, z: 0, yaw: 0, moving: false, targetDrop: -1 };
+  private readonly petIgnore = new Set<number>();
+
+  togglePet(on?: boolean): void {
+    this.pet.active = on ?? !this.pet.active;
+    this.pet.x = this.px - 0.8;
+    this.pet.z = this.pz + 0.4;
+    this.pet.targetDrop = -1;
+    this.petIgnore.clear();
+  }
+
+  private tickPet(dt: number): void {
+    const pet = this.pet;
+    if (!pet.active) return;
+    pet.moving = false;
+    // Left behind by a portal or a long walk: catch up at once
+    if (this.dist(pet.x, pet.z) > 14) {
+      pet.x = this.px - 0.8;
+      pet.z = this.pz + 0.4;
+    }
+    // The nearest loot within reach of the hero that the bag can take
+    let target: Drop | null = null;
+    let bestD = Infinity;
+    for (const d of this.drops) {
+      if (!d.alive || d.age < 0.6 || this.petIgnore.has(d.id)) continue;
+      if (this.dist(d.x, d.z) > PET_REACH) continue;
+      const dd = (d.x - pet.x) ** 2 + (d.z - pet.z) ** 2;
+      if (dd < bestD) {
+        bestD = dd;
+        target = d;
+      }
+    }
+    pet.targetDrop = target ? target.id : -1;
+    let gx: number;
+    let gz: number;
+    let stop: number;
+    if (target) {
+      gx = target.x;
+      gz = target.z;
+      stop = 0.25;
+    } else {
+      // Heel: a step behind and beside the hero
+      gx = this.px - Math.sin(this.pyaw) * 0.9 + 0.3;
+      gz = this.pz - Math.cos(this.pyaw) * 0.9 + 0.3;
+      stop = 0.5;
+    }
+    const dx = gx - pet.x;
+    const dz = gz - pet.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > stop) {
+      const step = Math.min(dist, PET_SPEED * dt);
+      this.map.slide(pet.x, pet.z, pet.x + (dx / dist) * step, pet.z + (dz / dist) * step, 0.2, this.slid);
+      pet.x = this.slid.x;
+      pet.z = this.slid.z;
+      pet.yaw = Math.atan2(dx, dz);
+      pet.moving = true;
+    } else if (target) {
+      // Fetched: gold to the purse, an item to the bag if it fits
+      if (target.gold > 0) {
+        this.player.gold += target.gold;
+        this.emit({ type: 'pickup', item: null, gold: target.gold });
+        this.emit({ type: 'sound', id: 'coin' });
+      } else if (target.item) {
+        if (!this.player.inventory.add(target.item)) {
+          this.petIgnore.add(target.id);
+          return;
+        }
+        this.emit({ type: 'pickup', item: target.item, gold: 0 });
+        this.emit({ type: 'sound', id: 'itemPickup' });
+      }
+      target.alive = false;
+      const i = this.drops.indexOf(target);
+      if (i >= 0) this.drops.splice(i, 1);
+      if (this.pendingPickup === target.id) this.pendingPickup = -1;
+      this.petIgnore.clear();
+    }
+  }
 
   gainXp(amount: number): void {
     const res = addXp(this.player, amount);
@@ -1574,7 +1657,8 @@ export class World {
 
   // ---------------------------------------------------------------- drops and spawning
 
-  private addDrop(x: number, z: number, item: Item | null, gold: number): void {
+  /** Puts loot on the floor; public so tests and tools can. */
+  addDrop(x: number, z: number, item: Item | null, gold: number): void {
     const d: Drop = { id: this.nextDropId++, alive: true, x, z, item, gold, age: 0 };
     this.drops.push(d);
     this.emit({ type: 'drop_spawn', id: d.id });
