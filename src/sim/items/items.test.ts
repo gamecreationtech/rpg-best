@@ -59,6 +59,24 @@ describe('item generation', () => {
   });
 });
 
+describe('inventory sort', () => {
+  it('packs items from the top left, biggest first', () => {
+    const inv = new Inventory(18, 14);
+    const ring = makeItem(baseItem('ring'), 'common', 1, null);
+    const chest = makeItem(baseItem('chest_armor'), 'rare', 5, null);
+    const sword = makeItem(baseItem('sword'), 'magic', 3, null);
+    inv.place(ring, 10, 10);
+    inv.place(sword, 3, 7);
+    inv.place(chest, 15, 2);
+    inv.sort();
+    expect([chest.col, chest.row]).toEqual([0, 0]);
+    expect(sword.row).toBe(0);
+    expect(sword.col).toBe(2);
+    expect(ring.row).toBe(0);
+    expect(inv.items.length).toBe(3);
+  });
+});
+
 describe('inventory grid', () => {
   it('places, rejects overlaps and removes', () => {
     const inv = new Inventory(12, 12);

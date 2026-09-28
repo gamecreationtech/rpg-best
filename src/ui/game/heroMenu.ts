@@ -190,7 +190,9 @@ export class HeroMenu {
       ? h('div', { class: 'px-inset px-itembox howto' }, pxText('Hover an item for its stats.\nClick to equip or take off.\nRight-click to drop.\nDrag to move it in the bag.', { color: MUTED }))
       : this.itemPanel(w, rerender);
     const top = h('div', { class: 'px-row gear-row' }, h('div', { class: 'px-col' }, label('Equipped'), doll), h('div', { class: 'px-col item-col' }, label(this.mouse ? 'How to' : 'Item'), side));
-    const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
+    const sortBtn = pbtn('Sort All', () => { p.inventory.sort(); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
+    sortBtn.classList.add('tiny-wide');
+    const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), sortBtn, h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
     const gearCol = h('div', { class: 'px-col gear-col' }, top, bagBlock);
     content.append(h('div', { class: 'px-inventory' }, stats, gearCol));
     // Now that the column has its size, the bag fills whatever is left

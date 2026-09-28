@@ -236,6 +236,22 @@ describe('class weapons', () => {
   });
 });
 
+describe('bulk selling', () => {
+  it('sells every item of one rarity and pays 40% of their value', () => {
+    const w = new World(createPlayer('knight', 'titan'), 81);
+    const a = makeItem(baseItem('ring'), 'common', 1, null);
+    const b = makeItem(baseItem('belt'), 'common', 1, null);
+    const c = makeItem(baseItem('amulet'), 'magic', 1, null);
+    for (const it of [a, b, c]) w.player.inventory.add(it);
+    const gold = w.player.gold;
+    const r = w.sellAll('common');
+    expect(r.count).toBe(2);
+    expect(w.player.gold).toBe(gold + Math.floor(a.value * 0.4) + Math.floor(b.value * 0.4));
+    expect(w.player.inventory.items).toEqual([c]);
+    expect(w.sellAll('common').count).toBe(0);
+  });
+});
+
 describe('pet', () => {
   it('the dev crab fetches loot within 300 px of the hero and leaves the rest', () => {
     const w = new World(createPlayer('knight', 'titan'), 61);

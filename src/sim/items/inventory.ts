@@ -78,6 +78,15 @@ export class Inventory {
     }
   }
 
+  /** Repacks every item from the top left: tallest and widest first, then by rarity and name, so the bag reads tidily. */
+  sort(): void {
+    const order = ['divine', 'set', 'mythic', 'rare', 'magic', 'common'];
+    const items = [...this.items].sort((a, b) =>
+      b.size[1] - a.size[1] || b.size[0] - a.size[0] || order.indexOf(a.rarity) - order.indexOf(b.rarity) || a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+    this.clear();
+    for (const it of items) this.add(it);
+  }
+
   clear(): void {
     this.items.length = 0;
     this.cells.fill(-1);

@@ -21,9 +21,9 @@ arrives.
 | Stats and formulas | `src/sim/player.ts`, `src/sim/combat.ts` | Max life and mana, move speed, attack speed, cast rate, crit, armour, resistances, dodge, block, shields, life steal, cooldown reduction |
 | Status effects | `src/data/status.ts`, `src/sim/combat.ts` | Stun, freeze, slow, poison, burn, bleed, death curse, shock, electrocute, with the export's proc chances |
 | Items | `src/data/items.ts`, `src/sim/items/` | 13 weapons (incl. bardiche, spellbook, warpike), 5 armours, 8 accessories, 4 divine specials, 6 starters; six rarities with the export's weights, multipliers and value formula; random affixes. Weapon damage, armour and block scale by the rarity multiplier (1x common to 5.5x divine) and 12% per item level; attribute bonuses (strength, life, crit and so on) scale by a gentler rarity bonus (1x to 2.5x) and 6% per level, so a level 2 magic weapon gives a point or two and a level 100 mythic one a dozen. Starters and the divine specials keep their numbers as written |
-| Inventory and stash | `src/sim/items/inventory.ts` | 18x14 bag (`ITEM_RULES.inventoryCols/Rows`), three 12x12 stash pages, sized items |
+| Inventory and stash | `src/sim/items/inventory.ts` | 18x14 bag (`ITEM_RULES.inventoryCols/Rows`), three 12x12 stash pages, sized items; Sort All (`Inventory.sort`) repacks the bag from the top left, tallest and widest first, then by rarity |
 | Equipment | `src/sim/items/equipment.ts` | 13 slots, two rings, two-handed weapons block the shield, level requirements |
-| Vendor | `src/sim/items/vendor.ts` | Stock capped at magic, item level 65/20/10/5 spread, sells at 40% |
+| Vendor | `src/sim/items/vendor.ts`, `World.sellAll` | Stock capped at magic, item level 65/20/10/5 spread, sells at 40%; Sell all Common and Sell all Magic buttons empty the bag of that rarity in one tap |
 | Crafting | `src/data/crafting.ts`, `src/sim/items/crafting.ts` | Forge (4 smelts, 5 uses each), Blood Fountain (4), Arcana Oracle (enchant, transmute, infuse, reroll) |
 | Consumables | `src/data/consumables.ts` | Health potion, bandage, mana potion, incense; charges refill on kills |
 | Professions | `src/data/professions.ts` | Five professions with the perk ladder; they cannot gain experience until gathering nodes exist in zones |

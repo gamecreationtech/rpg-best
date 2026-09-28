@@ -225,8 +225,19 @@ export class Panels {
       const sel = this.selected;
       actions.push(button(`Buy for ${buyPrice(sel)} gold`, () => { const r = w.buyItem(sel); if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080); this.selected = null; this.render(); }, 'btn primary' + (w.player.gold >= buyPrice(sel) ? '' : ' disabled')));
     }
+    const bulk = (rarity: 'common' | 'magic', label: string) => {
+      const items = w.player.inventory.items.filter((i) => i.rarity === rarity);
+      const gold = items.reduce((sum, i) => sum + sellPrice(i), 0);
+      return button(items.length ? `Sell all ${label} (${items.length} for ${gold}g)` : `Sell all ${label}`, () => {
+        const r = w.sellAll(rarity);
+        this.host.message(r.count ? `Sold ${r.count} ${label.toLowerCase()} items for ${r.gold} gold` : `No ${label.toLowerCase()} items to sell`, r.count ? 0xffd060 : 0xff8080);
+        this.selected = null;
+        this.render();
+      }, 'btn small' + (items.length ? '' : ' disabled'));
+    };
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value.`),
+      h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic')),
       this.selectedCard(w, actions, 'Tap something for sale or in your bag to see its stats, then buy or sell it here.')!,
       ...this.halves('For sale', stock, this.bagGrid(w, (item) => this.select(item, 'bag'))),
     );

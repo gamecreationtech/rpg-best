@@ -16,6 +16,7 @@ import { generateItem, type Item } from './items/item';
 import { buyPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
+import type { Rarity } from '../data/items';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
@@ -687,6 +688,21 @@ export class World {
     this.player.gold += sellPrice(item);
     this.emit({ type: 'sound', id: 'coin' });
     return true;
+  }
+
+  /** Sells every bag item of the rarity. Returns how many went and the gold made. */
+  sellAll(rarity: Rarity): { count: number; gold: number } {
+    let count = 0;
+    let gold = 0;
+    for (const item of [...this.player.inventory.items]) {
+      if (item.rarity !== rarity) continue;
+      this.player.inventory.remove(item);
+      gold += sellPrice(item);
+      count++;
+    }
+    this.player.gold += gold;
+    if (count) this.emit({ type: 'sound', id: 'coin' });
+    return { count, gold };
   }
 
   buyItem(item: Item): { ok: boolean; reason?: string } {
