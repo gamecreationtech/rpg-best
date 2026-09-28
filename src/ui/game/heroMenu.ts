@@ -555,11 +555,13 @@ export class HeroMenu {
         }, learn.ok ? 'gold' : 'dim'));
       } else if (ult && !ultOn) {
         const can = canUnlockUltimate(p, s.id);
-        actions.append(pbtn('+', () => {
+        const plus = pbtn('+', () => {
           if (!unlockUltimate(p, s.id)) this.host.message(canUnlockUltimate(p, s.id).reason ?? 'Cannot unlock', 0xff8080);
           else this.host.message(`${ult.name} unlocked as an ultimate`, 0xffe066);
           rerender();
-        }, can.ok ? 'gold' : 'dim'), pxText('go Ultimate', { color: can.ok ? GOLD : MUTED, scale: 1 }));
+        }, can.ok ? 'gold' : 'dim');
+        if (can.ok) plus.classList.add('glow');
+        actions.append(plus);
       }
       if (rank > 0) {
         // Where it sits on the bar, as a dropdown

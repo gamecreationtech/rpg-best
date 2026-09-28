@@ -532,6 +532,10 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-skill { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; box-shadow: inset 6px 0 0 var(--c); }
 .skill-line { flex-wrap: wrap; align-items: baseline; }
 .px-skill .actions .pxb { min-width: 34px; justify-content: center; }
+/* The + that goes Ultimate pulses gold */
+.pxb.glow { box-shadow: 0 0 6px 2px rgba(255, 221, 68, 0.55); animation: plus-glow 1.2s ease-in-out infinite alternate; }
+.pxb.glow .mt { color: #ffdd44; text-shadow: 0 0 6px #ffdd44; }
+@keyframes plus-glow { from { box-shadow: 0 0 4px 1px rgba(255, 221, 68, 0.35); } to { box-shadow: 0 0 12px 4px rgba(255, 221, 68, 0.8); } }
 .px-select { font: inherit; font-size: 13px; color: var(--text); background: #0c0c13; border: 2px solid #44444f; padding: 4px 8px; min-height: 30px; }
 .skill-line .mt:first-child { min-width: 96px; }
 .px-skill.unlearned { opacity: 0.8; }
