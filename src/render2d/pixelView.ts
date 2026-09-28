@@ -9,7 +9,7 @@ import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalPr
 import { zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
-import type { Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types';
+import type { Drop, Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types';
 import type { World } from '../sim/world';
 import { IsoCamera, RING_RX, RING_RY, TILE_H, TILE_W } from './camera';
 import { Compositor, type Light } from './compositor';
@@ -106,6 +106,8 @@ export class PixelView {
   private readonly heroSheets = new Map<string, CharacterSheet>();
   private readonly projectiles = new Map<string, Prop>();
   private readonly drops = new Map<string, Prop>();
+  /** Loot-filter check for the labels, bound once so the frame loop allocates nothing. */
+  private readonly dropVisible = (d: Drop) => this.world.dropVisible(d);
   private readonly stations: Record<string, Prop>;
   private readonly rubble: Prop[];
   private readonly decor = new Map<string, Prop[]>();
@@ -630,7 +632,7 @@ export class PixelView {
       if (t && t.alive && !t.dead) this.effects.beamSet(w.px, 1.2, w.pz, t.x, 0.8, t.z, 0x60ff90);
     }
     this.numbers.update(dt);
-    this.labels.update(w.drops);
+    this.labels.update(w.drops, this.dropVisible);
     this.minimap.update(dt);
     const near = w.nearestInteractable();
     const hover = w.interactables.find((i) => i.id === this.hoverInteractable && i.active) ?? null;
@@ -821,7 +823,7 @@ export class PixelView {
 
     // Drops
     for (const d of w.drops) {
-      if (!d.alive) continue;
+      if (!d.alive || !w.dropVisible(d)) continue;
       const prop = this.dropProp(d.item ? RARITIES[d.item.rarity].color : null);
       const fx = Math.round(cam.frameX(d.x, d.z));
       const fy = Math.round(cam.frameY(d.x, 0, d.z));

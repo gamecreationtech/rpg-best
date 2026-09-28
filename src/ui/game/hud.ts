@@ -152,7 +152,7 @@ export class Hud {
       const drag = { slot: i, pointerId: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
       this.drag = drag;
       if (i === 0) {
-        if (this.touch && this.host.world.nearestInteractable()) {
+        if (this.touch && this.host.world.nextAction()) {
           // Standing next to something usable: the button is an action button
           this.host.interactNearby();
         } else if (this.touch) {
@@ -263,10 +263,10 @@ export class Hud {
         continue;
       }
       if (id === ATTACK_SLOT) {
-        const use = this.touch ? w.nearestInteractable() : null;
+        const use = this.touch ? w.nextAction() : null;
         b.classList.toggle('use', !!use);
         if (use) {
-          const verb = INTERACT_INFO[use.kind].verb;
+          const verb = 'drop' in use ? 'pick up' : INTERACT_INFO[use.use.kind].verb;
           this.slotLabels[i]!.textContent = verb.charAt(0).toUpperCase() + verb.slice(1);
           this.slotWipes[i]!.style.setProperty('--p', '0');
         } else {

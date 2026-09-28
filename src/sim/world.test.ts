@@ -252,6 +252,50 @@ describe('bulk selling', () => {
   });
 });
 
+describe('picking up loot', () => {
+  it('gold is walked over but an item waits for the action key', () => {
+    const w = new World(createPlayer('knight', 'titan'), 81);
+    w.travel('arena');
+    const gold = w.player.gold;
+    const sword = makeItem(baseItem('sword'), 'common', 1, null);
+    w.addDrop(w.px, w.pz, null, 12);
+    w.addDrop(w.px, w.pz, sword, 0);
+    run(w, 2);
+    expect(w.player.gold).toBe(gold + 12);
+    expect(w.player.inventory.has(sword)).toBe(false);
+    expect(w.nextAction()).toEqual({ drop: w.drops[0] });
+    expect(w.interactNearby()).toBe(true);
+    expect(w.player.inventory.has(sword)).toBe(true);
+    expect(w.drops.length).toBe(0);
+    expect(w.interactNearby()).toBe(false);
+  });
+
+  it('a filtered rarity is invisible to the hero, the crab and the label click', () => {
+    const w = new World(createPlayer('knight', 'titan'), 82);
+    w.travel('arena');
+    w.setLootFilter(['common']);
+    const plain = makeItem(baseItem('sword'), 'common', 1, null);
+    const blue = makeItem(baseItem('sword'), 'magic', 1, null);
+    w.addDrop(w.px, w.pz, plain, 0);
+    w.addDrop(w.px + 0.2, w.pz, blue, 0);
+    const [d1, d2] = w.drops;
+    expect(w.dropVisible(d1!)).toBe(false);
+    expect(w.dropVisible(d2!)).toBe(true);
+    w.pickup(d1!.id);
+    run(w, 1);
+    expect(w.player.inventory.has(plain)).toBe(false);
+    expect(w.interactNearby()).toBe(true);
+    expect(w.player.inventory.has(blue)).toBe(true);
+    expect(w.interactNearby()).toBe(false);
+    w.togglePet(true);
+    run(w, 6);
+    expect(w.player.inventory.has(plain)).toBe(false);
+    w.setLootFilter([]);
+    expect(w.interactNearby()).toBe(true);
+    expect(w.player.inventory.has(plain)).toBe(true);
+  });
+});
+
 describe('item find', () => {
   it('scales how often a kill drops an item, with magic find left to the rarity', () => {
     const drops = (itemFind: number, seed: number) => {

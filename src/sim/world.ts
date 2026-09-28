@@ -545,26 +545,79 @@ export class World {
     return best;
   }
 
-  /** Keyboard "F": use the nearest interactable in reach. */
-  interactNearby(): boolean {
-    let best: Interactable | null = null;
+  /** Rarities hidden by the loot filter: not drawn, not labelled, not picked up by hand or crab. */
+  readonly hiddenRarities = new Set<Rarity>();
+
+  setLootFilter(hidden: Rarity[]): void {
+    this.hiddenRarities.clear();
+    for (const r of hidden) this.hiddenRarities.add(r);
+  }
+
+  /** Gold always shows; an item shows unless its rarity is filtered out. */
+  dropVisible(d: Drop): boolean {
+    return !d.item || !this.hiddenRarities.has(d.item.rarity);
+  }
+
+  /** The visible item drop under the hero's feet, if any. Items wait there until the action key takes them. */
+  nearestPickup(): Drop | null {
+    let best: Drop | null = null;
     let bestD = Infinity;
-    for (const it of this.interactables) {
-      if (!it.active) continue;
-      const d = this.dist(it.x, it.z);
-      if (d <= it.radius + 0.4 && d < bestD) {
-        bestD = d;
-        best = it;
+    for (const d of this.drops) {
+      if (!d.alive || !d.item || !this.dropVisible(d)) continue;
+      const dist = this.dist(d.x, d.z);
+      if (dist <= PICKUP_RADIUS + 0.4 && dist < bestD) {
+        bestD = dist;
+        best = d;
       }
     }
-    if (!best) return false;
-    this.emit({ type: 'open', panel: best.kind });
+    return best;
+  }
+
+  /** What the action key would do right now: take the item underfoot, else use the interactable in reach. */
+  nextAction(): { drop: Drop } | { use: Interactable } | null {
+    const use = this.nearestInteractable();
+    const drop = this.nearestPickup();
+    if (drop && (!use || this.dist(drop.x, drop.z) <= PICKUP_RADIUS)) return { drop };
+    if (use) return { use };
+    return null;
+  }
+
+  /** Keyboard "F" or the touch action button: pick up the item underfoot, else use the nearest interactable in reach. */
+  interactNearby(): boolean {
+    const action = this.nextAction();
+    if (!action) return false;
+    if ('drop' in action) {
+      this.takeDrop(action.drop, true);
+      return true;
+    }
+    this.emit({ type: 'open', panel: action.use.kind });
+    return true;
+  }
+
+  /** Puts a drop in the purse or the bag. Returns false when the bag is full and the item stays on the ground. */
+  private takeDrop(d: Drop, byHand: boolean): boolean {
+    if (d.gold > 0) {
+      this.player.gold += d.gold;
+      this.emit({ type: 'pickup', item: null, gold: d.gold });
+      this.emit({ type: 'sound', id: 'coin' });
+    } else if (d.item) {
+      if (!this.player.inventory.add(d.item)) {
+        if (byHand) this.message('Inventory is full', 0xff8080);
+        return false;
+      }
+      this.emit({ type: 'pickup', item: d.item, gold: 0 });
+      this.emit({ type: 'sound', id: 'itemPickup' });
+    }
+    d.alive = false;
+    const i = this.drops.indexOf(d);
+    if (i >= 0) this.drops.splice(i, 1);
+    if (this.pendingPickup === d.id) this.pendingPickup = -1;
     return true;
   }
 
   pickup(dropId: number): void {
     const d = this.drops.find((q) => q.id === dropId && q.alive);
-    if (!d) return;
+    if (!d || !this.dropVisible(d)) return;
     this.targetId = -1;
     this.pendingInteract = null;
     this.pendingPickup = dropId;
@@ -806,7 +859,7 @@ export class World {
     let target: Drop | null = null;
     let bestD = Infinity;
     for (const d of this.drops) {
-      if (!d.alive || d.age < 0.6 || this.petIgnore.has(d.id)) continue;
+      if (!d.alive || d.age < 0.6 || this.petIgnore.has(d.id) || !this.dropVisible(d)) continue;
       if (this.dist(d.x, d.z) > PET_REACH) continue;
       const dd = (d.x - pet.x) ** 2 + (d.z - pet.z) ** 2;
       if (dd < bestD) {
@@ -1695,31 +1748,19 @@ export class World {
     this.emit({ type: 'drop_spawn', id: d.id });
   }
 
+  /** Gold is scooped up by walking over it. Items wait underfoot for the action key, or for a click on their label. */
   private tickDrops(dt: number): void {
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const d = this.drops[i]!;
       d.age += dt;
       if (this.playerDead) continue;
-      const near = this.dist(d.x, d.z) <= PICKUP_RADIUS;
-      const wanted = this.pendingPickup === d.id && this.dist(d.x, d.z) <= PICKUP_RADIUS + 0.4;
-      if (!near && !wanted) continue;
+      const dist = this.dist(d.x, d.z);
       if (d.gold > 0) {
-        this.player.gold += d.gold;
-        this.emit({ type: 'pickup', item: null, gold: d.gold });
-        this.emit({ type: 'sound', id: 'coin' });
-      } else if (d.item) {
-        if (d.age < 0.6 && !wanted) continue;
-        if (!this.player.inventory.add(d.item)) {
-          if (wanted) this.message('Inventory is full', 0xff8080);
-          this.pendingPickup = -1;
-          continue;
-        }
-        this.emit({ type: 'pickup', item: d.item, gold: 0 });
-        this.emit({ type: 'sound', id: 'itemPickup' });
+        if (dist <= PICKUP_RADIUS) this.takeDrop(d, false);
+        continue;
       }
-      d.alive = false;
-      this.drops.splice(i, 1);
-      if (this.pendingPickup === d.id) this.pendingPickup = -1;
+      if (this.pendingPickup !== d.id || dist > PICKUP_RADIUS + 0.4) continue;
+      if (!this.takeDrop(d, true)) this.pendingPickup = -1;
     }
   }
 

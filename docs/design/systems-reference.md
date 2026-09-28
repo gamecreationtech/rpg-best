@@ -73,7 +73,7 @@ half at a time on touch (For sale or Bag, Stash or Bag, Equipped or Bag) under a
 pair of tabs, with the tapped item's card and its Buy or Sell button pinned at
 the top, and the bag's cells shrink so all 18 columns fit. Tapping a skill casts it at the nearest
 enemy; holding a skill repeats it; dragging from a skill aims it. Loot is
-picked up by walking over it. Loot labels, the merchant and
+picked up by standing on it and pressing F or the touch action button; gold is still walked over. Menu > Loot hides common, magic or rare drops entirely (not drawn, not picked up by hand or crab). Loot labels, the merchant and
 the stations can be tapped directly too.
 Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
 
@@ -81,7 +81,7 @@ Desktop keeps tap-to-move: tap to move, hold to keep walking, tap an enemy to
 attack it. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
 space to attack, 1-4 potions, Tab for the hero menu (Inventory tab: worn gear
 as a paper doll, the full stat sheet and the bag; Skills tab: skills, the slot
-bar and the passive trees), K straight to Skills, F to interact, Escape for the
+bar and the passive trees), K straight to Skills, F to pick up or interact, Escape for the
 menu. I, C and P still open the matching tab. The hero menu's frames, buttons
 and item icons are pixel art (`src/ui/pixelChrome.ts`, `src/gen/pixel/icons.ts`)
 over the game dimmed in dithered bands; its text uses the game's normal serif

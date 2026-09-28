@@ -352,6 +352,9 @@ export class Panels {
       h('div', { class: 'section-label' }, 'Pet'),
       h('div', { class: 'actions' }, button(s.pet ? 'Crab: on' : 'Crab: off', () => { s.pet = !s.pet; this.host.applySettings(); this.render(); }, 'btn small' + (s.pet ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'A small crab follows you and fetches gold and items that drop within 300 px.'),
+      h('div', { class: 'section-label' }, 'Loot'),
+      h('div', { class: 'actions' }, ...(['common', 'magic', 'rare'] as const).map((r) => button(`${RARITIES[r].name}: ${s.loot[r] ? 'shown' : 'hidden'}`, () => { s.loot[r] = !s.loot[r]; this.host.applySettings(); this.render(); }, 'btn small' + (s.loot[r] ? ' on' : '')))),
+      h('div', { class: 'dim small' }, 'Hidden items stay on the ground unseen and neither you nor the crab pick them up. Mythic, set and divine items always show. Stand on an item and press F, or the action button, to pick it up.'),
       h('div', { class: 'section-label' }, 'Controls'),
       h('div', { class: 'actions' }, ...(['auto', 'touch', 'tap'] as const).map((c) => button(c === 'auto' ? 'Automatic' : c === 'touch' ? 'Joystick and buttons' : 'Tap to move', () => { s.controls = c; this.host.applySettings(); this.render(); }, 'btn small' + (s.controls === c ? ' on' : '')))),
       h('div', { class: 'dim small' }, 'Automatic picks the joystick on phones and tablets, tap to move elsewhere.'),
@@ -371,7 +374,7 @@ export class Panels {
         button('Quit to title', () => this.host.quitToTitle(), 'btn'),
         button('Delete hero', () => { if (confirm('Delete this hero and its save? This cannot be undone.')) void this.host.deleteSave(); }, 'btn danger'),
       ),
-      h('div', { class: 'dim small pad' }, 'Controls: tap to move, tap an enemy to attack, tap a skill to cast at the nearest enemy, or drag from a skill to aim it. Keyboard: WASD, Q E R Y, right click, 1-4 potions, I C K P, F to interact.'),
+      h('div', { class: 'dim small pad' }, 'Controls: tap to move, tap an enemy to attack, tap a skill to cast at the nearest enemy, or drag from a skill to aim it. Keyboard: WASD, Q E R Y, right click, 1-4 potions, I C K P, F to pick up or interact.'),
     );
   }
 }

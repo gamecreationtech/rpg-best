@@ -14,10 +14,10 @@ export class DropLabels {
     parent.appendChild(this.root);
   }
 
-  update(drops: Drop[]): void {
+  update(drops: Drop[], visible: (d: Drop) => boolean): void {
     const seen = new Set<number>();
     for (const d of drops) {
-      if (!d.alive || !d.item) continue;
+      if (!d.alive || !d.item || !visible(d)) continue;
       seen.add(d.id);
       let el = this.els.get(d.id);
       if (!el) {

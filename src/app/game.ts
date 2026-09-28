@@ -15,7 +15,7 @@ import { GameCursor } from '../ui/game/cursor';
 import { DevMenu } from '../ui/game/devMenu';
 import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
-import { deleteSave, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
+import { deleteSave, hiddenLoot, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
 
 type State = 'title' | 'class' | 'pledge' | 'playing';
 
@@ -189,6 +189,7 @@ export class Game {
     this.teardown();
     this.world = new World(player, seed);
     this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
+    this.world.setLootFilter(hiddenLoot(this.settings));
     this.view.zoom = this.settings.zoom;
     if (this.settings.pet) this.world.togglePet(true);
     this.buildHud();
@@ -206,6 +207,7 @@ export class Game {
         if (this.hud && this.hud.touch !== this.touchControls) this.buildHud();
         if (this.view) this.view.zoom = this.settings.zoom;
         if (this.world && this.world.pet.active !== this.settings.pet) this.world.togglePet(this.settings.pet);
+        this.world?.setLootFilter(hiddenLoot(this.settings));
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),
