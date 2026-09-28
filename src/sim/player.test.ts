@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELING, xpForLevel, xpPerMinuteAt } from '../data/classes';
-import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlockUltimate, unlockedSlots } from './player';
+import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlearnSkill, unlockUltimate, unlockedSlots } from './player';
+import { skillsFor } from '../data/skills';
 
 describe('player', () => {
   it('starts the rogue with a bow in hand and a dagger in the bag', () => {
@@ -56,6 +57,22 @@ describe('player', () => {
     const p = createPlayer('knight', 'paladin');
     for (let i = 0; i < 200; i++) addXp(p, xpForLevel(p.level));
     expect(p.level).toBe(LEVELING.maxLevel);
+  });
+
+  it('takes a rank back and refunds the point, and a rank-0 skill leaves the bar', () => {
+    const p = createPlayer('sorcerer', null);
+    const id = skillsFor('sorcerer', null)[0]!.id;
+    const rank = p.skillRanks[id] ?? 0;
+    if (!rank) learnSkill(p, id);
+    const points = p.skillPoints;
+    expect(p.slots.includes(id)).toBe(true);
+    expect(unlearnSkill(p, id)).toBe(true);
+    expect(p.skillPoints).toBe(points + 1);
+    if (rank <= 1) {
+      expect(p.skillRanks[id]).toBeUndefined();
+      expect(p.slots.includes(id)).toBe(false);
+      expect(unlearnSkill(p, id)).toBe(false);
+    }
   });
 
   it('unlocks slots and ultimates at the right levels', () => {

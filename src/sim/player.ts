@@ -321,6 +321,22 @@ export function learnSkill(p: PlayerState, id: string): boolean {
   return true;
 }
 
+/** Takes one rank back and refunds the point. A skill at rank 0 leaves the bar. */
+export function unlearnSkill(p: PlayerState, id: string): boolean {
+  const rank = skillRank(p, id);
+  if (rank <= 0) return false;
+  const def = SKILLS[id];
+  if (def?.upgradesTo && p.unlockedUltimates.includes(def.upgradesTo)) return false; // undo the ultimate first
+  p.skillPoints++;
+  if (rank === 1) {
+    delete p.skillRanks[id];
+    p.slots = p.slots.map((s, i) => (s === id ? (i === 0 ? ATTACK_SLOT : null) : s));
+  } else {
+    p.skillRanks[id] = rank - 1;
+  }
+  return true;
+}
+
 export function canUnlockUltimate(p: PlayerState, baseId: string): { ok: boolean; reason?: string } {
   const base = SKILLS[baseId];
   if (!base?.upgradesTo) return { ok: false, reason: 'No ultimate' };

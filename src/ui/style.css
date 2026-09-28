@@ -531,6 +531,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-chip.locked { opacity: 0.5; }
 .px-skill { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; box-shadow: inset 6px 0 0 var(--c); }
 .skill-line { flex-wrap: wrap; align-items: baseline; }
+.px-skill .actions .pxb { min-width: 34px; justify-content: center; }
+.px-select { font: inherit; font-size: 13px; color: var(--text); background: #0c0c13; border: 2px solid #44444f; padding: 4px 8px; min-height: 30px; }
 .skill-line .mt:first-child { min-width: 96px; }
 .px-skill.unlearned { opacity: 0.8; }
 .px-passives { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }

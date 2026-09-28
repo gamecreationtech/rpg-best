@@ -7,7 +7,7 @@ import { formatStat, type StatKey } from '../../data/stats';
 import { itemIconSprite } from '../../gen/pixel/icons';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
-import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { ATTACK_SLOT, allocateStat, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -509,7 +509,7 @@ export class HeroMenu {
     const slotsUnlocked = unlockedSlots(p.level);
     const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
     const wrap = h('div', { class: 'px-skills' });
-    wrap.append(pxText(`${p.skillPoints} skill points, ${p.ultimatePoints} ultimate points. Click a key to put a skill on the bar. LMB can hold Attack or a skill.`, { color: MUTED, maxChars: 90 }));
+    wrap.append(pxText(`${p.skillPoints} skill points, ${p.ultimatePoints} ultimate points. + adds a rank, \u2212 takes one back; at rank 5 the + goes Ultimate. Pick where a skill sits on the bar from its dropdown.`, { color: MUTED, maxChars: 90 }));
     const slotBar = h('div', { class: 'px-row slotbar' });
     for (let i = 0; i < 6; i++) {
       const id = p.slots[i];
@@ -541,31 +541,43 @@ export class HeroMenu {
         pxText(active.description, { color: MUTED, scale: 1 }),
       );
       const actions = h('div', { class: 'px-row actions' });
-      actions.append(pbtn(rank ? `Rank up (${p.skillPoints})` : `Learn (${p.skillPoints})`, () => {
-        if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
-        rerender();
-      }, learn.ok ? 'gold' : 'dim'));
-      if (rank > 0) {
-        for (let i = 0; i < 6; i++) {
-          if (i >= slotsUnlocked) continue;
-          const here = p.slots[i] === s.id;
-          actions.append(pbtn(keys[i]!, () => {
-            for (let k = 0; k < 6; k++) if (p.slots[k] === s.id) p.slots[k] = k === 0 ? ATTACK_SLOT : null;
-            p.slots[i] = here ? (i === 0 ? ATTACK_SLOT : null) : s.id;
-            rerender();
-          }, here ? 'on' : 'btn'));
-        }
-        if (p.slots[0] !== ATTACK_SLOT) actions.append(pbtn('Attack on LMB', () => { p.slots[0] = ATTACK_SLOT; rerender(); }));
+      // A minus takes a rank back (or undoes the ultimate), a plus adds one (or goes ultimate at rank 5); the plus hides at the top
+      if (ultOn) {
+        actions.append(pbtn('\u2212', () => { revokeUltimate(p, ult!.id); rerender(); }, 'red'));
+      } else if (rank > 0) {
+        actions.append(pbtn('\u2212', () => { unlearnSkill(p, s.id); rerender(); }, 'red'));
       }
-      if (ult && !ultOn) {
+      if (rank < 5) {
+        actions.append(pbtn('+', () => {
+          if (!learnSkill(p, s.id)) this.host.message(canLearnSkill(p, s.id).reason ?? 'Cannot learn', 0xff8080);
+          rerender();
+        }, learn.ok ? 'gold' : 'dim'));
+      } else if (ult && !ultOn) {
         const can = canUnlockUltimate(p, s.id);
-        actions.append(pbtn('Unlock Ultimate', () => {
+        actions.append(pbtn('+', () => {
           if (!unlockUltimate(p, s.id)) this.host.message(canUnlockUltimate(p, s.id).reason ?? 'Cannot unlock', 0xff8080);
           else this.host.message(`${ult.name} unlocked as an ultimate`, 0xffe066);
           rerender();
-        }, can.ok ? 'gold' : 'dim'));
+        }, can.ok ? 'gold' : 'dim'), pxText('go Ultimate', { color: can.ok ? GOLD : MUTED, scale: 1 }));
       }
-      if (ult && ultOn) actions.append(pbtn('Undo Ultimate', () => { revokeUltimate(p, ult.id); rerender(); }, 'dim'));
+      if (rank > 0) {
+        // Where it sits on the bar, as a dropdown
+        const bound = p.slots.findIndex((k) => k === s.id || k === active.id);
+        const select = h('select', { class: 'px-select' }) as HTMLSelectElement;
+        select.append(h('option', { value: '' }, 'Not bound'));
+        for (let i = 0; i < 6; i++) {
+          if (i >= slotsUnlocked) continue;
+          select.append(h('option', { value: String(i) }, `Bound to ${keys[i]}`));
+        }
+        select.value = bound >= 0 ? String(bound) : '';
+        select.addEventListener('pointerdown', (e) => e.stopPropagation());
+        select.addEventListener('change', () => {
+          for (let k = 0; k < 6; k++) if (p.slots[k] === s.id || p.slots[k] === active.id) p.slots[k] = k === 0 ? ATTACK_SLOT : null;
+          if (select.value !== '') p.slots[Number(select.value)] = active.id;
+          rerender();
+        });
+        actions.append(select);
+      }
       row.append(actions);
       wrap.append(row);
     }
