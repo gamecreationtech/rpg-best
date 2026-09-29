@@ -214,9 +214,9 @@ export class Game {
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),
-      travel: (area, zoneId) => {
+      travel: (area, zoneId, level) => {
         this.closePanel();
-        this.world!.travel(area, zoneId);
+        this.world!.travel(area, zoneId, level);
       },
       exportCode: () => encodeSave(serialize(this.world!.player, this.seed)),
       importCode: async (code) => {
@@ -363,7 +363,7 @@ export class Game {
         }
         break;
       case 'area':
-        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name);
+        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name + (ev.level ? `, level ${ev.level}` : ''));
         this.sfx.play('portal');
         void this.autosave();
         break;

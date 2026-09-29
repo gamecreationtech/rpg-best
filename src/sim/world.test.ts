@@ -252,6 +252,36 @@ describe('bulk selling', () => {
   });
 });
 
+describe('beyond 100', () => {
+  it('replays a zone at a picked monster level, drops follow it, and the hero stays at the cap', () => {
+    const w = new World(createPlayer('knight', 'titan'), 131);
+    w.player.level = 100;
+    w.player.xpToNext = 999999;
+    w.travel('arena', 'the_abyss', 300);
+    expect(w.monsterLevel).toBe(300);
+    expect(w.events.some((ev) => ev.type === 'area' && ev.level === 300)).toBe(true);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 12, w.pz);
+    expect(e.maxHp).toBe(Math.round(22 * (1 + MONSTER_RULES.hpPerLevel * 299)));
+    let drop = null;
+    for (let i = 0; i < 60 && !drop; i++) {
+      const g = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 12, w.pz);
+      w.killEnemy(g, 0);
+      drop = w.drops.find((d) => d.alive && d.item)?.item ?? null;
+    }
+    expect(drop).toBeTruthy();
+    expect(drop!.ilvl).toBe(300);
+    expect(drop!.reqLevel).toBe(100);
+    expect(w.player.level).toBe(100);
+    // The return portal brings the hero back at the same level
+    w.enterTown();
+    w.enterArena();
+    expect(w.monsterLevel).toBe(300);
+    // Travelling normally clears it
+    w.travel('arena', 'cursed_hollow');
+    expect(w.monsterLevel).toBe(6);
+  });
+});
+
 describe('shift-click attack in place', () => {
   it('a melee hero stands still, faces the point and hits what is in reach that way', () => {
     const w = new World(createPlayer('knight', 'titan'), 121);

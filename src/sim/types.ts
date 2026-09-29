@@ -197,6 +197,6 @@ export type SimEvent =
   | { type: 'drop_spawn'; id: number }
   | { type: 'sound'; id: string }
   | { type: 'open'; panel: InteractableKind }
-  | { type: 'area'; area: 'town' | 'arena'; zone?: string }
+  | { type: 'area'; area: 'town' | 'arena'; zone?: string; /** A picked monster level past the zone's own. */ level?: number }
   | { type: 'kick'; k: number }
   | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' };

@@ -208,8 +208,17 @@ export class World {
     return zoneById(this.zoneId);
   }
 
-  enterArena(zoneId = this.zoneId): void {
+  /** A monster level chosen on the waypoint's Beyond 100 page, or 0 for the zone's own. Kept through the return portal. */
+  zoneLevel = 0;
+
+  /** The level monsters, gold and endgame drops scale to in the current zone. */
+  get monsterLevel(): number {
+    return this.zoneLevel || this.zone.level;
+  }
+
+  enterArena(zoneId = this.zoneId, level = this.zoneLevel): void {
     this.zoneId = zoneById(zoneId).id;
+    this.zoneLevel = level;
     const z = this.zone;
     this.arena = buildZone(z.layout, z.cols, z.rows, this.rng.int(1, 1e9));
     this.arenaVisited = true;
@@ -224,7 +233,7 @@ export class World {
     this.interactables.length = 0;
     this.interactables.push({ id: 1, kind: 'town_portal', x: this.arena.spawn.x - 2, z: this.arena.spawn.z, radius: 50 * PX, active: true });
     this.spawnTimer = 0.5;
-    this.emit({ type: 'area', area: 'arena', zone: this.zoneId });
+    this.emit({ type: 'area', area: 'arena', zone: this.zoneId, level: this.zoneLevel || undefined });
   }
 
   private clearArea(): void {
@@ -787,8 +796,9 @@ export class World {
     return true;
   }
 
-  travel(to: Area, zoneId?: string): void {
-    if (to === 'arena') this.enterArena(zoneId);
+  /** `level` replays a zone at a monster level of the player's choosing (the Beyond 100 page); omit it for the zone's own level. */
+  travel(to: Area, zoneId?: string, level?: number): void {
+    if (to === 'arena') this.enterArena(zoneId, level ?? 0);
     else this.enterTown();
   }
 
@@ -1328,8 +1338,8 @@ export class World {
 
   spawnEnemy(def: EnemyDef, x: number, z: number): Enemy {
     const e = this.allocEnemy();
-    // Monsters grow with their zone, not with the hero
-    const lv = this.zone.level - 1;
+    // Monsters grow with their zone (or the level picked for it), not with the hero
+    const lv = this.monsterLevel - 1;
     Object.assign(e, {
       def, dummy: null, name: def.name, recipeId: def.look, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
       maxHp: Math.round(def.hp * (1 + MONSTER_RULES.hpPerLevel * lv)), damage: Math.round(def.damage * (1 + MONSTER_RULES.dmgPerLevel * lv)),
@@ -1356,12 +1366,14 @@ export class World {
     rechargePotions(this.player, this.potionFraction);
     this.gainXp(e.xp);
     if (e.def) {
-      const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + MONSTER_RULES.goldPerLevel * (this.zone.level - 1)) * (1 + this.derived.goldFind / 100));
+      const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + MONSTER_RULES.goldPerLevel * (this.monsterLevel - 1)) * (1 + this.derived.goldFind / 100));
       this.addDrop(e.x + this.rng.range(-0.4, 0.4), e.z + this.rng.range(-0.4, 0.4), null, gold);
       // Item find scales the monster's own drop chance; magic find then decides the rarity
       if (this.rng.next() * 100 < e.def.dropChance * (1 + this.derived.itemFind / 100)) {
         const sets = setsForZone(this.zone.id);
-        const item = generateItem(this.rng, { ilvl: this.player.level, magicFind: this.derived.magicFind, sets: sets.map((s) => s.id), setWeight: Math.max(0, ...sets.map((s) => s.dropWeight)) });
+        // Past the cap, drops follow the monster level instead of the hero's, so gear keeps growing to 500
+        const ilvl = this.monsterLevel > LEVELING.maxLevel ? this.monsterLevel : this.player.level;
+        const item = generateItem(this.rng, { ilvl, magicFind: this.derived.magicFind, sets: sets.map((s) => s.id), setWeight: Math.max(0, ...sets.map((s) => s.dropWeight)) });
         this.addDrop(e.x + this.rng.range(-0.6, 0.6), e.z + this.rng.range(-0.6, 0.6), item, 0);
       }
     }

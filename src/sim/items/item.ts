@@ -1,5 +1,6 @@
 import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SET_BASES, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
 import type { StatKey, StatMap } from '../../data/stats';
+import { LEVELING } from '../../data/classes';
 import { PROCS, type ItemProc } from '../../data/procs';
 import type { Rng } from '../../gen/rng';
 
@@ -68,8 +69,9 @@ function scaleStat(key: StatKey, value: number, mult: number): number {
   return DECIMAL_STATS.includes(key) ? Math.round(v * 100) / 100 : Math.round(v);
 }
 
+/** Drops past the cap (Beyond 100 zones) stay wearable: the requirement never exceeds the level cap. */
 export function reqLevelFor(ilvl: number): number {
-  return Math.max(1, Math.round(ilvl * 0.8));
+  return Math.min(LEVELING.maxLevel, Math.max(1, Math.round(ilvl * 0.8)));
 }
 
 /** Builds an item from a base definition at a rarity and item level. */

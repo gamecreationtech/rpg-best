@@ -80,6 +80,14 @@ Obsidian Halls (58), the Storm Peaks (72), the Abyss (88) and the Throne of
 the Fallen (100). Drafted by the engineer until the producer's zone and
 monster data replaces them.
 
+**Beyond 100** (producer's call, 2026-09-29): at the level cap the waypoint
+shows a second page that replays any zone at a monster level of the player's
+choosing, 125 to 500 in steps of 25. Heroes never pass level 100; monsters keep
+the same per-level growth all the way up (about five times the life and four
+times the damage of a level 100 monster at 500), and drops there are made at
+the monster's level so gear keeps growing, with the level requirement capped at
+100 so it stays wearable.
+
 ### 4.2c Leveling pace
 
 The level cap is 100. A level is meant to take about a minute and a half of
