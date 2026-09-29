@@ -2,7 +2,7 @@ import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
 import { PLEDGES } from '../data/pledges';
-import { SKILLS } from '../data/skills';
+import { SKILLS, orbiterPlace } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
 import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
@@ -838,12 +838,12 @@ export class PixelView {
       const prop = this.projectileProp(shape, color);
       const rings = od.stacks ? b.data.rings ?? 1 : 1;
       for (let ring = 0; ring < rings; ring++) {
-      const r = od.radius * PX + ring * (od.ringGap ?? 0) * PX;
       for (let i = 0; i < od.count; i++) {
-        // Each further ring trails a third of a turn behind the one inside it
-        const a = (b.data.angle ?? 0) + (i / od.count) * Math.PI * 2 - ring * ((Math.PI * 2) / 3);
-        const ox = w.px + Math.sin(a) * r;
-        const oz = w.pz + Math.cos(a) * r;
+        // Drawn exactly where the simulation's hit box is
+        const place = orbiterPlace(od, b.data.angle ?? 0, ring, i);
+        const a = place.angle;
+        const ox = w.px + Math.sin(a) * place.radius * PX;
+        const oz = w.pz + Math.cos(a) * place.radius * PX;
         const fx = Math.round(cam.frameX(ox, oz));
         const fy = Math.round(cam.frameY(ox, 0.9, oz));
         // Daggers point along their path; the hammer's own frames spin it

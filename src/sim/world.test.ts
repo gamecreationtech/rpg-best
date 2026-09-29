@@ -271,6 +271,10 @@ describe('hidden skills', () => {
     w.player.slots[1] = 'hammer_of_gods_spin';
     const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1.9, w.pz); // on the 60 px ring
     const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 6, w.pz);
+    const inside = w.spawnEnemy(MONSTERS.blood_bat!, w.px - 0.3, w.pz); // a bat hugging the hero, well inside the ring
+    inside.speed = 0;
+    inside.maxHp = inside.hp = 100000;
+    const insideHp = inside.hp;
     near.speed = 0;
     far.speed = 0;
     near.maxHp = near.hp = 100000;
@@ -283,6 +287,8 @@ describe('hidden skills', () => {
     run(w, 2.5);
     expect(near.hp).toBeLessThan(afterOne);
     expect(far.hp).toBe(farHp);
+    // The hammer is a hit box on its path, not a field: a monster inside the ring is never touched
+    expect(inside.hp).toBe(insideHp);
     expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(false);
   });
 

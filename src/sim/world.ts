@@ -2,7 +2,7 @@ import { CONSUMABLES, CONSUMABLE_RULES, type ConsumableId } from '../data/consum
 import { DUMMIES, DUMMY_RULES } from '../data/dummies';
 import { MONSTERS, MONSTER_RULES, monsterScale, type EnemyDef } from '../data/monsters';
 import { ZONES, zoneById, type ZoneDef } from '../data/zones';
-import { SKILLS, type BuffMods, type SkillDef } from '../data/skills';
+import { SKILLS, orbiterPlace, type BuffMods, type SkillDef } from '../data/skills';
 import { STATUS_RULES } from '../data/status';
 import { LEVELING } from '../data/classes';
 import { PLEDGES } from '../data/pledges';
@@ -1016,19 +1016,22 @@ export class World {
     const od = b.mods.orbitDaggers!;
     b.data.angle = (b.data.angle ?? 0) + dt * (od.spin ?? 3.2);
     const rings = od.stacks ? b.data.rings ?? 1 : 1;
-    const gap = (od.ringGap ?? 0) * PX;
     // The buff carries its skill's id, so the damage is that skill's
     const def = SKILLS[b.id] ?? SKILLS.daggers_protection!;
     const dmg = Math.round(skillDamageFor(this, def.id, od.damageMult));
+    // Each orbiter is a real hit box at the spot it is drawn: it strikes only what it touches
+    const hitRadius = (od.hitRadius ?? 10) * PX;
     for (let r = 0; r < rings; r++) {
-      const radius = od.radius * PX + r * gap;
-      for (const e of this.enemiesWithin(this.px, this.pz, radius + 0.3)) {
-        const d = this.dist(e.x, e.z);
-        if (d < radius - 0.9) continue;
-        const key = `hit_${r}_${e.id}`;
-        if ((b.data[key] ?? 0) > this.time) continue;
-        b.data[key] = this.time + od.hitCooldown * MS;
-        hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: true, skillId: def.id, weaponHit: false });
+      for (let i = 0; i < od.count; i++) {
+        const place = orbiterPlace(od, b.data.angle, r, i);
+        const ox = this.px + Math.sin(place.angle) * place.radius * PX;
+        const oz = this.pz + Math.cos(place.angle) * place.radius * PX;
+        for (const e of this.enemiesWithin(ox, oz, hitRadius)) {
+          const key = `hit_${r}_${e.id}`;
+          if ((b.data[key] ?? 0) > this.time) continue;
+          b.data[key] = this.time + od.hitCooldown * MS;
+          hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: true, skillId: def.id, weaponHit: false });
+        }
       }
     }
   }
