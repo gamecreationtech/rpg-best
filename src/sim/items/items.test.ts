@@ -15,7 +15,7 @@ describe('item generation', () => {
     expect(rare.stats.armor!).toBeGreaterThan(common.stats.armor!);
     expect(rare.affixes.length).toBe(2);
     expect(rare.value).toBeGreaterThan(common.value);
-    expect(rare.reqLevel).toBe(8);
+    expect(rare.reqLevel).toBe(10);
   });
 
   it('keeps attribute bonuses small on low-level items and lets them grow', () => {
@@ -205,8 +205,9 @@ describe('equipment', () => {
   it('enforces level requirements', () => {
     const eq = new Equipment();
     const item = generateItem(new Rng(2), { ilvl: 20, rarity: 'magic', slot: 'boots' });
-    expect(eq.equip(item, 3).ok).toBe(false);
-    expect(eq.equip(item, 16).ok).toBe(true);
+    expect(item.reqLevel).toBe(20);
+    expect(eq.equip(item, 19).ok).toBe(false);
+    expect(eq.equip(item, 20).ok).toBe(true);
   });
 });
 

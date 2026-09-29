@@ -48,7 +48,7 @@ arrives.
 - **Skill slots.** Six slots: the primary (tap an enemy, or left click) holds Attack or a skill, and five skill slots unlock at levels 1, 5, 10, 15 and 20.
 - **Walls block everything.** No attack, skill, splash or monster bite reaches through a wall, whatever its range: every hit needs a clear line from its source to the target. Heroes and monsters walk round instead, and the hero's path shortcuts allow for its body width so it never wedges on a corner.
 - **Skill damage scaling.** Skills scale from the weapon roll plus strength (melee weapons) or intelligence and spell damage (magic weapons). Void Slash adds both. Rank multiplier is 1 + rank x rankBonus.
-- **Requirement level of items.** The export had a field but no formula: level = round(item level x 0.8), minimum 1.
+- **Requirement level of items.** The export had a field but no formula: an item needs its own level (was 80% of it until 2026-09-29), capped at the hero level cap of 100.
 - **Death.** Respawn in town with no penalty, as decided in the design document.
 - **Wind and Storm** follow the caster. **Blizzard** covers a fixed 600px circle around the cast point.
 - **Fire Prison** ticks every half second; the ultimate clamps enemies inside the ring.

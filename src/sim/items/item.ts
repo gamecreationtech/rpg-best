@@ -69,9 +69,9 @@ function scaleStat(key: StatKey, value: number, mult: number): number {
   return DECIMAL_STATS.includes(key) ? Math.round(v * 100) / 100 : Math.round(v);
 }
 
-/** Drops past the cap (Beyond 100 zones) stay wearable: the requirement never exceeds the level cap. */
+/** An item needs its own level (producer's call, 2026-09-29); drops past the cap stay wearable at 100. */
 export function reqLevelFor(ilvl: number): number {
-  return Math.min(LEVELING.maxLevel, Math.max(1, Math.round(ilvl * 0.8)));
+  return Math.min(LEVELING.maxLevel, Math.max(1, Math.round(ilvl)));
 }
 
 /** Builds an item from a base definition at a rarity and item level. */
