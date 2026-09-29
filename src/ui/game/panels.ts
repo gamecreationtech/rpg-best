@@ -269,7 +269,7 @@ export class Panels {
       list.append(h('div', { class: 'px-inset px-zone' },
         h('div', { class: 'px-row tight gear-row' }, ...DIFFICULTIES.map((o) => pbtn(o.name, () => { this.difficulty = o; this.render(); }, o === d ? 'on' : 'btn'))),
         pxText(`${d.name}: monster level ${d.level}. ${d.blurb}`, { color: TEXT, maxChars: 60 }),
-        pxText('Heroes stop at level 100; monsters keep climbing. Past 100 every level adds 30% life and 10% damage, and what they drop is made at their level.', { color: MUTED })));
+        pxText('Heroes stop at level 100; monsters keep climbing, their life compounding to 26,000 times a level 1 monster at Inferno. What they drop is made at their level.', { color: MUTED })));
       for (const z of ZONES) {
         const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === d.level;
         list.append(row(z.name, d.level, z.blurb, here, null, () => this.host.travel('arena', z.id, d.level)));
