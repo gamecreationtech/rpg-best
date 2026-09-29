@@ -95,21 +95,23 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
     w.killEnemy(e, p.healOnKillPct ?? 0);
   }
   // Item procs fire off weapon hits, never off their own damage
-  if (p.weaponHit && !p.fromProc && amount > 0) fireProcs(w, amount, p.element);
+  if (p.weaponHit && !p.fromProc && amount > 0) fireProcs(w, e, amount, p.element);
   return amount;
 }
 
-/** Rolls every worn proc against this hit; a proc that fires strikes everything around the hero. */
-function fireProcs(w: World, amount: number, element: Element): void {
+/** Rolls every worn proc against this hit; a proc that fires strikes everything around its centre (the hero or the enemy hit). */
+function fireProcs(w: World, e: Enemy, amount: number, element: Element): void {
   for (const proc of w.derived.procs) {
     if (w.rng.next() * 100 >= proc.chance) continue;
     const def = PROCS[proc.id];
     if (!def) continue;
     const radius = def.radius * PX;
-    w.emit({ type: 'aoe', visual: def.visual, x: w.px, z: w.pz, radius, element });
+    const cx = def.at === 'target' ? e.x : w.px;
+    const cz = def.at === 'target' ? e.z : w.pz;
+    w.emit({ type: 'aoe', visual: def.visual, x: cx, z: cz, radius, element });
     w.emit({ type: 'sound', id: 'hit' });
     const dmg = Math.max(1, Math.round(amount * def.damageMult));
-    for (const other of w.enemiesWithin(w.px, w.pz, radius)) {
+    for (const other of w.enemiesWithin(cx, cz, radius)) {
       hitEnemy(w, other, { amount: dmg, element, canCrit: false, skillId: null, weaponHit: false, fromProc: true });
     }
   }

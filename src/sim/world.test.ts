@@ -253,7 +253,7 @@ describe('bulk selling', () => {
 });
 
 describe('item procs', () => {
-  it('Cry of the Weak fires on about half of weapon hits and strikes everything within 50 px', () => {
+  it('Cry of the Weak fires on about half of weapon hits and strikes everything within 60 px of the enemy hit', () => {
     const w = new World(createPlayer('knight', 'titan'), 111);
     w.travel('arena');
     const amulet = makeItem(baseItem('weak_amulet'), 'divine', 100, null);
@@ -261,8 +261,10 @@ describe('item procs', () => {
     w.recomputeStats();
     expect(w.derived.procs).toEqual([{ id: 'cry_of_the_weak', chance: 50 }]);
     const target = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1, w.pz);
-    const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px, w.pz + 1.2); // 38 px away
-    const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 4, w.pz); // 128 px away
+    const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px, w.pz + 1.2); // 50 px from the target
+    const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 4, w.pz); // 96 px from the target
+    const behind = w.spawnEnemy(MONSTERS.ice_golem!, w.px - 1.5, w.pz); // 48 px from the hero, 80 from the target
+    const behindHp = behind.hp;
     const nearHp = near.hp;
     const farHp = far.hp;
     let fired = 0;
@@ -276,7 +278,7 @@ describe('item procs', () => {
         fired++;
         expect(aoe.length).toBe(1);
         expect(near.hp).toBe(nearHp - 10);
-        expect(target.hp).toBe(100000 - 20); // the target takes the blow and the cry
+        expect(target.hp).toBe(100000 - 20); // the target is at the centre, so it takes the blow and the cry
       } else {
         expect(near.hp).toBe(nearHp);
       }
@@ -284,6 +286,8 @@ describe('item procs', () => {
     expect(fired).toBeGreaterThan(150);
     expect(fired).toBeLessThan(250);
     expect(far.hp).toBe(farHp);
+    // Centred on the enemy hit, not the hero: the one behind the hero is untouched
+    expect(behind.hp).toBe(behindHp);
   });
 });
 

@@ -6,7 +6,9 @@ export interface ProcDef {
   id: string;
   name: string;
   description: string;
-  /** Radius around the hero in px. */
+  /** Where the effect is centred: on the hero, or on the enemy that was hit. */
+  at: 'self' | 'target';
+  /** Radius in px. */
   radius: number;
   /** Share of the triggering hit dealt to everything in range. */
   damageMult: number;
@@ -18,8 +20,9 @@ export const PROCS: Record<string, ProcDef> = {
   cry_of_the_weak: {
     id: 'cry_of_the_weak',
     name: 'Cry of the Weak',
-    description: 'A shout that strikes everything within 50 px of you for 100% of the blow.',
-    radius: 50,
+    description: 'A shout that strikes everything within 60 px of the enemy hit for 100% of the blow.',
+    at: 'target',
+    radius: 60,
     damageMult: 1.0,
     visual: 'stomp',
   },
