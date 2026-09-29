@@ -48,8 +48,8 @@ const RED = '#ff6a6a';
 const BLUE = '#8fb8ff';
 
 /** A pixel-framed button with pixel text. */
-export function pbtn(label: string, onClick: () => void, kind: 'btn' | 'gold' | 'red' | 'on' | 'dim' = 'btn', color = TEXT): HTMLButtonElement {
-  const b = h('button', { class: `pxb ${kind}`, onclick: () => onClick() }, pxText(label, { color: kind === 'dim' ? MUTED : color }));
+export function pbtn(label: string, onClick: (e: MouseEvent) => void, kind: 'btn' | 'gold' | 'red' | 'on' | 'dim' = 'btn', color = TEXT): HTMLButtonElement {
+  const b = h('button', { class: `pxb ${kind}`, onclick: (e: Event) => onClick(e as MouseEvent) }, pxText(label, { color: kind === 'dim' ? MUTED : color }));
   b.addEventListener('pointerdown', (e) => e.stopPropagation());
   return b;
 }
@@ -504,9 +504,11 @@ export class HeroMenu {
     const attr = (name: string, key: 'str' | 'dex' | 'int' | 'vit', current: number) => {
       const controls = h('span', { class: 'px-row tight' });
       if (p.statPoints > 0) {
+        // Desktop: Shift-click moves ten points, Ctrl-click five
+        const step = (e: MouseEvent) => (e.shiftKey ? 10 : e.ctrlKey ? 5 : 1);
         controls.append(
-          pbtn('\u2212', () => { if (pend[key] > 0) { pend[key]--; rerender(); } }, pend[key] > 0 ? 'red' : 'dim'),
-          pbtn('+', () => { if (left > 0) { pend[key]++; rerender(); } }, left > 0 ? 'gold' : 'dim'),
+          pbtn('\u2212', (e) => { if (pend[key] > 0) { pend[key] -= Math.min(step(e), pend[key]); rerender(); } }, pend[key] > 0 ? 'red' : 'dim'),
+          pbtn('+', (e) => { if (left > 0) { pend[key] += Math.min(step(e), left); rerender(); } }, left > 0 ? 'gold' : 'dim'),
         );
         for (const b of controls.children) b.classList.add('tiny');
         if (!this.mouse) {
@@ -541,6 +543,7 @@ export class HeroMenu {
         }, pendingTotal ? 'gold' : 'dim'),
         pbtn('Cancel', () => { this.clearPending(); rerender(); }, pendingTotal ? 'btn' : 'dim'),
       ));
+      if (this.mouse) sheet.append(h('div', { class: 'px-stat' }, pxText('Ctrl-click for 5, Shift-click for 10', { color: MUTED })));
     }
     head('Offense');
     const [dmgLo, dmgHi] = attackDamageRange(d);
