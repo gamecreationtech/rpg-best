@@ -583,5 +583,9 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .dev-actions { display: flex; gap: 6px; padding: 8px 4px; border-top: 1px solid var(--line); margin-top: 4px; }
 .dev-section { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); padding: 8px 4px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
 .dev-give { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 4px; }
+.dev-make { display: flex; flex-direction: column; gap: 4px; padding: 2px 4px; }
+.dev-select, .dev-number { background: #10131c; color: var(--text, #e8e8f0); border: 1px solid #3a4054; border-radius: 4px; font: inherit; font-size: 11px; padding: 2px 4px; min-height: 24px; }
+.dev-select { max-width: 100%; }
+.dev-number { width: 58px; }
 .dev-give .btn.small { min-height: 24px; padding: 2px 8px; font-size: 11px; }
 .dev-note { font-size: 11px; color: var(--muted); padding: 2px 4px; min-height: 14px; }

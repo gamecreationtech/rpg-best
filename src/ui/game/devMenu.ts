@@ -1,4 +1,4 @@
-import { ACCESSORY_BASES, SET_BASES, SPECIAL_BASES, WEAPON_BASES } from '../../data/items';
+import { ACCESSORY_BASES, ALL_BASES, RARITIES, SET_BASES, SPECIAL_BASES, WEAPON_BASES, type Rarity } from '../../data/items';
 import type { StatKey } from '../../data/stats';
 import { makeItem } from '../../sim/items/item';
 import type { World } from '../../sim/world';
@@ -69,6 +69,28 @@ export class DevMenu {
     if (this.open) this.render();
   }
 
+  /** Any item at any rarity and level, for testing numbers: hand-written items keep their own rarity. */
+  private itemMaker(note: HTMLElement): HTMLElement {
+    const w = this.world;
+    const base = h('select', { class: 'dev-select' }) as HTMLSelectElement;
+    for (const b of ALL_BASES) base.append(h('option', { value: b.id }, b.rarity ? `${b.name} (${RARITIES[b.rarity].name})` : b.name));
+    const rarity = h('select', { class: 'dev-select' }) as HTMLSelectElement;
+    for (const r of ['common', 'magic', 'rare', 'mythic'] as const) rarity.append(h('option', { value: r }, RARITIES[r].name));
+    rarity.value = 'magic';
+    const level = h('input', { type: 'number', min: 1, max: 1000, value: w.player.level, class: 'dev-number' }) as HTMLInputElement;
+    const make = button('Make', () => {
+      const def = ALL_BASES.find((b) => b.id === base.value);
+      if (!def) return;
+      const lv = Math.max(1, Math.min(1000, Math.round(Number(level.value) || 1)));
+      const item = makeItem(def, def.rarity ?? (rarity.value as Rarity), lv, w.rng);
+      const ok = w.player.inventory.add(item);
+      note.textContent = ok ? `${item.name} (${RARITIES[item.rarity].name}, level ${lv}) added to the bag` : 'Bag is full';
+      if (ok) w.markDirty();
+      this.onChange();
+    }, 'btn small primary');
+    return h('div', { class: 'dev-make' }, base, h('div', { class: 'dev-controls' }, rarity, h('span', { class: 'dim' }, 'level'), level, make));
+  }
+
   private render(): void {
     clear(this.body);
     const w = this.world;
@@ -115,6 +137,8 @@ export class DevMenu {
       giveRow(SET_BASES.map((b) => b.id), SET_BASES),
       h('div', { class: 'dev-section' }, 'Give divine'),
       giveRow(SPECIAL_BASES.map((b) => b.id), SPECIAL_BASES),
+      h('div', { class: 'dev-section' }, 'Make an item'),
+      this.itemMaker(note),
       note,
       h('div', { class: 'dev-actions' },
         button('Level up', () => {
