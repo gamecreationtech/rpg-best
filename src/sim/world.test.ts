@@ -252,6 +252,45 @@ describe('bulk selling', () => {
   });
 });
 
+describe('shift-click attack in place', () => {
+  it('a melee hero stands still, faces the point and hits what is in reach that way', () => {
+    const w = new World(createPlayer('knight', 'titan'), 121);
+    w.travel('arena');
+    const near = w.spawnEnemy(MONSTERS.ghoul!, w.px + 1, w.pz);
+    near.speed = 0;
+    const hp = near.hp;
+    const [px, pz] = [w.px, w.pz];
+    expect(w.attackAt(w.px + 3, w.pz)).toBe(true);
+    expect(near.hp).toBeLessThan(hp);
+    expect(w.targetId).toBe(-1);
+    run(w, 1);
+    expect(w.px).toBeCloseTo(px, 3);
+    expect(w.pz).toBeCloseTo(pz, 3);
+    // Nothing that way: a swing at air, still no walking
+    w.attackTimer = 0;
+    w.events.length = 0;
+    expect(w.attackAt(w.px, w.pz - 3)).toBe(true);
+    expect(w.events.some((ev) => ev.type === 'melee_swing')).toBe(true);
+    run(w, 1);
+    expect(w.px).toBeCloseTo(px, 3);
+    expect(w.targetId).toBe(-1);
+  });
+
+  it('a ranged hero shoots along the line without moving', () => {
+    const w = new World(createPlayer('rogue', 'quiverbound'), 122);
+    w.travel('arena');
+    const [px, pz] = [w.px, w.pz];
+    expect(w.attackAt(w.px + 5, w.pz)).toBe(true);
+    const shot = w.projectiles.find((p) => p.alive && p.owner === 'player');
+    expect(shot).toBeTruthy();
+    expect(shot!.vx).toBeGreaterThan(0);
+    expect(Math.abs(shot!.vz)).toBeLessThan(1e-6);
+    run(w, 1);
+    expect(w.px).toBeCloseTo(px, 3);
+    expect(w.pz).toBeCloseTo(pz, 3);
+  });
+});
+
 describe('item procs', () => {
   it('Cry of the Weak fires on about half of weapon hits and strikes everything within 60 px of the enemy hit', () => {
     const w = new World(createPlayer('knight', 'titan'), 111);

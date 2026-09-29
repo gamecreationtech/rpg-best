@@ -374,7 +374,7 @@ export class Panels {
         button('Quit to title', () => this.host.quitToTitle(), 'btn'),
         button('Delete hero', () => { if (confirm('Delete this hero and its save? This cannot be undone.')) void this.host.deleteSave(); }, 'btn danger'),
       ),
-      h('div', { class: 'dim small pad' }, 'Controls: tap to move, tap an enemy to attack, tap a skill to cast at the nearest enemy, or drag from a skill to aim it. Keyboard: WASD, Q E R Y, right click, 1-4 potions, I C K P, F to pick up or interact.'),
+      h('div', { class: 'dim small pad' }, 'Controls: tap to move, tap an enemy to attack, tap a skill to cast at the nearest enemy, or drag from a skill to aim it. Shift-click to attack in place without moving. Keyboard: WASD, Q E R Y, right click, 1-4 potions, I C K P, F to pick up or interact.'),
     );
   }
 }

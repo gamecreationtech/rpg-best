@@ -100,6 +100,9 @@ export class Game {
       tapGround: (sx, sy) => {
         if (this.view!.view.unproject(sx, sy, this.aim)) this.world!.moveTo(this.aim.x, this.aim.z);
       },
+      attackAt: (sx, sy) => {
+        if (this.view!.view.unproject(sx, sy, this.aim)) this.world!.attackAt(this.aim.x, this.aim.z);
+      },
       castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
       usePotion: (id) => this.usePotion(id),
       setMoveInput: (x, z) => {

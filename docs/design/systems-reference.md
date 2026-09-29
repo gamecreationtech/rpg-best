@@ -80,7 +80,8 @@ the stations can be tapped directly too.
 Potions sit bottom-left, the menu buttons top-right (top-centre in landscape).
 
 Desktop keeps tap-to-move: tap to move, hold to keep walking, tap an enemy to
-attack it. Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
+attack it, Shift-click to attack toward the cursor without moving (hold to keep
+swinging; `World.attackAt`). Keyboard: WASD or arrows, Q E R Y, right click for the sixth slot,
 space to attack, 1-4 potions, Tab for the hero menu (Inventory tab: worn gear
 as a paper doll, the full stat sheet and the bag; Skills tab: skills, the slot
 bar and the passive trees), K straight to Skills, F to pick up or interact, Escape for the

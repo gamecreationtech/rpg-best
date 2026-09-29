@@ -1193,10 +1193,50 @@ export class World {
     this.performAttack(t);
   }
 
-  private performAttack(t: Enemy): void {
+  /**
+   * Shift-click on desktop: attack toward a point without moving. The hero
+   * stops, faces the point and swings or shoots that way. A melee swing lands
+   * on the enemy in reach nearest the point (or hits air); an arrow flies
+   * along the line and hits whatever it meets.
+   */
+  attackAt(x: number, z: number): boolean {
+    if (this.playerDead || this.leap || this.charge || this.pStatus.stun > 0 || this.pStatus.freeze > 0) return false;
+    this.targetId = -1;
+    this.pendingCast = null;
+    this.pendingInteract = null;
+    this.pendingPickup = -1;
+    this.path.length = 0;
+    this.moveInput.x = 0;
+    this.moveInput.z = 0;
+    const dx = x - this.px;
+    const dz = z - this.pz;
+    if (dx * dx + dz * dz > 1e-6) this.pyaw = Math.atan2(dx, dz);
+    if (this.attackTimer > 0) return false;
     const d = this.derived;
-    const reach = this.attackReach(t);
+    const base = (d.isRanged ? (this.player.equipment.get('weapon')?.weapon?.range ?? 300) + d.range : d.meleeRange) * PX;
+    let t: Enemy | null = null;
+    if (!d.isRanged) {
+      let best = Infinity;
+      for (const e of this.enemiesInArc(this.px, this.pz, Math.sin(this.pyaw), Math.cos(this.pyaw), base, 70)) {
+        const dd = (e.x - x) ** 2 + (e.z - z) ** 2;
+        if (dd < best) {
+          best = dd;
+          t = e;
+        }
+      }
+    }
+    this.swing(base + (t?.radius ?? 0), t);
+    return true;
+  }
+
+  private performAttack(t: Enemy): void {
     this.pyaw = Math.atan2(t.x - this.px, t.z - this.pz);
+    this.swing(this.attackReach(t), t);
+  }
+
+  /** The basic attack itself, facing `pyaw`: an arrow or bolt along it, or a melee swing that lands on `t` when there is one. */
+  private swing(reach: number, t: Enemy | null): void {
+    const d = this.derived;
     this.attackTimer = 1 / d.atkSpd;
     this.breakInvisibility();
     this.emit({ type: 'player_attack', melee: !d.isRanged });
@@ -1214,7 +1254,7 @@ export class World {
       });
     } else {
       this.emit({ type: 'melee_swing', x: this.px, z: this.pz, dirX, dirZ, range: reach, arc: 70, element: 'physical' });
-      hitEnemy(this, t, { amount, element: 'physical', canCrit: true, skillId: null, weaponHit: true });
+      if (t) hitEnemy(this, t, { amount, element: 'physical', canCrit: true, skillId: null, weaponHit: true });
     }
   }
 

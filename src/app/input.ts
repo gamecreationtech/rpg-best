@@ -7,6 +7,8 @@ export interface InputHost {
   active(): boolean;
   tapEnemy(sx: number, sy: number): boolean;
   tapInteractable(sx: number, sy: number): boolean;
+  /** Shift-click: attack toward this point without moving. */
+  attackAt(sx: number, sy: number): void;
   tapGround(sx: number, sy: number): void;
   castSlot(slot: number, sx: number | null, sy: number | null): void;
   usePotion(id: ConsumableId): void;
@@ -37,6 +39,8 @@ export class Input {
   private mouseX = 0;
   private mouseY = 0;
   private holding = false;
+  /** True while a Shift-click is held: keep attacking in place instead of walking. */
+  private holdAttack = false;
   private holdTimer = 0;
   private pointerId = -1;
   private joy: { x: number; y: number; moved: boolean } | null = null;
@@ -70,10 +74,19 @@ export class Input {
       this.host.joystick(true, e.clientX, e.clientY, 0, 0);
       return;
     }
+    if (e.shiftKey) {
+      // Stand and fight: attack toward the cursor, never walk
+      this.host.attackAt(e.clientX, e.clientY);
+      this.holding = true;
+      this.holdAttack = true;
+      this.holdTimer = 0;
+      return;
+    }
     if (this.host.tapEnemy(e.clientX, e.clientY)) return;
     if (this.host.tapInteractable(e.clientX, e.clientY)) return;
     this.host.tapGround(e.clientX, e.clientY);
     this.holding = true;
+    this.holdAttack = false;
     this.holdTimer = 0;
   }
 
@@ -109,6 +122,7 @@ export class Input {
     if (e.pointerId !== this.pointerId) return;
     this.pointerId = -1;
     this.holding = false;
+    this.holdAttack = false;
     if (this.joy) {
       this.joy = null;
       this.host.joystick(false, 0, 0, 0, 0);
@@ -177,7 +191,8 @@ export class Input {
       this.holdTimer += dt;
       if (this.holdTimer > 0.15) {
         this.holdTimer = 0;
-        this.host.tapGround(this.mouseX, this.mouseY);
+        if (this.holdAttack) this.host.attackAt(this.mouseX, this.mouseY);
+        else this.host.tapGround(this.mouseX, this.mouseY);
       }
     }
   }
