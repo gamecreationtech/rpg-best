@@ -273,7 +273,7 @@ export class Panels {
       select.value = String(this.beyondLevel);
       select.addEventListener('change', () => { this.beyondLevel = Number(select.value); this.render(); });
       list.append(h('div', { class: 'px-inset px-zone' }, h('div', { class: 'px-row' }, pxText('Monster level', { color: TEXT }), h('span', { class: 'grow' }), select),
-        pxText('Heroes stop at level 100; monsters keep climbing to 500, gaining 30% life and 10% damage a level past it. What they drop is made at their level.', { color: MUTED })));
+        pxText('Heroes stop at level 100; monsters keep climbing to 500, each level past it 30% more life and 10% more damage than the one below. What they drop is made at their level.', { color: MUTED })));
       for (const z of ZONES) {
         const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === this.beyondLevel;
         list.append(row(z.name, this.beyondLevel, z.blurb, here, null, () => this.host.travel('arena', z.id, this.beyondLevel)));

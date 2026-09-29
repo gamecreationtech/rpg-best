@@ -83,9 +83,9 @@ monster data replaces them.
 **Beyond 100** (producer's call, 2026-09-29): at the level cap the waypoint
 shows a second page that replays any zone at a monster level of the player's
 choosing, 125 to 500 in steps of 25. Heroes never pass level 100; past it
-monsters grow faster, +30% life and +10% damage per level on top of the growth
-so far (about ten times the life and seven times the damage of a level 100
-monster at 500), and drops there are made at
+monsters grow exponentially, each level 30% more life and 10% more damage than
+the level below (level 200 is about 2,600 times the life and 14,000 times the
+damage of level 100; level 500 is beyond any gear), and drops there are made at
 the monster's level so gear keeps growing, with the level requirement capped at
 100 so it stays wearable.
 

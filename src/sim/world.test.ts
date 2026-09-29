@@ -261,9 +261,9 @@ describe('beyond 100', () => {
     expect(w.monsterLevel).toBe(300);
     expect(w.events.some((ev) => ev.type === 'area' && ev.level === 300)).toBe(true);
     const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 12, w.pz);
-    // Steeper past the cap: the usual growth to 100, then +30% life and +10% damage a level
-    expect(e.maxHp).toBe(Math.round(22 * (1 + MONSTER_RULES.hpPerLevel * 99 + 0.3 * 200)));
-    expect(e.damage).toBe(Math.round(3 * (1 + MONSTER_RULES.dmgPerLevel * 99 + 0.1 * 200)));
+    // Past the cap each level compounds on the one below: +30% life and +10% damage
+    expect(e.maxHp).toBe(Math.round(22 * (1 + MONSTER_RULES.hpPerLevel * 99) * Math.pow(1.3, 200)));
+    expect(e.damage).toBe(Math.round(3 * (1 + MONSTER_RULES.dmgPerLevel * 99) * Math.pow(1.1, 200)));
     let drop = null;
     for (let i = 0; i < 60 && !drop; i++) {
       const g = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 12, w.pz);
