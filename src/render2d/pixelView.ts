@@ -824,7 +824,7 @@ export class PixelView {
       } else if (pr.shape === 'hammer') {
         // The holy hammer throws a warm, pulsing light as it spins
         const [lr, lg, lb] = rgb(color);
-        this.lights.push({ x: fx, y: fy, radius: 70, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
+        this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
       }
     }
 

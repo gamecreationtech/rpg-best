@@ -298,24 +298,24 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       return prop(frames, 6 * s, s, 1);
     }
     case 'hammer': {
-      // A holy war hammer twice the hero's height, turning through eight
-      // angles: a long haft with a wrapped grip and a broad golden head that
-      // glows, with a dithered halo that flickers as it spins
-      const N = 52 * s;
-      const C = 26 * s;
-      const haft = 20 * s;
+      // A holy war hammer a head taller than the hero, spinning fast through
+      // eight angles: a long haft with a wrapped grip and a broad golden head
+      // that glows, with a dithered halo that flickers as it turns
+      const N = 36 * s;
+      const C = 18 * s;
+      const haft = 14 * s;
       const glow = ramp(0xffd860, pal.contrast);
       for (let f = 0; f < 8; f++) {
         const b = new PixelBuffer(N, N);
         const a = (f / 8) * Math.PI;
         const dx = Math.cos(a);
         const dy = Math.sin(a);
-        const hx = Math.round(C + dx * (haft - 4 * s));
-        const hy = Math.round(C + dy * (haft - 4 * s));
-        const across = 8 * s; // half-width across the haft
-        const along = 5 * s; // half-depth along it
+        const hx = Math.round(C + dx * (haft - 3 * s));
+        const hy = Math.round(C + dy * (haft - 3 * s));
+        const across = 5 * s; // half-width across the haft
+        const along = 3 * s; // half-depth along it
         // Halo: a soft ring of light around the head, dithered so it reads as glow
-        const halo = 5 * s;
+        const halo = 4 * s;
         for (let u = -along - halo; u <= along + halo; u++) {
           for (let v = -across - halo; v <= across + halo; v++) {
             const du = Math.max(0, Math.abs(u) - along);
@@ -332,9 +332,9 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
         }
         // Haft, three pixels thick, from the pommel to the head, with a darker wrapped grip
         for (let t = -1; t <= 1; t++) {
-          b.line(Math.round(C - dx * haft - dy * t), Math.round(C - dy * haft + dx * t), Math.round(C + dx * (haft - 8 * s) - dy * t), Math.round(C + dy * (haft - 8 * s) + dx * t), t === 0 ? wood[1] : wood[0]);
+          b.line(Math.round(C - dx * haft - dy * t), Math.round(C - dy * haft + dx * t), Math.round(C + dx * (haft - 5 * s) - dy * t), Math.round(C + dy * (haft - 5 * s) + dx * t), t === 0 ? wood[1] : wood[0]);
         }
-        for (let g = 0; g < 6 * s; g += 2) {
+        for (let g = 0; g < 4 * s; g += 2) {
           const gx = Math.round(C - dx * (haft - 2 * s - g));
           const gy = Math.round(C - dy * (haft - 2 * s - g));
           b.rect(gx - s, gy - s, 3 * s, 3 * s, wood[0]);
@@ -352,12 +352,11 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
         for (const side of [-1, 1]) {
           const rx = Math.round(hx - dy * side * (across >> 1));
           const ry = Math.round(hy + dx * side * (across >> 1));
-          b.rect(rx - s, ry - s, 3 * s, 3 * s, glow[3]);
           b.set(rx, ry, glow[0]);
         }
         frames.push(b.toCanvas());
       }
-      return prop(frames, C, C, 0.04);
+      return prop(frames, C, C, 0.022);
     }
   }
 }
