@@ -298,17 +298,39 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       return prop(frames, 6 * s, s, 1);
     }
     case 'hammer': {
+      // A war hammer as tall as the hero: a long haft with a wrapped grip and a
+      // broad two-faced head, spinning through four angles
+      const N = 26 * s;
+      const C = 13 * s;
+      const haft = 10 * s;
       for (let f = 0; f < 4; f++) {
-        const b = new PixelBuffer(10 * s, 10 * s);
-        // Spinning: draw the hammer at four angles
+        const b = new PixelBuffer(N, N);
         const a = (f / 4) * Math.PI;
         const dx = Math.cos(a);
         const dy = Math.sin(a);
-        b.line(Math.round(5 * s - dx * 4 * s), Math.round(5 * s - dy * 4 * s), Math.round(5 * s + dx * 4 * s), Math.round(5 * s + dy * 4 * s), wood[1]);
-        b.rect(Math.round(5 * s + dx * 4 * s) - s, Math.round(5 * s + dy * 4 * s) - s, 3 * s, 3 * s, steel[1]);
+        // Haft, two pixels thick, from the pommel to the head
+        for (let t = -1; t <= 0; t++) {
+          b.line(Math.round(C - dx * haft - dy * t), Math.round(C - dy * haft + dx * t), Math.round(C + dx * (haft - 3 * s) - dy * t), Math.round(C + dy * (haft - 3 * s) + dx * t), wood[1]);
+        }
+        // Grip wrap near the pommel
+        b.rect(Math.round(C - dx * (haft - s)) - s, Math.round(C - dy * (haft - s)) - s, 2 * s, 2 * s, wood[0]);
+        // Head: a broad block across the haft's end, with a bright face and a dark band
+        const hx = Math.round(C + dx * (haft - 2 * s));
+        const hy = Math.round(C + dy * (haft - 2 * s));
+        const across = 4 * s; // half-width across the haft
+        const along = 3 * s; // half-depth along it
+        for (let u = -along; u <= along; u++) {
+          for (let v = -across; v <= across; v++) {
+            const x = Math.round(hx + dx * u - dy * v);
+            const y = Math.round(hy + dy * u + dx * v);
+            const edge = Math.abs(v) === across || Math.abs(u) === along;
+            b.set(x, y, edge ? steel[0] : u < 0 ? steel[2] : steel[1]);
+          }
+        }
+        b.set(Math.round(hx - dx * s - dy * s), Math.round(hy - dy * s + dx * s), steel[3]);
         frames.push(b.toCanvas());
       }
-      return prop(frames, 5 * s, 5 * s, 0.05);
+      return prop(frames, C, C, 0.05);
     }
   }
 }
