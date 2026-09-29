@@ -1,4 +1,5 @@
-import { PROC_CHANCE, STATUS_RULES } from '../data/status';
+import { COMBAT_RULES, PROC_CHANCE, STATUS_RULES } from '../data/status';
+import { LEVELING } from '../data/classes';
 import { PROCS } from '../data/procs';
 import { PX } from '../data/units';
 import type { Element } from '../data/stats';
@@ -24,8 +25,12 @@ export function skillDamage(w: World, skillId: string, damageMult: number, scale
   return Math.max(1, Math.round(base * damageMult * rankMult * w.derived.dmgMult));
 }
 
-export function armorReduction(armor: number): number {
-  return Math.min(75, (armor / (armor + 650)) * 100);
+/** Percent of a hit that armour removes for a hero of this level. */
+export function armorReduction(armor: number, level: number): number {
+  const r = COMBAT_RULES;
+  const t = (Math.min(Math.max(1, level), LEVELING.maxLevel) - 1) / (LEVELING.maxLevel - 1);
+  const k = r.armorConstantAtOne + (r.armorConstantAtCap - r.armorConstantAtOne) * t;
+  return Math.min(r.maxArmorReductionPct, (armor / (armor + k)) * 100);
 }
 
 /** Player hits an enemy. Handles crits, procs, statuses, on-hit healing and death. */
@@ -194,7 +199,7 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
   const inSanctuary = w.zoneMods.allResists ?? 0;
   let reduced: number;
   if (element === 'physical') {
-    reduced = Math.max(1, Math.round(amount * (1 - armorReduction(d.armor) / 100)));
+    reduced = Math.max(1, Math.round(amount * (1 - armorReduction(d.armor, w.player.level) / 100)));
   } else {
     const res = Math.min(75, d.res[element] + inSanctuary);
     reduced = Math.max(1, Math.round(amount * (1 - res / 100)));

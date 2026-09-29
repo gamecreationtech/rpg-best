@@ -26,7 +26,16 @@ export const STATUS_RULES = {
 };
 
 export const COMBAT_RULES = {
-  armorConstant: 650,
+  /**
+   * Armour's damage reduction = armor / (armor + K), where K grows with the
+   * hero's level: 80% takes 100 armor at level 1 and 5000 at level 100
+   * (producer's call, 2026-09-29), so K runs from 25 to 1250.
+   */
+  armorConstantAtOne: 25,
+  armorConstantAtCap: 1250,
+  /** Armour can never reduce a hit by more than this. */
+  maxArmorReductionPct: 90,
+  /** Resistances are capped here. */
   maxReductionPct: 75,
   baseCritChance: 5,
   baseCritDamage: 150,

@@ -4,7 +4,7 @@ import { ZONES } from '../data/zones';
 import { SKILLS, skillsFor } from '../data/skills';
 import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
-import { damagePlayer, hitEnemy } from './combat';
+import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -249,6 +249,15 @@ describe('bulk selling', () => {
     expect(w.player.gold).toBe(gold + Math.floor(a.value * 0.4) + Math.floor(b.value * 0.4));
     expect(w.player.inventory.items).toEqual([c]);
     expect(w.sellAll('common').count).toBe(0);
+  });
+});
+
+describe('armour', () => {
+  it('80% reduction takes 100 armor at level 1 and 5000 at level 100', () => {
+    expect(armorReduction(100, 1)).toBeCloseTo(80, 5);
+    expect(armorReduction(5000, 100)).toBeCloseTo(80, 5);
+    expect(armorReduction(100, 100)).toBeLessThan(10);
+    expect(armorReduction(1e9, 50)).toBe(90);
   });
 });
 

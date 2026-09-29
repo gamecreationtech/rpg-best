@@ -1,6 +1,7 @@
 import { CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { SETS, describeSetBonus } from '../../data/sets';
+import { armorReduction } from '../../sim/combat';
 import { PROCS } from '../../data/procs';
 import { COMBAT_RULES } from '../../data/status';
 import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
@@ -563,7 +564,7 @@ export class HeroMenu {
     head('Defense');
     row('Life', `${Math.ceil(p.hp)} / ${d.maxHp}`);
     row('Mana', `${Math.floor(p.mana)} / ${d.maxMana}`);
-    row('Armor', `${Math.round(d.armor)}  (${Math.round((d.armor / (d.armor + 650)) * 100)}% damage reduced)`);
+    row('Armor', `${Math.round(d.armor)}  (${Math.round(armorReduction(d.armor, p.level))}% damage reduced)`);
     row('Dodge', `${d.dodge.toFixed(1)}%`);
     row('Block', `${d.block}%`);
     row('Life regen', `${d.hpRegen.toFixed(1)} /s`);
