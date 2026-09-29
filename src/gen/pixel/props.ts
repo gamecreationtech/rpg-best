@@ -297,6 +297,56 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       frames.push(b.toCanvas());
       return prop(frames, 6 * s, s, 1);
     }
+    case 'star': {
+      // A holy star: a five-pointed star of light with a bright core and a
+      // flickering halo, turning through six angles
+      const N = 30 * s;
+      const C = 15 * s;
+      const glow = ramp(0xffe070, pal.contrast);
+      for (let f = 0; f < 6; f++) {
+        const b = new PixelBuffer(N, N);
+        const rot = (f / 6) * ((Math.PI * 2) / 5);
+        const outer = 12 * s;
+        const inner = 5 * s;
+        const pts: [number, number][] = [];
+        for (let k = 0; k < 10; k++) {
+          const a = rot + (k / 10) * Math.PI * 2 - Math.PI / 2;
+          const rr = k % 2 === 0 ? outer : inner;
+          pts.push([C + Math.cos(a) * rr, C + Math.sin(a) * rr]);
+        }
+        // Halo first, dithered and shifting so it flickers
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            const d = Math.hypot(x - C, y - C);
+            if (d > outer + 2 * s || d < inner) continue;
+            const density = Math.max(0, 1 - (d - inner) / (outer + 2 * s - inner));
+            // Ordered 4x4 dither, shifted a row per frame so the glow shimmers instead of streaking
+            const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5][((y + f) % 4) * 4 + (x % 4)]!;
+            if (bayer < density * 0.45 * 16) b.set(x, y, glow[0]);
+          }
+        }
+        // Fill the star: a point is inside when it is inside any of the five kite triangles from the centre
+        for (let y = 0; y < N; y++) {
+          for (let x = 0; x < N; x++) {
+            let inside = false;
+            for (let k = 0; k < 10 && !inside; k++) {
+              const [ax, ay] = pts[k]!;
+              const [bx, by] = pts[(k + 1) % 10]!;
+              const d1 = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+              const d2 = (C - bx) * (y - by) - (C - by) * (x - bx);
+              const d3 = (ax - C) * (y - C) - (ay - C) * (x - C);
+              inside = (d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0);
+            }
+            if (!inside) continue;
+            const d = Math.hypot(x - C, y - C);
+            b.set(x, y, d < 3 * s ? glow[3] : glow[2]);
+          }
+        }
+        b.outline(glow[0]);
+        frames.push(b.toCanvas());
+      }
+      return prop(frames, C, C, 0.03);
+    }
     case 'hammer': {
       // A holy war hammer a head taller than the hero, spinning fast through
       // eight angles: a long haft with a wrapped grip and a broad golden head

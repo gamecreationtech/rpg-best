@@ -834,7 +834,7 @@ export class PixelView {
       const od = b.mods.orbitDaggers;
       if (!od) continue;
       const shape: ProjectileShape = od.shape ?? 'dagger';
-      const color = shape === 'hammer' ? 0xffd860 : 0xe8e0d0;
+      const color = shape === 'hammer' ? 0xffd860 : shape === 'star' ? 0xffe070 : 0xe8e0d0;
       const prop = this.projectileProp(shape, color);
       const rings = od.stacks ? b.data.rings ?? 1 : 1;
       for (let ring = 0; ring < rings; ring++) {
@@ -849,7 +849,7 @@ export class PixelView {
         // Daggers point along their path; the hammer's own frames spin it
         const tx = Math.cos(a);
         const tz = -Math.sin(a);
-        const angle = shape === 'hammer' ? 0 : Math.atan2((tx + tz) / 2, tx - tz);
+        const angle = shape === 'hammer' || shape === 'star' ? 0 : Math.atan2((tx + tz) / 2, tx - tz);
         const frame = prop.frames[Math.floor(this.time / prop.frameTime + i) % prop.frames.length]!;
         this.items.push({
           depth: cam.depth(ox, oz) + 0.01,
@@ -861,7 +861,7 @@ export class PixelView {
             ctx.restore();
           },
         });
-        if (shape === 'hammer') {
+        if (shape === 'hammer' || shape === 'star') {
           const [lr, lg, lb] = rgb(color);
           this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
         }

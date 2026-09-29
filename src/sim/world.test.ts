@@ -254,21 +254,21 @@ describe('bulk selling', () => {
 });
 
 describe('hidden skills', () => {
-  it('Hammer of Gods Spin stays off the list until the dev toggle shows it', () => {
+  it('Holy Smite stays off the list until the dev toggle shows it', () => {
     const ids = () => skillsFor('knight', 'paladin').map((s) => s.id);
-    expect(ids()).not.toContain('hammer_of_gods_spin');
+    expect(ids()).not.toContain('holy_smite');
     SKILL_RULES.showHidden = true;
-    expect(ids()).toContain('hammer_of_gods_spin');
+    expect(ids()).toContain('holy_smite');
     SKILL_RULES.showHidden = false;
   });
 
-  it('the spinning hammer circles the hero for three seconds and strikes what it passes', () => {
+  it('Holy Smite circles the hero for three seconds and strikes what it passes', () => {
     const w = new World(createPlayer('knight', 'paladin'), 141);
     w.travel('arena');
     w.player.level = 10;
     w.player.skillPoints = 5;
-    w.player.skillRanks.hammer_of_gods_spin = 1;
-    w.player.slots[1] = 'hammer_of_gods_spin';
+    w.player.skillRanks.holy_smite = 1;
+    w.player.slots[1] = 'holy_smite';
     const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1.9, w.pz); // on the 60 px ring
     const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 6, w.pz);
     const inside = w.spawnEnemy(MONSTERS.blood_bat!, w.px - 0.3, w.pz); // a bat hugging the hero, well inside the ring
@@ -280,28 +280,28 @@ describe('hidden skills', () => {
     near.maxHp = near.hp = 100000;
     const farHp = far.hp;
     w.castSlot(1);
-    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(true);
+    expect(w.buffs.some((b) => b.id === 'holy_smite')).toBe(true);
     run(w, 1);
     const afterOne = near.hp;
     expect(afterOne).toBeLessThan(100000);
     run(w, 2.5);
     expect(near.hp).toBeLessThan(afterOne);
     expect(far.hp).toBe(farHp);
-    // The hammer is a hit box on its path, not a field: a monster inside the ring is never touched
+    // The star is a hit box on its path, not a field: a monster inside the ring is never touched
     expect(inside.hp).toBe(insideHp);
-    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(false);
+    expect(w.buffs.some((b) => b.id === 'holy_smite')).toBe(false);
   });
 
   it('recasting adds up to three rings, and the outermost goes when the oldest timer ends', () => {
     const w = new World(createPlayer('knight', 'paladin'), 142);
     w.travel('arena');
     w.player.level = 10;
-    w.player.skillRanks.hammer_of_gods_spin = 1;
-    w.player.slots[1] = 'hammer_of_gods_spin';
+    w.player.skillRanks.holy_smite = 1;
+    w.player.slots[1] = 'holy_smite';
     w.devStats.cdr = 90;
     w.recomputeStats();
     expect(w.derived.cdr).toBe(90);
-    const rings = () => w.buffs.find((b) => b.id === 'hammer_of_gods_spin')?.data.rings ?? 0;
+    const rings = () => w.buffs.find((b) => b.id === 'holy_smite')?.data.rings ?? 0;
     w.castSlot(1);
     run(w, 1);
     w.cooldowns = {};
@@ -311,7 +311,7 @@ describe('hidden skills', () => {
     w.castSlot(1);
     expect(rings()).toBe(3);
     w.cooldowns = {};
-    expect(castSkill(w, 'hammer_of_gods_spin', null).ok).toBe(false); // three is the limit
+    expect(castSkill(w, 'holy_smite', null).ok).toBe(false); // three is the limit
     run(w, 1.05); // the first ring's three seconds are up
     expect(rings()).toBe(2);
     run(w, 1);

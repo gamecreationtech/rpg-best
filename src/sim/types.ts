@@ -60,7 +60,7 @@ export interface Enemy {
   aggro: boolean;
 }
 
-export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'boulder' | 'enemy_bolt';
+export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
 
 export interface DamagePacket {
   amount: number;
