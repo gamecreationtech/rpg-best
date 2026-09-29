@@ -1536,7 +1536,8 @@ export class World {
         const safe = Math.max(dist, 0.001);
         e.moveX = (e.x - this.px) / safe;
         e.moveZ = (e.z - this.pz) / safe;
-      } else if (dist > pref * 1.2 || !los) {
+      } else if (dist > pref || !los) {
+        // Close in until it is truly at its preferred range: a hero with a 200 px weapon must be able to answer
         const dir = { x: 0, z: 0 };
         this.flow.direction(e.x, e.z, dir);
         e.moveX = dir.x * 0.6;

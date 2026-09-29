@@ -253,6 +253,26 @@ describe('bulk selling', () => {
   });
 });
 
+describe('ranged monsters stay answerable', () => {
+  it('a sorcerer holding the attack button can shoot back at an archer that has settled to shoot', () => {
+    const w = new World(createPlayer('sorcerer', null), 151);
+    w.travel('arena');
+    const archer = w.spawnEnemy(MONSTERS.bone_archer!, w.px + 9, w.pz); // 288 px out, it walks in to its preferred range
+    archer.aggro = true;
+    w.attackHeld = true;
+    run(w, 6);
+    expect(w.events.some((ev) => ev.type === 'player_attack')).toBe(true);
+    expect(archer.hp).toBeLessThan(archer.maxHp);
+  });
+
+  it('every ranged monster prefers to stand inside a 200 px weapon\'s reach', () => {
+    for (const m of Object.values(MONSTERS)) {
+      if (m.ai !== 'ranged') continue;
+      expect(m.preferredRange ?? 195, m.name).toBeLessThanOrEqual(180);
+    }
+  });
+});
+
 describe('hidden skills', () => {
   it('Holy Smite stays off the list until the dev toggle shows it', () => {
     const ids = () => skillsFor('knight', 'paladin').map((s) => s.id);
