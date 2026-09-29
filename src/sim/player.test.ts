@@ -47,6 +47,19 @@ describe('reach and attack speed limits', () => {
   });
 });
 
+describe('defence caps', () => {
+  it('block and dodge never pass 75%', () => {
+    const p = createPlayer('knight', null);
+    const shield = makeItem(baseItem('tower_shield'), 'mythic', 650, null); // thousands of percent block on paper
+    expect(shield.stats.block!).toBeGreaterThan(1000);
+    expect(p.equipment.equip(shield, 100).ok).toBe(true);
+    p.allocated.dex += 100000;
+    const d = deriveStats(p, [], {});
+    expect(d.block).toBe(75);
+    expect(d.dodge).toBe(75);
+  });
+});
+
 describe('prisoner set', () => {
   it("Prisoner's Nightmare halves speed and attack rate and triples damage with both pieces", () => {
     const p = createPlayer('knight', null);

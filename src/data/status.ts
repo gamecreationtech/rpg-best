@@ -38,6 +38,9 @@ export const COMBAT_RULES = {
   armorPerVit: 1,
   baseMoveSpeedPx: 145,
   minAtkSpd: 0.3,
+  /** Dodge and block chance can never pass this, whatever the gear. */
+  maxDodgePct: 75,
+  maxBlockPct: 75,
   /** Melee reach in px with no weapon in hand, any class. */
   unarmedRange: 20,
   /** Attack speed from gear can add at most this share of the weapon's own rate (100 = double it). */
