@@ -28,6 +28,25 @@ describe('sets', () => {
   });
 });
 
+describe('reach and attack speed limits', () => {
+  it('bare hands reach 20 px for every class', () => {
+    for (const cls of ['knight', 'sorcerer', 'rogue'] as const) {
+      const p = createPlayer(cls, null);
+      p.equipment.unequip('weapon');
+      expect(deriveStats(p, [], {}).meleeRange).toBe(20);
+    }
+  });
+
+  it('gear can at most double a weapon\'s attack speed', () => {
+    const p = createPlayer('knight', null);
+    const sword = p.equipment.get('weapon')!;
+    const lantern = makeItem(baseItem('lantern'), 'mythic', 650, null); // a huge attack speed bonus
+    expect(lantern.stats.atkSpd!).toBeGreaterThan(5);
+    expect(p.equipment.equip(lantern, 100).ok).toBe(true);
+    expect(deriveStats(p, [], {}).atkSpd).toBeCloseTo(sword.weapon!.atkSpd * 2, 5);
+  });
+});
+
 describe('prisoner set', () => {
   it("Prisoner's Nightmare halves speed and attack rate and triples damage with both pieces", () => {
     const p = createPlayer('knight', null);

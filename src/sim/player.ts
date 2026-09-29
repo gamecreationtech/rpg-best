@@ -233,12 +233,14 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
   const hasShield = !!shieldItem && !shieldItem.offhand;
   const moveSpeedPercent = 100 + g('moveSpeed') + dex * COMBAT_RULES.moveSpeedPerDex;
   const moveSpeedPx = Math.round(COMBAT_RULES.baseMoveSpeedPx * (moveSpeedPercent / 100)) * (1 + moveSpdPct / 100);
-  const baseAtkSpd = (w?.atkSpd ?? 1.0) + g('atkSpd');
+  // Gear can at most double the weapon's own rate
+  const weaponAtkSpd = w?.atkSpd ?? 1.0;
+  const baseAtkSpd = weaponAtkSpd + Math.min(g('atkSpd'), weaponAtkSpd * (COMBAT_RULES.maxGearAtkSpdPct / 100));
   const atkSpd = Math.max(COMBAT_RULES.minAtkSpd, baseAtkSpd * (1 + atkSpdPct / 100));
   const fasterCast = g('fasterCast');
   const castInterval = Math.max(SKILL_RULES.minCastInterval, Math.round(1000 / (1 + fasterCast / 100))) / 1000;
   const res = (k: StatKey) => Math.min(COMBAT_RULES.maxReductionPct, g(k) + allRes);
-  const baseRange = w?.range ?? 80;
+  const baseRange = w?.range ?? COMBAT_RULES.unarmedRange;
 
   return {
     str, dex, int, vit,
@@ -275,7 +277,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     isRanged: !!w?.ranged,
     weaponType: w?.type ?? null,
     hasShield,
-    meleeRange: meleeRangeOverride || (w && !w.ranged ? baseRange : 80) + g('range'),
+    meleeRange: meleeRangeOverride || (w && !w.ranged ? baseRange : COMBAT_RULES.unarmedRange) + g('range'),
     procs: p.equipment.all().flatMap((it) => (it.proc ? [it.proc] : [])),
     dmgMult: 1 + dmgPct / 100,
     castInterval,
