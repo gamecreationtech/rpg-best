@@ -1,6 +1,6 @@
 import { CONSUMABLES, CONSUMABLE_RULES, type ConsumableId } from '../data/consumables';
 import { DUMMIES, DUMMY_RULES } from '../data/dummies';
-import { MONSTERS, MONSTER_RULES, type EnemyDef } from '../data/monsters';
+import { MONSTERS, MONSTER_RULES, monsterScale, type EnemyDef } from '../data/monsters';
 import { ZONES, zoneById, type ZoneDef } from '../data/zones';
 import { SKILLS, type BuffMods, type SkillDef } from '../data/skills';
 import { STATUS_RULES } from '../data/status';
@@ -1338,11 +1338,12 @@ export class World {
 
   spawnEnemy(def: EnemyDef, x: number, z: number): Enemy {
     const e = this.allocEnemy();
-    // Monsters grow with their zone (or the level picked for it), not with the hero
+    // Monsters grow with their zone (or the level picked for it), not with the hero; steeper past the cap
     const lv = this.monsterLevel - 1;
+    const scale = monsterScale(this.monsterLevel);
     Object.assign(e, {
       def, dummy: null, name: def.name, recipeId: def.look, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
-      maxHp: Math.round(def.hp * (1 + MONSTER_RULES.hpPerLevel * lv)), damage: Math.round(def.damage * (1 + MONSTER_RULES.dmgPerLevel * lv)),
+      maxHp: Math.round(def.hp * scale.hp), damage: Math.round(def.damage * scale.dmg),
       speed: def.speed * PX, xp: Math.round(def.xp * (1 + MONSTER_RULES.xpPerLevel * lv)), attackRange: def.attackRange * PX,
       attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0, aggro: false,
       scale: def.scale * this.rng.range(0.92, 1.08),
