@@ -100,7 +100,7 @@ export const LEVELING = {
   /** Experience per minute at level 1 and its growth per level, before the zone-level factor. Refit 2026-09-29 to the level 1 monster rescale. */
   xpRateAtOne: 65,
   xpRatePerLevel: 1.2,
-  xpRateCap: 170,
+  xpRateCap: 150,
   /** Monster experience grows by this per zone level (mirrors MONSTER_RULES.xpPerLevel). */
   xpPerLevel: 0.15,
   statPointsPerLevel: 5,
