@@ -47,6 +47,8 @@ export const COMBAT_RULES = {
   armorPerVit: 1,
   baseMoveSpeedPx: 145,
   minAtkSpd: 0.3,
+  /** Cooldown reduction is capped here (the dev slider goes to the same 90). */
+  maxCdrPct: 90,
   /** Dodge and block chance can never pass this, whatever the gear. */
   maxDodgePct: 75,
   maxBlockPct: 75,

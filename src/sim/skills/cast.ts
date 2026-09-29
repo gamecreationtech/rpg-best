@@ -275,7 +275,27 @@ function castAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
 }
 
 function castBuff(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'buff' }>): CastResult {
-  pay(w, def, { x: Math.sin(w.pyaw), z: Math.cos(w.pyaw) }, w.px, w.pz);
+  const dir = { x: Math.sin(w.pyaw), z: Math.cos(w.pyaw) };
+  const od = eff.mods.orbitDaggers;
+  if (od?.stacks) {
+    // Stacking rings: a recast while it spins adds a ring with its own timer instead of refreshing
+    const existing = w.buffs.find((b) => b.id === def.id);
+    if (existing) {
+      const rings = existing.data.rings ?? 1;
+      if (rings >= od.stacks) return { ok: false, reason: `Already ${od.stacks} hammers` };
+      pay(w, def, dir, w.px, w.pz);
+      existing.data[`exp${rings}`] = w.time + eff.duration * MS;
+      existing.data.rings = rings + 1;
+      w.emit({ type: 'buff_start', id: def.id, color: skillColor(def) });
+      return { ok: true };
+    }
+    pay(w, def, dir, w.px, w.pz);
+    const b = w.addBuff(def.id, def.name, eff.duration * MS, eff.mods, skillColor(def));
+    b.data.rings = 1;
+    b.data.exp0 = w.time + eff.duration * MS;
+    return { ok: true };
+  }
+  pay(w, def, dir, w.px, w.pz);
   w.addBuff(def.id, def.name, eff.duration * MS, eff.mods, skillColor(def));
   return { ok: true };
 }

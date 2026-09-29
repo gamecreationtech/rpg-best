@@ -990,25 +990,46 @@ export class World {
       const b = this.buffs[i]!;
       b.remaining -= dt;
       if (b.mods.regenPct) this.healPlayer((this.derived.maxHp * b.mods.regenPct * dt) / 100, true);
+      if (b.mods.orbitDaggers?.stacks) this.settleRings(b);
       if (b.mods.orbitDaggers) this.tickOrbit(b, dt);
       if (b.remaining <= 0) this.endBuff(i);
     }
   }
 
+  /**
+   * Stacked rings each run their own timer, oldest first. When the oldest
+   * runs out the outermost ring goes and the rest shift in; the buff lasts
+   * until the newest ring's timer ends.
+   */
+  private settleRings(b: Buff): void {
+    let rings = b.data.rings ?? 1;
+    while (rings > 0 && (b.data.exp0 ?? 0) <= this.time) {
+      for (let r = 0; r < rings - 1; r++) b.data[`exp${r}`] = b.data[`exp${r + 1}`]!;
+      delete b.data[`exp${rings - 1}`];
+      rings--;
+    }
+    b.data.rings = rings;
+    b.remaining = rings ? b.data[`exp${rings - 1}`]! - this.time : 0;
+  }
+
   private tickOrbit(b: Buff, dt: number): void {
     const od = b.mods.orbitDaggers!;
     b.data.angle = (b.data.angle ?? 0) + dt * (od.spin ?? 3.2);
-    const radius = od.radius * PX;
+    const rings = od.stacks ? b.data.rings ?? 1 : 1;
+    const gap = (od.ringGap ?? 0) * PX;
     // The buff carries its skill's id, so the damage is that skill's
     const def = SKILLS[b.id] ?? SKILLS.daggers_protection!;
     const dmg = Math.round(skillDamageFor(this, def.id, od.damageMult));
-    for (const e of this.enemiesWithin(this.px, this.pz, radius + 0.3)) {
-      const d = this.dist(e.x, e.z);
-      if (d < radius - 0.9) continue;
-      const key = `hit_${e.id}`;
-      if ((b.data[key] ?? 0) > this.time) continue;
-      b.data[key] = this.time + od.hitCooldown * MS;
-      hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: true, skillId: def.id, weaponHit: false });
+    for (let r = 0; r < rings; r++) {
+      const radius = od.radius * PX + r * gap;
+      for (const e of this.enemiesWithin(this.px, this.pz, radius + 0.3)) {
+        const d = this.dist(e.x, e.z);
+        if (d < radius - 0.9) continue;
+        const key = `hit_${r}_${e.id}`;
+        if ((b.data[key] ?? 0) > this.time) continue;
+        b.data[key] = this.time + od.hitCooldown * MS;
+        hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: true, skillId: def.id, weaponHit: false });
+      }
     }
   }
 

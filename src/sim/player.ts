@@ -263,7 +263,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     hpRegen: g('hpRegen'),
     manaRegen: g('manaRegen'),
     fasterCast,
-    cdr: Math.min(60, g('cdr')),
+    cdr: Math.min(COMBAT_RULES.maxCdrPct, g('cdr')),
     magicFind: g('magicFind'),
     goldFind: g('goldFind'),
     itemFind: g('itemFind'),

@@ -836,9 +836,12 @@ export class PixelView {
       const shape: ProjectileShape = od.shape ?? 'dagger';
       const color = shape === 'hammer' ? 0xffd860 : 0xe8e0d0;
       const prop = this.projectileProp(shape, color);
-      const r = od.radius * PX;
+      const rings = od.stacks ? b.data.rings ?? 1 : 1;
+      for (let ring = 0; ring < rings; ring++) {
+      const r = od.radius * PX + ring * (od.ringGap ?? 0) * PX;
       for (let i = 0; i < od.count; i++) {
-        const a = (b.data.angle ?? 0) + (i / od.count) * Math.PI * 2;
+        // Each further ring trails a third of a turn behind the one inside it
+        const a = (b.data.angle ?? 0) + (i / od.count) * Math.PI * 2 - ring * ((Math.PI * 2) / 3);
         const ox = w.px + Math.sin(a) * r;
         const oz = w.pz + Math.cos(a) * r;
         const fx = Math.round(cam.frameX(ox, oz));
@@ -862,6 +865,7 @@ export class PixelView {
           const [lr, lg, lb] = rgb(color);
           this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
         }
+      }
       }
     }
 

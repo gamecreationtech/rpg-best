@@ -5,6 +5,7 @@ import { SKILLS, SKILL_RULES, skillsFor } from '../data/skills';
 import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
+import { castSkill } from './skills/cast';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -283,6 +284,34 @@ describe('hidden skills', () => {
     expect(near.hp).toBeLessThan(afterOne);
     expect(far.hp).toBe(farHp);
     expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(false);
+  });
+
+  it('recasting adds up to three rings, and the outermost goes when the oldest timer ends', () => {
+    const w = new World(createPlayer('knight', 'paladin'), 142);
+    w.travel('arena');
+    w.player.level = 10;
+    w.player.skillRanks.hammer_of_gods_spin = 1;
+    w.player.slots[1] = 'hammer_of_gods_spin';
+    w.devStats.cdr = 90;
+    w.recomputeStats();
+    expect(w.derived.cdr).toBe(90);
+    const rings = () => w.buffs.find((b) => b.id === 'hammer_of_gods_spin')?.data.rings ?? 0;
+    w.castSlot(1);
+    run(w, 1);
+    w.cooldowns = {};
+    w.castSlot(1);
+    run(w, 1);
+    w.cooldowns = {};
+    w.castSlot(1);
+    expect(rings()).toBe(3);
+    w.cooldowns = {};
+    expect(castSkill(w, 'hammer_of_gods_spin', null).ok).toBe(false); // three is the limit
+    run(w, 1.05); // the first ring's three seconds are up
+    expect(rings()).toBe(2);
+    run(w, 1);
+    expect(rings()).toBe(1);
+    run(w, 1.1);
+    expect(rings()).toBe(0);
   });
 });
 
