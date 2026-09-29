@@ -66,7 +66,7 @@ Every feature must serve at least one of these. If it does not, cut it.
   automatic stat growth, the five points are the only growth and are spent by
   the player. The level cap is 100.
 - **Passives:** a general tree plus one tree per class, with prerequisites.
-- **Stats:** Strength, Dexterity, Intelligence, Vitality. Full formulas are in
+- **Stats:** Strength, Dexterity, Intelligence, Endurance (the stat key stays `vit` in code). Full formulas are in
   `docs/design/systems-reference.md` and the export they came from.
 
 ### 4.2b Zones (first draft)

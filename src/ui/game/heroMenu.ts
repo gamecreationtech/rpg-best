@@ -529,7 +529,7 @@ export class HeroMenu {
     attr('Strength', 'str', d.str);
     attr('Dexterity', 'dex', d.dex);
     attr('Intelligence', 'int', d.int);
-    attr('Vitality', 'vit', d.vit);
+    attr('Endurance', 'vit', d.vit);
     if (p.statPoints > 0) {
       // The row is always there so the sheet does not jump when points go pending
       sheet.append(h('div', { class: 'px-row tight stat-confirm' },

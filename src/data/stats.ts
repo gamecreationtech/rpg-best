@@ -30,7 +30,7 @@ export const STAT_DEFS: Record<StatKey, StatDef> = {
   str: { name: 'Strength', format: 'flat' },
   dex: { name: 'Dexterity', format: 'flat' },
   int: { name: 'Intelligence', format: 'flat' },
-  vit: { name: 'Vitality', format: 'flat' },
+  vit: { name: 'Endurance', format: 'flat' },
   life: { name: 'Life', format: 'flat' },
   mana: { name: 'Mana', format: 'flat' },
   armor: { name: 'Armor', format: 'flat' },
