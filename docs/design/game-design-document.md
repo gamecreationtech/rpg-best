@@ -80,14 +80,14 @@ Obsidian Halls (58), the Storm Peaks (72), the Abyss (88) and the Throne of
 the Fallen (100). Drafted by the engineer until the producer's zone and
 monster data replaces them.
 
-**Beyond 100** (producer's call, 2026-09-29): at the level cap the waypoint
-shows a second page that replays any zone at a monster level of the player's
-choosing, 125 to 500 in steps of 25. Heroes never pass level 100; past it
-monsters grow exponentially, each level 30% more life and 10% more damage than
-the level below (level 200 is about 2,600 times the life and 14,000 times the
-damage of level 100; level 500 is beyond any gear), and drops there are made at
-the monster's level so gear keeps growing, with the level requirement capped at
-100 so it stays wearable.
+**Difficulties** (producer's call, 2026-09-29): at the level cap the waypoint
+shows a second page that replays any zone at one of four difficulties: Normal
+(monster level 100), Nightmare (300), Hell (500) and Inferno (1000). Heroes
+never pass level 100; past it monsters gain +30% life and +10% damage per level
+on top of the growth so far (Inferno is about twenty-two times the life and
+fifteen times the damage of Normal), and drops there are made at the monster's
+level so gear keeps growing, with the level requirement capped at 100 so it
+stays wearable.
 
 ### 4.2c Leveling pace
 

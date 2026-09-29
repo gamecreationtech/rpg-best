@@ -119,3 +119,22 @@ export const ZONES: ZoneDef[] = [
 export function zoneById(id: string): ZoneDef {
   return ZONES.find((z) => z.id === id) ?? ZONES[0]!;
 }
+
+/** Difficulties on the waypoint's second page: every zone replayed at this monster level. Heroes stop at 100; monsters do not. */
+export interface DifficultyDef {
+  id: string;
+  name: string;
+  level: number;
+  blurb: string;
+}
+
+export const DIFFICULTIES: DifficultyDef[] = [
+  { id: 'normal', name: 'Normal', level: 100, blurb: 'Every zone at level 100, the hero cap.' },
+  { id: 'nightmare', name: 'Nightmare', level: 300, blurb: 'Level 300 monsters: about six times the life and four times the damage of Normal.' },
+  { id: 'hell', name: 'Hell', level: 500, blurb: 'Level 500 monsters: about ten times the life and seven times the damage of Normal.' },
+  { id: 'inferno', name: 'Inferno', level: 1000, blurb: 'Level 1000 monsters: about twenty-two times the life and fifteen times the damage of Normal.' },
+];
+
+export function difficultyForLevel(level: number): DifficultyDef | null {
+  return DIFFICULTIES.find((d) => d.level === level) ?? null;
+}

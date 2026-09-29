@@ -1,6 +1,6 @@
 
 import type { ConsumableId } from '../data/consumables';
-import { zoneById } from '../data/zones';
+import { difficultyForLevel, zoneById } from '../data/zones';
 import { Music } from '../audio/music';
 import { Sfx } from '../audio/sfx';
 import { PixelView } from '../render2d/pixelView';
@@ -363,7 +363,7 @@ export class Game {
         }
         break;
       case 'area':
-        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name + (ev.level ? `, level ${ev.level}` : ''));
+        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name + (ev.level ? `, ${difficultyForLevel(ev.level)?.name ?? `level ${ev.level}`}` : ''));
         this.sfx.play('portal');
         void this.autosave();
         break;

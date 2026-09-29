@@ -133,7 +133,7 @@ export const MONSTER_RULES = {
   alertRange: 100,
   hpPerLevel: 0.12,
   dmgPerLevel: 0.055,
-  /** Past the hero's level cap (Beyond 100 zones) each level multiplies the level below by these: compounding, not additive. */
+  /** Past the hero's level cap (the difficulty page) every further level adds this much more, on top of the growth so far. */
   beyondLevel: 100,
   beyondHpPerLevel: 0.3,
   beyondDmgPerLevel: 0.1,
@@ -143,15 +143,13 @@ export const MONSTER_RULES = {
 
 /**
  * Life and damage multipliers for a monster of this level: linear growth to
- * the hero cap, then exponential beyond it, each level 30% more life and 10%
- * more damage than the level below (producer's call, 2026-09-29).
+ * the hero cap, then a steeper linear slope beyond it (+30% life and +10%
+ * damage of the base per level). Inferno (1000) is about 22 times the life
+ * and 15 times the damage of level 100.
  */
 export function monsterScale(level: number): { hp: number; dmg: number } {
   const r = MONSTER_RULES;
   const base = Math.min(level, r.beyondLevel) - 1;
   const beyond = Math.max(0, level - r.beyondLevel);
-  return {
-    hp: (1 + r.hpPerLevel * base) * Math.pow(1 + r.beyondHpPerLevel, beyond),
-    dmg: (1 + r.dmgPerLevel * base) * Math.pow(1 + r.beyondDmgPerLevel, beyond),
-  };
+  return { hp: 1 + r.hpPerLevel * base + r.beyondHpPerLevel * beyond, dmg: 1 + r.dmgPerLevel * base + r.beyondDmgPerLevel * beyond };
 }

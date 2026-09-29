@@ -1,11 +1,8 @@
 import { ARCANA_OPS, BLOOD_OPS, FORGE_OPS, STATIONS } from '../../data/crafting';
 import { PROFESSIONS, PROFESSION_PERKS } from '../../data/professions';
 import { ITEM_RULES, RARITIES } from '../../data/items';
-import { ZONES } from '../../data/zones';
+import { DIFFICULTIES, ZONES } from '../../data/zones';
 import { LEVELING } from '../../data/classes';
-
-/** Monster levels offered on the waypoint's Beyond 100 page. */
-const BEYOND_LEVELS = [125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375, 400, 425, 450, 475, 500];
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
@@ -59,9 +56,9 @@ export class Panels {
   private selected: Item | null = null;
   private selectedFrom: 'bag' | 'equip' | 'stash' | 'vendor' | null = null;
   private stashPage = 0;
-  /** Waypoint: the normal zone list, or the Beyond 100 page that replays zones at a picked monster level. */
+  /** Waypoint: the normal zone list, or the difficulty page that replays zones at Normal, Nightmare, Hell or Inferno. */
   private wpPage: 'zones' | 'beyond' = 'zones';
-  private beyondLevel = BEYOND_LEVELS[0]!;
+  private difficulty = DIFFICULTIES[0]!;
   private cellSize = 30;
   /** Which half of a two-part panel a phone shows: the stock or the bag, the gear or the bag. */
   private half: 'left' | 'bag' = 'left';
@@ -267,16 +264,15 @@ export class Panels {
     const capped = w.player.level >= LEVELING.maxLevel;
     if (!capped) this.wpPage = 'zones';
     if (this.wpPage === 'beyond') {
-      // Beyond 100: every zone again, at a monster level the player picks. Drops follow that level.
-      const select = h('select', { class: 'px-select' }) as HTMLSelectElement;
-      for (const lv of BEYOND_LEVELS) select.append(h('option', { value: String(lv) }, `Level ${lv}`));
-      select.value = String(this.beyondLevel);
-      select.addEventListener('change', () => { this.beyondLevel = Number(select.value); this.render(); });
-      list.append(h('div', { class: 'px-inset px-zone' }, h('div', { class: 'px-row' }, pxText('Monster level', { color: TEXT }), h('span', { class: 'grow' }), select),
-        pxText('Heroes stop at level 100; monsters keep climbing to 500, each level past it 30% more life and 10% more damage than the one below. What they drop is made at their level.', { color: MUTED })));
+      // Difficulties: every zone again at Normal, Nightmare, Hell or Inferno. Drops follow the monster level.
+      const d = this.difficulty;
+      list.append(h('div', { class: 'px-inset px-zone' },
+        h('div', { class: 'px-row tight gear-row' }, ...DIFFICULTIES.map((o) => pbtn(o.name, () => { this.difficulty = o; this.render(); }, o === d ? 'on' : 'btn'))),
+        pxText(`${d.name}: monster level ${d.level}. ${d.blurb}`, { color: TEXT, maxChars: 60 }),
+        pxText('Heroes stop at level 100; monsters keep climbing. Past 100 every level adds 30% life and 10% damage, and what they drop is made at their level.', { color: MUTED })));
       for (const z of ZONES) {
-        const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === this.beyondLevel;
-        list.append(row(z.name, this.beyondLevel, z.blurb, here, null, () => this.host.travel('arena', z.id, this.beyondLevel)));
+        const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === d.level;
+        list.append(row(z.name, d.level, z.blurb, here, null, () => this.host.travel('arena', z.id, d.level)));
       }
     } else {
       list.append(row('Town', null, 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', null, () => this.host.travel('town')));
@@ -289,7 +285,7 @@ export class Panels {
     const head = h('div', { class: 'px-tabs' },
       h('div', { class: 'px-tabs-title' }, pxText('Waypoint', { color: GOLD })),
       capped ? pbtn('Zones', () => { this.wpPage = 'zones'; this.render(); }, this.wpPage === 'zones' ? 'on' : 'btn') : null,
-      capped ? pbtn('Beyond 100', () => { this.wpPage = 'beyond'; this.render(); }, this.wpPage === 'beyond' ? 'on' : 'btn') : null,
+      capped ? pbtn('Difficulty', () => { this.wpPage = 'beyond'; this.render(); }, this.wpPage === 'beyond' ? 'on' : 'btn') : null,
       pbtn('X', () => this.host.close(), 'btn'));
     this.body.append(h('div', { class: 'px-window' }, head, h('div', { class: 'px-content' }, list)));
   }
