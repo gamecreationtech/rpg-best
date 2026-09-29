@@ -40,7 +40,7 @@ arrives.
 | Pet | `Settings.pet`, `World.pet`, `crabSheet` | Menu > Pet: a small crab trots behind the hero and fetches gold and items that drop within 300 px of the hero (gold to the purse, items to the bag when they fit). Saved with the settings |
 | Full screen and install | `src/app/fullscreen.ts`, `tools/pwa.ts` | Android browsers go full screen on Play; the home-screen install (manifest, code-drawn icons, offline cache, all generated at build time) gives true full screen on every phone including iPhone |
 | Rendering | `src/render2d/pixelView.ts`, `src/gen/pixel/` | Isometric pixel art: 32x16 tiles, 22px hero, Grim palette, dithered torchlight; sprites for heroes (class, pledge colour, weapon, shield or offhand), four placeholder monsters, dummies, the merchant, stations, projectiles, loot and spell effects, all generated at start-up |
-| Interface | `src/ui/game/` | HUD, hero menu (inventory, gear, stats, skills, passives), stash, merchant, waypoint, three stations, professions, menu, title, class and pledge pick, death |
+| Interface | `src/ui/game/` | HUD, hero menu (inventory, gear, stats, skills, passives), stash, merchant, waypoint, three stations, professions, menu, title (just the name, then Login and Play as Guest, or a single Play once signed in; Login explains accounts are not live yet), class pick (name and pledges only), pledge pick, death |
 
 ## Calls made where the export was unclear
 

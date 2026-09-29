@@ -57,11 +57,10 @@ export class Game {
         this.goFullscreenOnPhones();
         void this.continueGame();
       },
-      showcase: () => {
-        location.search = '?showcase';
-      },
-      lab: () => {
-        location.search = '?lab';
+      login: () => {
+        // Accounts come with the online update; until then the title says so
+        this.screens.titleNote = 'Google sign-in arrives with the online update. Play as a guest for now: your hero is saved on this device.';
+        this.screens.splash();
       },
       // Pledges are sworn at level 20, so a new hero starts right after the class pick
       chooseClass: (id) => {
