@@ -997,9 +997,10 @@ export class World {
 
   private tickOrbit(b: Buff, dt: number): void {
     const od = b.mods.orbitDaggers!;
-    b.data.angle = (b.data.angle ?? 0) + dt * 3.2;
+    b.data.angle = (b.data.angle ?? 0) + dt * (od.spin ?? 3.2);
     const radius = od.radius * PX;
-    const def = SKILLS.daggers_protection!;
+    // The buff carries its skill's id, so the damage is that skill's
+    const def = SKILLS[b.id] ?? SKILLS.daggers_protection!;
     const dmg = Math.round(skillDamageFor(this, def.id, od.damageMult));
     for (const e of this.enemiesWithin(this.px, this.pz, radius + 0.3)) {
       const d = this.dist(e.x, e.z);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MONSTERS, MONSTER_RULES, monsterScale } from '../data/monsters';
 import { ZONES } from '../data/zones';
-import { SKILLS, skillsFor } from '../data/skills';
+import { SKILLS, SKILL_RULES, skillsFor } from '../data/skills';
 import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
@@ -158,7 +158,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(53);
+    expect(Object.keys(SKILLS).length).toBe(54);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -249,6 +249,40 @@ describe('bulk selling', () => {
     expect(w.player.gold).toBe(gold + Math.floor(a.value * 0.4) + Math.floor(b.value * 0.4));
     expect(w.player.inventory.items).toEqual([c]);
     expect(w.sellAll('common').count).toBe(0);
+  });
+});
+
+describe('hidden skills', () => {
+  it('Hammer of Gods Spin stays off the list until the dev toggle shows it', () => {
+    const ids = () => skillsFor('knight', 'paladin').map((s) => s.id);
+    expect(ids()).not.toContain('hammer_of_gods_spin');
+    SKILL_RULES.showHidden = true;
+    expect(ids()).toContain('hammer_of_gods_spin');
+    SKILL_RULES.showHidden = false;
+  });
+
+  it('the spinning hammer circles the hero for three seconds and strikes what it passes', () => {
+    const w = new World(createPlayer('knight', 'paladin'), 141);
+    w.travel('arena');
+    w.player.level = 10;
+    w.player.skillPoints = 5;
+    w.player.skillRanks.hammer_of_gods_spin = 1;
+    w.player.slots[1] = 'hammer_of_gods_spin';
+    const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1.9, w.pz); // on the 60 px ring
+    const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 6, w.pz);
+    near.speed = 0;
+    far.speed = 0;
+    near.maxHp = near.hp = 100000;
+    const farHp = far.hp;
+    w.castSlot(1);
+    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(true);
+    run(w, 1);
+    const afterOne = near.hp;
+    expect(afterOne).toBeLessThan(100000);
+    run(w, 2.5);
+    expect(near.hp).toBeLessThan(afterOne);
+    expect(far.hp).toBe(farHp);
+    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_spin')).toBe(false);
   });
 });
 

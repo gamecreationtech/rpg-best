@@ -96,7 +96,7 @@ strip on the left (`src/ui/game/devMenu.ts`) with a slider and Apply button
 for movement speed, cooldown reduction, cast rate, crit, resistances, armour,
 block, evasion, range, projectile speed, gold find and magic find, a
 Give weapon row (a common Sword, Spear, Mace, Bardiche, Wand, Staff, Dagger, Bow,
-Spellbook or Warpike dropped into the bag), rows for offhands, set pieces and divines, an item maker (any base at any rarity and level 1-1000, hand-written items keep their rarity) and a Level up button. The bonuses live in `World.devStats`, add to the character
+Spellbook or Warpike dropped into the bag), rows for offhands, set pieces and divines, an item maker (any base at any rarity and level 1-1000, hand-written items keep their rarity), a Special skills toggle that offers skills marked `hidden` on the Skills tab (`SKILL_RULES.showHidden`; today Hammer of Gods Spin, a paladin buff that whirls the hammer around the hero for three seconds via `orbitDaggers` with `shape: 'hammer'`) and a Level up button. The bonuses live in `World.devStats`, add to the character
 sheet and are never saved. Delete the file and the key before release.
 
 ## Known gaps

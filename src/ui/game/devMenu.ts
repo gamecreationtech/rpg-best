@@ -1,6 +1,7 @@
 import { ACCESSORY_BASES, ALL_BASES, RARITIES, SET_BASES, SPECIAL_BASES, WEAPON_BASES, type Rarity } from '../../data/items';
 import type { StatKey } from '../../data/stats';
 import { makeItem } from '../../sim/items/item';
+import { SKILL_RULES } from '../../data/skills';
 import type { World } from '../../sim/world';
 import { button, clear, h } from '../dom';
 
@@ -139,6 +140,12 @@ export class DevMenu {
       giveRow(SPECIAL_BASES.map((b) => b.id), SPECIAL_BASES),
       h('div', { class: 'dev-section' }, 'Make an item'),
       this.itemMaker(note),
+      h('div', { class: 'dev-section' }, 'Special skills'),
+      h('div', { class: 'dev-give' }, button(SKILL_RULES.showHidden ? 'Special skills: shown' : 'Special skills: hidden', () => {
+        SKILL_RULES.showHidden = !SKILL_RULES.showHidden;
+        this.onChange();
+        this.render();
+      }, 'btn small' + (SKILL_RULES.showHidden ? ' primary' : ''))),
       note,
       h('div', { class: 'dev-actions' },
         button('Level up', () => {

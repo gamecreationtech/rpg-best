@@ -99,6 +99,11 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
   }
   if (eff.kind === 'curse') return { cooldown, damage: `${eff.pctPerSec}% of the target's life per second for ${(eff.duration / 1000).toFixed(0)}s, kills below ${eff.executeBelowPct}% life`, formula: 'scales with the target\'s life, not your gear' };
   if (eff.kind === 'melee' && eff.bleed) return { cooldown, damage: `${eff.bleed.pctOfMaxHp}% of the target's life over ${(eff.bleed.duration / 1000).toFixed(0)}s`, formula: 'scales with the target\'s life, not your gear' };
+  if (eff.kind === 'buff' && eff.mods.orbitDaggers) {
+    const od = eff.mods.orbitDaggers;
+    const [lo, hi] = hit(od.damageMult);
+    return { cooldown, damage: `${lo} to ${hi} each pass, every ${(od.hitCooldown / 1000).toFixed(1)}s per enemy, for ${(eff.duration / 1000).toFixed(0)}s${when}`, formula: chain(od.damageMult) };
+  }
   if (eff.kind === 'buff') return { cooldown, damage: `none, a ${(eff.duration / 1000).toFixed(0)}s buff`, formula: null };
   return { cooldown, damage: 'none', formula: null };
 }

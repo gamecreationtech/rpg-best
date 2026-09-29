@@ -1,5 +1,6 @@
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
+import { PX } from '../data/units';
 import { PLEDGES } from '../data/pledges';
 import { SKILLS } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
@@ -825,6 +826,42 @@ export class PixelView {
         // The holy hammer throws a warm, pulsing light as it spins
         const [lr, lg, lb] = rgb(color);
         this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
+      }
+    }
+
+    // Orbiting daggers and the spinning hammer: drawn from the buff's angle, one sprite per orbiter
+    for (const b of w.buffs) {
+      const od = b.mods.orbitDaggers;
+      if (!od) continue;
+      const shape: ProjectileShape = od.shape ?? 'dagger';
+      const color = shape === 'hammer' ? 0xffd860 : 0xe8e0d0;
+      const prop = this.projectileProp(shape, color);
+      const r = od.radius * PX;
+      for (let i = 0; i < od.count; i++) {
+        const a = (b.data.angle ?? 0) + (i / od.count) * Math.PI * 2;
+        const ox = w.px + Math.sin(a) * r;
+        const oz = w.pz + Math.cos(a) * r;
+        const fx = Math.round(cam.frameX(ox, oz));
+        const fy = Math.round(cam.frameY(ox, 0.9, oz));
+        // Daggers point along their path; the hammer's own frames spin it
+        const tx = Math.cos(a);
+        const tz = -Math.sin(a);
+        const angle = shape === 'hammer' ? 0 : Math.atan2((tx + tz) / 2, tx - tz);
+        const frame = prop.frames[Math.floor(this.time / prop.frameTime + i) % prop.frames.length]!;
+        this.items.push({
+          depth: cam.depth(ox, oz) + 0.01,
+          draw: () => {
+            ctx.save();
+            ctx.translate(fx, fy);
+            ctx.rotate(angle);
+            ctx.drawImage(frame, -prop.originX, -prop.originY);
+            ctx.restore();
+          },
+        });
+        if (shape === 'hammer') {
+          const [lr, lg, lb] = rgb(color);
+          this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
+        }
       }
     }
 
