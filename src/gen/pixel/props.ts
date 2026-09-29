@@ -298,39 +298,66 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       return prop(frames, 6 * s, s, 1);
     }
     case 'hammer': {
-      // A war hammer as tall as the hero: a long haft with a wrapped grip and a
-      // broad two-faced head, spinning through four angles
-      const N = 26 * s;
-      const C = 13 * s;
-      const haft = 10 * s;
-      for (let f = 0; f < 4; f++) {
+      // A holy war hammer twice the hero's height, turning through eight
+      // angles: a long haft with a wrapped grip and a broad golden head that
+      // glows, with a dithered halo that flickers as it spins
+      const N = 52 * s;
+      const C = 26 * s;
+      const haft = 20 * s;
+      const glow = ramp(0xffd860, pal.contrast);
+      for (let f = 0; f < 8; f++) {
         const b = new PixelBuffer(N, N);
-        const a = (f / 4) * Math.PI;
+        const a = (f / 8) * Math.PI;
         const dx = Math.cos(a);
         const dy = Math.sin(a);
-        // Haft, two pixels thick, from the pommel to the head
-        for (let t = -1; t <= 0; t++) {
-          b.line(Math.round(C - dx * haft - dy * t), Math.round(C - dy * haft + dx * t), Math.round(C + dx * (haft - 3 * s) - dy * t), Math.round(C + dy * (haft - 3 * s) + dx * t), wood[1]);
+        const hx = Math.round(C + dx * (haft - 4 * s));
+        const hy = Math.round(C + dy * (haft - 4 * s));
+        const across = 8 * s; // half-width across the haft
+        const along = 5 * s; // half-depth along it
+        // Halo: a soft ring of light around the head, dithered so it reads as glow
+        const halo = 5 * s;
+        for (let u = -along - halo; u <= along + halo; u++) {
+          for (let v = -across - halo; v <= across + halo; v++) {
+            const du = Math.max(0, Math.abs(u) - along);
+            const dv = Math.max(0, Math.abs(v) - across);
+            const dist = Math.hypot(du, dv);
+            if (dist === 0 || dist > halo) continue;
+            const x = Math.round(hx + dx * u - dy * v);
+            const y = Math.round(hy + dy * u + dx * v);
+            // Nearer the head is denser; the pattern shifts frame to frame so it flickers
+            const density = 1 - dist / halo;
+            const bayer = ((x * 3 + y * 5 + f) % 4) / 4;
+            if (bayer < density * 0.8) b.set(x, y, dist < halo * 0.4 ? glow[2] : glow[1]);
+          }
         }
-        // Grip wrap near the pommel
-        b.rect(Math.round(C - dx * (haft - s)) - s, Math.round(C - dy * (haft - s)) - s, 2 * s, 2 * s, wood[0]);
-        // Head: a broad block across the haft's end, with a bright face and a dark band
-        const hx = Math.round(C + dx * (haft - 2 * s));
-        const hy = Math.round(C + dy * (haft - 2 * s));
-        const across = 4 * s; // half-width across the haft
-        const along = 3 * s; // half-depth along it
+        // Haft, three pixels thick, from the pommel to the head, with a darker wrapped grip
+        for (let t = -1; t <= 1; t++) {
+          b.line(Math.round(C - dx * haft - dy * t), Math.round(C - dy * haft + dx * t), Math.round(C + dx * (haft - 8 * s) - dy * t), Math.round(C + dy * (haft - 8 * s) + dx * t), t === 0 ? wood[1] : wood[0]);
+        }
+        for (let g = 0; g < 6 * s; g += 2) {
+          const gx = Math.round(C - dx * (haft - 2 * s - g));
+          const gy = Math.round(C - dy * (haft - 2 * s - g));
+          b.rect(gx - s, gy - s, 3 * s, 3 * s, wood[0]);
+        }
+        // Head: a broad block across the haft's end, bright on the leading face, dark at the edges
         for (let u = -along; u <= along; u++) {
           for (let v = -across; v <= across; v++) {
             const x = Math.round(hx + dx * u - dy * v);
             const y = Math.round(hy + dy * u + dx * v);
             const edge = Math.abs(v) === across || Math.abs(u) === along;
-            b.set(x, y, edge ? steel[0] : u < 0 ? steel[2] : steel[1]);
+            b.set(x, y, edge ? glow[0] : u < -s ? glow[3] : u < along - s ? glow[2] : glow[1]);
           }
         }
-        b.set(Math.round(hx - dx * s - dy * s), Math.round(hy - dy * s + dx * s), steel[3]);
+        // A rune on each face
+        for (const side of [-1, 1]) {
+          const rx = Math.round(hx - dy * side * (across >> 1));
+          const ry = Math.round(hy + dx * side * (across >> 1));
+          b.rect(rx - s, ry - s, 3 * s, 3 * s, glow[3]);
+          b.set(rx, ry, glow[0]);
+        }
         frames.push(b.toCanvas());
       }
-      return prop(frames, C, C, 0.05);
+      return prop(frames, C, C, 0.04);
     }
   }
 }

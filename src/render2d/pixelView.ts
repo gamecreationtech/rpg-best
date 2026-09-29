@@ -800,7 +800,7 @@ export class PixelView {
     // Projectiles
     for (const pr of w.projectiles) {
       if (!pr.alive) continue;
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'arrow' || pr.shape === 'dagger' || pr.shape === 'hammer' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'hammer' ? 0xffd860 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
       const prop = this.projectileProp(pr.shape, color);
       const fx = Math.round(cam.frameX(pr.x, pr.z));
       const fy = Math.round(cam.frameY(pr.x, pr.y, pr.z));
@@ -821,6 +821,10 @@ export class PixelView {
       if (pr.shape === 'bolt' || pr.shape === 'ball' || pr.shape === 'enemy_bolt') {
         const [lr, lg, lb] = rgb(color);
         this.lights.push({ x: fx, y: fy, radius: pr.shape === 'ball' ? 50 : 30, intensity: 1, r: lr, g: lg, b: lb });
+      } else if (pr.shape === 'hammer') {
+        // The holy hammer throws a warm, pulsing light as it spins
+        const [lr, lg, lb] = rgb(color);
+        this.lights.push({ x: fx, y: fy, radius: 70, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
       }
     }
 
