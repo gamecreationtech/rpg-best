@@ -82,7 +82,7 @@ monster data replaces them.
 
 **Difficulties** (producer's call, 2026-09-29): at the level cap the waypoint
 shows a second page that replays any zone at one of four difficulties: Normal
-(monster level 100), Nightmare (300), Hell (500) and Inferno (1000). Heroes
+(monster level 100), Nightmare (300), Hell (650) and Inferno (1000). Heroes
 never pass level 100. Every monster is a level 1 creature (13 to 50 life, 3 to
 25 damage) and its zone's level does all the growing: life +12% of the base per
 level to 100, then compounding so a level 1000 monster has 26,000 times its

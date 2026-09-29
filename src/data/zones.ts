@@ -131,7 +131,7 @@ export interface DifficultyDef {
 export const DIFFICULTIES: DifficultyDef[] = [
   { id: 'normal', name: 'Normal', level: 100, blurb: 'Every zone at level 100, the hero cap.' },
   { id: 'nightmare', name: 'Nightmare', level: 300, blurb: 'Level 300 monsters: about five times the life and four times the damage of Normal.' },
-  { id: 'hell', name: 'Hell', level: 500, blurb: 'Level 500 monsters: about thirty times the life and seven times the damage of Normal.' },
+  { id: 'hell', name: 'Hell', level: 650, blurb: 'Level 650 monsters: about a hundred times the life and ten times the damage of Normal.' },
   { id: 'inferno', name: 'Inferno', level: 1000, blurb: 'Level 1000 monsters: two thousand times the life and fifteen times the damage of Normal.' },
 ];
 
