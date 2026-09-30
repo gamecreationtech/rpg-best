@@ -61,6 +61,9 @@ interface Item {
 }
 
 const SIZE = 'small';
+/** The lighting's ambient colour, and the colder one while the hero sneaks. */
+const BASE_AMBIENT: [number, number, number] = [0.85, 0.88, 1.0];
+const SNEAK_AMBIENT: [number, number, number] = [0.5, 0.58, 0.95];
 const OUTLINE = true;
 const DEATH_FALL = 0.35;
 /** Rim colour of the targeted monster and its life bar. */
@@ -487,6 +490,7 @@ export class PixelView {
         const color = ELEMENT_COLORS[ev.element];
         if (ev.splash > 0 && ev.element === 'fire') this.fireWave(ev.x, ev.z, ev.splash);
         else if (ev.splash > 0) this.explode(ev.x, ev.z, Math.max(0.5, ev.splash / 2.5), ev.element);
+        else if (ev.shape === 'arrow' && ev.element === 'poison') this.poisonSplat(ev.x, ev.z);
         else {
           pt.burst(ev.x, 0.8, ev.z, ev.shape === 'boulder' ? 16 : 8, 2, color, 0.35, { priority: 0.5 });
           this.effects.flash(ev.x, 0.8, ev.z, color, 0.9, 30, 0.15);
@@ -510,6 +514,12 @@ export class PixelView {
         this.snowflakeHit(ev.x, ev.z);
         break;
       case 'buff_start': {
+        if (ev.id === 'sneak' || ev.id === 'sneak_ult') {
+          // Slipping into shadow: a puff of darkness and a ring that closes in on the hero
+          pt.burst(w.px, 0.6, w.pz, 26, 1.4, 0x080810, 0.9, { drag: 1.5, up: 0.8, priority: 0.8, size: 2, alpha: 0.85 });
+          this.effects.ring(w.px, w.pz, 1.6, 0.2, 0x3a4a80, 0.45, 2);
+          break;
+        }
         if (ev.id === 'rite_of_blood') {
           // The change: a black-red eruption round the hero and a hard red flash
           pt.burst(w.px, 0.2, w.pz, 36, 1.8, 0x1a0a14, 1.0, { up: 3, drag: 1, priority: 0.8, size: 2 });
@@ -597,6 +607,16 @@ export class PixelView {
     this.particles.burst(x, 0.5, z, 20, 3 * radius, color, 0.6, { gravity: 4, up: 2, priority: 0.7 });
     this.effects.ring(x, z, 0.2, radius * 1.4, color, 0.35, 1);
     this.view.kick(0.12 * radius);
+  }
+
+  /** Poison Shot landing: venom splashes off the arrow, a green stain spreads on the floor and bubbles rise from it. */
+  private poisonSplat(x: number, z: number): void {
+    this.particles.burst(x, 0.8, z, 16, 2.2, 0x66e070, 0.5, { gravity: 6, up: 1, priority: 0.6, size: 2 });
+    this.particles.burst(x, 0.8, z, 8, 1.4, 0xc0ffc0, 0.4, { gravity: 6, up: 1.5, priority: 0.6 });
+    this.effects.disc(x, z, 0.55, 0x2a7a30, 1.2, 0.5);
+    this.effects.ring(x, z, 0.1, 0.6, 0x66e070, 0.3, 1, 1.2);
+    for (let i = 0; i < 6; i++) this.particles.spawn(x + (Math.random() - 0.5) * 0.6, 0.1, z + (Math.random() - 0.5) * 0.6, 0, 0.6, 0, 0.9, 0x9aff9a, { priority: 0.4, size: 2, alpha: 0.8, delay: 0.1 + i * 0.12 });
+    this.effects.flash(x, 0.6, z, 0x66e070, 1.4, 40, 0.3);
   }
 
   /** Blizzard's hit: a big snowflake drops from above and bursts into ice where it lands. */
@@ -930,8 +950,12 @@ export class PixelView {
         break;
       }
       case 'trap':
-        this.particles.burst(x, 0.3, z, 12, 2, 0xd8d0c0, 0.4, { priority: 0.5 });
-        this.effects.ring(x, z, 0.2, radius, 0xd8d0c0, 0.3, 1);
+        // The jaws snap: a white flash ring, sparks off the iron and shards flung outward
+        this.effects.ring(x, z, 0.1, radius, 0xffffff, 0.2, 2, 1.5);
+        this.effects.ring(x, z, 0.2, radius * 1.2, 0xb0b0c0, 0.4, 1);
+        this.particles.burst(x, 0.3, z, 18, 2.5, 0xd8d0c0, 0.45, { gravity: 6, up: 2.5, priority: 0.6 });
+        this.particles.burst(x, 0.2, z, 10, 1.5, 0xffe070, 0.3, { gravity: 5, up: 2, priority: 0.6 });
+        this.view.kick(0.1);
         break;
       case 'curse': {
         // Death: a dark stain, a ring drawing in, and a great skull rising out of the ground and fading into the air
@@ -1151,7 +1175,13 @@ export class PixelView {
     // Hero
     const heroY = this.heroHeight();
     const rite = w.buffs.some((b) => b.id === 'rite_of_blood');
-    this.pushPuppet(this.hero, w.px, heroY, w.pz, w.invisible ? 0.45 : 1, rite ? '#7a0a2a' : null, rite ? '#ff2040' : null);
+    const sneaking = w.invisible && !w.playerDead;
+    this.pushPuppet(this.hero, w.px, heroY, w.pz, sneaking ? 0.5 : 1, rite ? '#7a0a2a' : sneaking ? '#101828' : null, rite ? '#ff2040' : null);
+    if (sneaking && Math.random() < 0.5) {
+      // Shadow clinging to the hero: dark wisps drifting up off the body
+      const a = Math.random() * Math.PI * 2;
+      this.particles.spawn(w.px + Math.cos(a) * 0.35, heroY + 0.1 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.35, 0, 0.5, 0, 0.8, Math.random() < 0.5 ? 0x080810 : 0x182038, { priority: 0.4, size: 2, alpha: 0.75 });
+    }
     if (rite && !w.playerDead) this.drawRite();
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
     drawn++;
@@ -1185,7 +1215,13 @@ export class PixelView {
     for (const pr of w.projectiles) {
       if (!pr.alive) continue;
       const holy = pr.shape === 'hammer' || pr.shape === 'star';
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const venom = pr.shape === 'arrow' && pr.element === 'poison' && pr.owner !== 'enemy';
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      if (venom) {
+        // Venom dripping off the arrowhead as it flies, and a sickly glow round it
+        if (Math.random() < 0.7) this.particles.spawn(pr.x, pr.y - 0.05, pr.z, (Math.random() - 0.5) * 0.3, -0.8, (Math.random() - 0.5) * 0.3, 0.4, Math.random() < 0.3 ? 0xc0ffc0 : 0x66e070, { priority: 0.5, alpha: 0.9, gravity: 2 });
+        this.lights.push({ x: Math.round(cam.frameX(pr.x, pr.z)), y: Math.round(cam.frameY(pr.x, pr.y, pr.z)), radius: 26, intensity: 0.8, r: 0.4, g: 1, b: 0.45 });
+      }
       const prop = this.projectileProp(pr.shape, color);
       const fx = Math.round(cam.frameX(pr.x, pr.z));
       const fy = Math.round(cam.frameY(pr.x, pr.y, pr.z));
@@ -1337,8 +1373,16 @@ export class PixelView {
       this.lights.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) / a.intensity - Math.hypot(b.x - cx, b.y - cy) / b.intensity);
       this.lights.length = 48;
     }
-    this.compositor.dim += (this.dim - this.compositor.dim) * 0.25;
-    if (Math.abs(this.compositor.dim - this.dim) < 0.01) this.compositor.dim = this.dim;
+    // A sneaking hero is in the dark: the whole world dims a little and goes cold blue until it ends
+    const sneak = w.invisible && !w.playerDead ? 0.4 : 0;
+    const dim = Math.max(this.dim, sneak);
+    this.compositor.dim += (dim - this.compositor.dim) * 0.25;
+    if (Math.abs(this.compositor.dim - dim) < 0.01) this.compositor.dim = dim;
+    const amb = sneak > 0 ? SNEAK_AMBIENT : BASE_AMBIENT;
+    const ca = this.compositor.ambient;
+    ca[0] += (amb[0] - ca[0]) * 0.15;
+    ca[1] += (amb[1] - ca[1]) * 0.15;
+    ca[2] += (amb[2] - ca[2]) * 0.15;
     this.compositor.lights.length = 0;
     for (const l of this.lights) this.compositor.lights.push(l);
     this.compositor.present(this.frame, cam.scale, cam.offsetX, cam.offsetY);
@@ -1402,14 +1446,7 @@ export class PixelView {
           ellipse(z.x, z.z, z.radius, '#8a8a9a', true, 0.3);
           break;
         case 'trap':
-          ellipse(z.x, z.z, z.radius, '#a0a0b0', true, 0.25);
-          ctx.fillStyle = '#c8c8d0';
-          for (let i = 0; i < 6; i++) {
-            const a = (i / 6) * Math.PI * 2;
-            const sx = Math.round(cam.frameX(z.x + Math.cos(a) * z.radius * 0.8, z.z + Math.sin(a) * z.radius * 0.8));
-            const sy = Math.round(cam.frameY(z.x + Math.cos(a) * z.radius * 0.8, 0, z.z + Math.sin(a) * z.radius * 0.8));
-            ctx.fillRect(sx, sy - 3, 1, 3);
-          }
+          this.drawTrap(ctx, z, ellipse);
           break;
         case 'spear_wall': {
           ctx.fillStyle = '#d8d0c0';
@@ -1559,6 +1596,42 @@ export class PixelView {
     const [r, g, b] = rgb(color);
     const glow = z.type === 'sanctuary' ? 1.6 + Math.sin(this.time * 1.5 + z.id) * 0.25 : 0.8;
     this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W, intensity: glow, r, g, b });
+  }
+
+  /**
+   * A spiked trap: an iron plate with a rim and a ring of spikes that punch
+   * up and sink back without pause, each a little out of step with its
+   * neighbour, plus one big spike in the middle.
+   */
+  private drawTrap(ctx: CanvasRenderingContext2D, z: Zone, ellipse: (x: number, z: number, r: number, style: string, fill: boolean, alpha: number, width?: number) => void): void {
+    const cam = this.view;
+    ellipse(z.x, z.z, z.radius, '#2a2a34', true, 0.85);
+    ellipse(z.x, z.z, z.radius, '#8a8a98', false, 0.9, 1);
+    ellipse(z.x, z.z, z.radius * 0.8, '#4a4a58', false, 0.7, 1);
+    const spikes = Math.max(8, Math.round(z.radius * 9));
+    const spike = (wx: number, wz: number, h: number, wide: boolean): void => {
+      const sx = Math.round(cam.frameX(wx, wz));
+      const sy = Math.round(cam.frameY(wx, 0, wz));
+      if (h < 1) {
+        // Sunk: just the slot it lives in
+        ctx.fillStyle = '#101018';
+        ctx.fillRect(sx - 1, sy, 3, 1);
+        return;
+      }
+      const w = wide ? 3 : 1;
+      ctx.fillStyle = '#101018';
+      ctx.fillRect(sx - (w >> 1) - 1, sy - h, w + 2, h + 1);
+      ctx.fillStyle = '#b0b0c0';
+      ctx.fillRect(sx - (w >> 1), sy - h + 1, w, h);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, sy - h, 1, 1);
+    };
+    for (let i = 0; i < spikes; i++) {
+      const a = (i / spikes) * Math.PI * 2;
+      const h = Math.round(1 + 4 * (0.5 + 0.5 * Math.sin(this.time * 7 + i * 1.9 + z.id)));
+      spike(z.x + Math.cos(a) * z.radius * 0.72, z.z + Math.sin(a) * z.radius * 0.72, h, false);
+    }
+    spike(z.x, z.z, Math.round(2 + 6 * (0.5 + 0.5 * Math.sin(this.time * 5 + z.id))), true);
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

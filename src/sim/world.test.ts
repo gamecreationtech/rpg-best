@@ -439,6 +439,18 @@ describe('ground stomp', () => {
   });
 });
 
+describe('trap', () => {
+  it('is always set at the hero\'s feet, whatever is aimed at', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    w.player.level = 10;
+    w.player.skillRanks.trap = 1;
+    expect(castSkill(w, 'trap', { x: w.px + 8, z: w.pz + 3 }).ok).toBe(true);
+    const z = w.zones.find((z) => z.type === 'trap')!;
+    expect([z.x, z.z]).toEqual([w.px, w.pz]);
+  });
+});
+
 describe('consumables', () => {
   it('holds one dose that refills with time and, for potions, with kills', () => {
     const w = new World(createPlayer('knight', 'titan'), 7);

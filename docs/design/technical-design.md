@@ -77,6 +77,12 @@ What that means for each kind of asset:
   Armor is Fire Armor's bubble in ice: a glassy sheen, crystals on the rim,
   snow drifting off it. Call of the Wind draws a dashed nine-ring tornado
   funnel round the hero and spiral wind streaks over the gale's floor.
+  Poison Shot's arrow is fletched green, drips venom and glows as it flies,
+  and lands in a splash with a stain and bubbles. Trap is always set at the
+  hero's feet (no `maxRange`), drawn as an iron plate whose ring of spikes
+  punch up and sink back without pause, snapping with a flash and shards.
+  Sneak dims the whole world and cools the ambient light to blue for as long
+  as the hero is hidden, with dark wisps clinging to the half-seen hero.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,
