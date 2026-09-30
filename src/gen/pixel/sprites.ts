@@ -200,6 +200,8 @@ export interface EffectSprites {
   skull: HTMLCanvasElement;
   /** Four frames of a standing tongue of flame, a hero tall, for Fire Prison's bars. */
   flame: HTMLCanvasElement[];
+  /** Two big six-armed snowflakes, the ones Blizzard drops on enemies. */
+  snowflakes: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -309,5 +311,29 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
     }
     flame.push(b.toCanvas());
   }
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame };
+  const snowflakes: HTMLCanvasElement[] = [];
+  for (const R of [7, 9]) {
+    const b = new PixelBuffer((R * 2 + 1) * s, (R * 2 + 1) * s);
+    const c = R * s;
+    for (let arm = 0; arm < 6; arm++) {
+      const a = (arm / 6) * Math.PI * 2;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      for (let r = 0; r <= R * s; r++) {
+        const x = Math.round(c + dx * r);
+        const y = Math.round(c + dy * r);
+        b.set(x, y, r < R * s * 0.35 ? [255, 255, 255] : ice[3]);
+        // Side branches two thirds of the way out
+        if (r === Math.round(R * s * 0.6)) {
+          for (const side of [-1, 1]) {
+            const ba = a + side * Math.PI / 3;
+            for (let q = 1; q <= Math.round(R * s * 0.35); q++) b.set(Math.round(x + Math.cos(ba) * q), Math.round(y + Math.sin(ba) * q), ice[2]);
+          }
+        }
+      }
+    }
+    b.set(c, c, [255, 255, 255]);
+    snowflakes.push(b.toCanvas());
+  }
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes };
 }

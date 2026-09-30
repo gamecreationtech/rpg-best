@@ -97,8 +97,8 @@ export class Effects2D {
   }
 
   /** One still frame left at a point that fades out over the second half of its life. */
-  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, rise = 0, light?: { color: number; intensity: number; radius: number }): void {
-    const fx = this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy, ty: rise });
+  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, rise = 0, light?: { color: number; intensity: number; radius: number }, fall = false): void {
+    const fx = this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy, ty: rise, arc: fall ? 1 : 0 });
     if (light) this.withLight(fx, light.color, light.intensity, light.radius);
   }
 
@@ -261,7 +261,9 @@ export class Effects2D {
         case 'sprite': {
           // Fades over the second half; `ty` frame pixels of rise over the life, quick at first
           ctx.globalAlpha = k < 0.5 ? 1 : 1 - (k - 0.5) * 2;
-          ctx.drawImage(fx.frames![0]!, px - fx.ox, py - fx.oy - Math.round(fx.ty * (1 - (1 - k) * (1 - k))));
+          // Rising things ease out; falling things (arc set) speed up on the way down
+          const move = fx.arc > 0 ? k * k : 1 - (1 - k) * (1 - k);
+          ctx.drawImage(fx.frames![0]!, px - fx.ox, py - fx.oy - Math.round(fx.ty * move));
           ctx.globalAlpha = 1;
           break;
         }

@@ -68,7 +68,15 @@ What that means for each kind of asset:
   blood red and pulls drops of blood along it from the enemy into the hero.
   Poison Nova rolls two plague waves out, leaves a cloud and sends spores up
   along the way. Death stains the ground, draws a ring in and raises a big
-  generated skull that fades into the air.
+  generated skull that fades into the air. A light with a negative intensity
+  is a shadow: Storm casts one over its whole patch (flickering when a bolt
+  lands) with rain and low cloud, so the sky reads darker there. Blizzard is
+  sheeting snow on a wind with a cold white cast, and each hit is a big
+  generated snowflake dropping onto the enemy. Frost Nova is a shockwave of
+  ice from the hero with shards thrown along it and a frosted floor. Frozen
+  Armor is Fire Armor's bubble in ice: a glassy sheen, crystals on the rim,
+  snow drifting off it. Call of the Wind draws a dashed nine-ring tornado
+  funnel round the hero and spiral wind streaks over the gale's floor.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

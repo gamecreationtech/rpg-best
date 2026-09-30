@@ -3,6 +3,7 @@ export interface Light {
   x: number;
   y: number;
   radius: number;
+  /** Negative for a shadow that darkens its pool instead of lighting it. */
   intensity: number;
   r: number;
   g: number;
@@ -50,10 +51,12 @@ void main() {
     lit += f;
     tint += f * uColors[i];
   }
-  float l = min(1.0, lit);
-  float b = ((1.0 - uDarkness) + uDarkness * l) * mix(1.0, 0.4, uDim);
-  vec3 t = lit > 0.0 ? mix(vec3(1.0), tint / lit, l * uTint) : vec3(1.0);
-  vec3 amb = mix(uAmbient, vec3(1.0), l);
+  // A light with a negative intensity is a shadow: it pulls the floor of the brightness down
+  float l = clamp(lit, -0.7, 1.0);
+  float b = max(0.0, ((1.0 - uDarkness) + uDarkness * l) * mix(1.0, 0.4, uDim));
+  float lp = max(0.0, l);
+  vec3 t = lit > 0.0 ? mix(vec3(1.0), tint / lit, lp * uTint) : vec3(1.0);
+  vec3 amb = mix(uAmbient, vec3(1.0), lp);
   if (uDither > 0.5) {
     int bx = int(mod(floor(p.x), 4.0));
     int by = int(mod(floor(p.y), 4.0));

@@ -15,7 +15,7 @@ import type { Drop, Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types'
 /** Which shield drawing each shield base gets on the hero. */
 const SHIELD_LOOKS: Record<string, OffhandLook> = { wooden_shield: 'wooden', wooden_shield_base: 'wooden', iron_shield: 'iron', tower_shield: 'tower', energy_shield: 'energy' };
 import type { World } from '../sim/world';
-import { IsoCamera, RING_RX, RING_RY, TILE_H, TILE_W } from './camera';
+import { IsoCamera, RING_RX, RING_RY, TILE_H, TILE_W, Y_PX } from './camera';
 import { Compositor, type Light } from './compositor';
 import { DamageNumbers } from './damageNumbers';
 import { DropLabels } from './dropLabels';
@@ -497,12 +497,17 @@ export class PixelView {
         const z = ev.zone;
         if (z.type === 'fire_prison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xff7a2a, 0.4, 2, 1.5);
         if (z.type === 'sanctuary') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xffe87a, 0.6, 2, 1.2);
-        if (z.type === 'wind') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x8fd0ff, 0.5, 1);
+        if (z.type === 'wind') {
+          this.effects.ring(z.x, z.z, 0.3, z.radius, 0x8fd0ff, 0.5, 1);
+          pt.burst(w.px, 0.3, w.pz, 30, 4, 0xd8ecff, 0.6, { up: 2, drag: 1, priority: 0.7 });
+        }
+        if (z.type === 'storm') this.effects.flash(z.x, 3, z.z, 0xd8e8ff, 3, 200, 0.2);
+        if (z.type === 'blizzard') this.effects.ring(z.x, z.z, 0.3, 6, 0xd8f4ff, 0.6, 1, 1);
         if (z.type === 'poison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x66e070, 0.5, 1);
         break;
       }
       case 'zone_tick':
-        this.iceImpact(ev.x, ev.z);
+        this.snowflakeHit(ev.x, ev.z);
         break;
       case 'buff_start': {
         if (ev.id === 'rite_of_blood') {
@@ -594,8 +599,12 @@ export class PixelView {
     this.view.kick(0.12 * radius);
   }
 
-  private iceImpact(x: number, z: number): void {
-    this.particles.burst(x, 0.3, z, 6, 1.5, 0x9fe0ff, 0.5, { drag: 2, up: 1.5, priority: 0.3 });
+  /** Blizzard's hit: a big snowflake drops from above and bursts into ice where it lands. */
+  private snowflakeHit(x: number, z: number): void {
+    const flake = this.fx.snowflakes[(Math.random() * this.fx.snowflakes.length) | 0]!;
+    this.effects.sprite(flake, x, 2.4, z, flake.width >> 1, flake.height >> 1, 0.34, 'air', -2.4 * Y_PX, undefined, true);
+    this.effects.ring(x, z, 0.1, 1.2, 0xd8f4ff, 0.3, 1, 1, 0.17);
+    this.particles.burst(x, 0.2, z, 10, 1.8, 0x9fe0ff, 0.45, { drag: 2, up: 1.5, priority: 0.4, delay: 0.17 });
   }
 
   /** How high the hero is off the floor: a leap arcs higher the further it goes. */
@@ -656,8 +665,12 @@ export class PixelView {
     }
   }
 
-  /** Fire Armor: a bubble of flame round the hero, its rim licking and flickering, with embers rising off it and a warm light. */
-  private drawFireArmor(heroY: number): void {
+  /**
+   * Fire Armor and Frozen Armor: a bubble round the hero. Fire: a licking,
+   * flickering rim with embers rising off it and a warm light. Ice: a slow,
+   * glassy rim with frost crystals, snow drifting down off it and a cold light.
+   */
+  private drawArmorBubble(heroY: number, kind: 'fire' | 'ice'): void {
     const w = this.world;
     const cam = this.view;
     const ctx = this.ctx;
@@ -665,37 +678,65 @@ export class PixelView {
     const fy = Math.round(cam.frameY(w.px, heroY + 0.75, w.pz));
     const rx = 15;
     const ry = 20;
+    const fire = kind === 'fire';
+    const fill = fire ? '#ff7a2a' : '#9fe0ff';
+    const rim = fire ? '#ff7a2a' : '#9fe0ff';
+    const bright = fire ? '#ffe070' : '#ffffff';
     this.items.push({
       depth: cam.depth(w.px, w.pz) + 0.001,
       draw: () => {
-        ctx.globalAlpha = 0.14 + Math.sin(this.time * 9) * 0.03;
-        ctx.fillStyle = '#ff7a2a';
+        ctx.globalAlpha = (fire ? 0.14 : 0.16) + Math.sin(this.time * (fire ? 9 : 3)) * 0.03;
+        ctx.fillStyle = fill;
         ctx.beginPath();
         ctx.ellipse(fx, fy, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
-        // The rim: short tongues of flame round the ellipse, each wobbling in and out
+        if (!fire) {
+          // A glassy sheen: a thin pale outline and a highlight on the upper left
+          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = '#d8f4ff';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(fx, fy, rx, ry, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 0.6;
+          ctx.beginPath();
+          ctx.ellipse(fx, fy, rx - 3, ry - 3, 0, Math.PI * 1.1, Math.PI * 1.45);
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        // The rim: tongues of flame wobbling in and out, or frost crystals slowly drifting round
         const n = 22;
         for (let i = 0; i < n; i++) {
-          const a = (i / n) * Math.PI * 2 + this.time * 0.6;
-          const wob = 1 + Math.sin(this.time * 11 + i * 2.3) * 0.12;
+          const a = (i / n) * Math.PI * 2 + this.time * (fire ? 0.6 : -0.25);
+          const wob = 1 + Math.sin(this.time * (fire ? 11 : 2.5) + i * 2.3) * (fire ? 0.12 : 0.04);
           const x = fx + Math.round(Math.cos(a) * rx * wob);
           const y = fy + Math.round(Math.sin(a) * ry * wob);
-          const hot = Math.sin(this.time * 13 + i * 1.1) > 0.3;
-          ctx.fillStyle = hot ? '#ffe070' : '#ff7a2a';
+          const hot = Math.sin(this.time * (fire ? 13 : 4) + i * 1.1) > 0.3;
+          ctx.fillStyle = hot ? bright : rim;
           ctx.fillRect(x - 1, y - 1, 2, 2);
           if (hot) {
-            ctx.fillStyle = '#ff7a2a';
-            ctx.fillRect(x - 1, y - 3, 2, 2);
+            ctx.fillStyle = rim;
+            if (fire) ctx.fillRect(x - 1, y - 3, 2, 2);
+            else {
+              // A little six-pointed crystal
+              ctx.fillRect(x - 2, y, 1, 1);
+              ctx.fillRect(x + 1, y, 1, 1);
+              ctx.fillRect(x, y - 2, 1, 1);
+              ctx.fillRect(x, y + 1, 1, 1);
+            }
           }
         }
       },
     });
     if (Math.random() < 0.6) {
       const a = Math.random() * Math.PI * 2;
-      this.particles.spawn(w.px + Math.cos(a) * 0.45, heroY + 0.3 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.45, 0, 1.2, 0, 0.5, Math.random() < 0.5 ? 0xffb040 : 0xff7a2a, { priority: 0.4, size: 1, alpha: 0.9 });
+      if (fire) this.particles.spawn(w.px + Math.cos(a) * 0.45, heroY + 0.3 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.45, 0, 1.2, 0, 0.5, Math.random() < 0.5 ? 0xffb040 : 0xff7a2a, { priority: 0.4, size: 1, alpha: 0.9 });
+      else this.particles.spawn(w.px + Math.cos(a) * 0.5, heroY + 1.2 + Math.random() * 0.8, w.pz + Math.sin(a) * 0.5, 0, -0.5, 0, 1.0, Math.random() < 0.5 ? 0xffffff : 0xd0f0ff, { priority: 0.4, size: 1, alpha: 0.9 });
     }
-    this.lights.push({ x: fx, y: fy, radius: 40, intensity: 1 + Math.sin(this.time * 9) * 0.15, r: 1, g: 0.5, b: 0.2 });
+    if (fire) this.lights.push({ x: fx, y: fy, radius: 40, intensity: 1 + Math.sin(this.time * 9) * 0.15, r: 1, g: 0.5, b: 0.2 });
+    else this.lights.push({ x: fx, y: fy, radius: 40, intensity: 0.9 + Math.sin(this.time * 3) * 0.1, r: 0.6, g: 0.85, b: 1 });
   }
 
   /** Prayer's healing: twelve small crosses rising round the hero in turn, brightest halfway up, plus a soft green light. */
@@ -841,10 +882,22 @@ export class PixelView {
         this.shockwave(x, z, radius);
         break;
       case 'nova_cold': {
-        const frames = this.fx.frostRing;
-        const big = frames[frames.length - 1]!;
-        this.effects.anim(frames, x, 0, z, big.width >> 1, big.height >> 1, 0.45, 'floor', { color: 0x9fe0ff, intensity: 1.5, radius: 70 });
-        this.particles.burst(x, 0.3, z, 30, 4, 0xd0f0ff, 0.6, { drag: 1, priority: 0.7 });
+        // A shockwave of ice from the hero: a hard white-blue wave out to the radius, a frosted floor left behind,
+        // shards thrown up along the wave and a cold flash
+        this.effects.wave(x, z, 0.2, radius, 0x9fe0ff, 0.4, 2.2);
+        this.effects.wave(x, z, 0.2, radius * 0.85, 0xd8f4ff, 0.5, 0, 0.08);
+        this.effects.disc(x, z, radius, 0xa8d8f0, 1.6, 0.3);
+        this.effects.ring(x, z, 0.2, radius * 1.05, 0xffffff, 0.45, 1, 0, 0.1);
+        this.effects.flash(x, 0.8, z, 0xd8f4ff, 2.5, 90, 0.25);
+        const n = 32;
+        for (let i = 0; i < n; i++) {
+          const t = i / n;
+          const a = i * 2.399 + x;
+          const r = radius * (0.2 + 0.8 * (1 - (1 - t) * (1 - t)));
+          this.particles.spawn(x + Math.cos(a) * r, 0.1, z + Math.sin(a) * r, Math.cos(a) * 1.2, 2.2 + (i % 3) * 0.5, Math.sin(a) * 1.2, 0.5, i % 3 === 0 ? 0xffffff : 0x9fe0ff, { gravity: 7, priority: 0.7, size: i % 2 ? 2 : 1, delay: t * 0.28 });
+        }
+        this.particles.burst(x, 0.5, z, 16, 2, 0xffffff, 0.4, { drag: 2, up: 1.5, priority: 0.7 });
+        this.view.kick(0.1);
         break;
       }
       case 'nova_poison': {
@@ -957,9 +1010,14 @@ export class PixelView {
         const r = Math.random() * z.radius;
         pt.spawn(z.x + Math.cos(a) * r, 0.1, z.z + Math.sin(a) * r, 0, 0.5, 0, 1.2, z.type === 'poison' ? 0x66e070 : 0x9090a0, { alpha: 0.6, priority: 0.4, size: 2 });
       }
-      if (z.type === 'wind' && Math.random() < dt * 25) {
+      if (z.type === 'wind' && Math.random() < dt * 90) {
+        // Debris caught in the funnel: whipping round the hero, climbing as it goes, the rest streaking round the gale's edge
         const a = Math.random() * Math.PI * 2;
-        pt.spawn(z.x + Math.cos(a) * z.radius * 0.9, 0.4 + Math.random(), z.z + Math.sin(a) * z.radius * 0.9, -Math.sin(a) * 4, 0, Math.cos(a) * 4, 0.5, 0x9fd8ff, { alpha: 0.6, priority: 0.4 });
+        const inFunnel = Math.random() < 0.7;
+        const r = inFunnel ? 0.5 + Math.random() * 1.8 : z.radius * (0.5 + Math.random() * 0.5);
+        const h = inFunnel ? Math.random() * 3.5 : 0.2 + Math.random() * 0.8;
+        const spd = inFunnel ? 6 : 4;
+        pt.spawn(z.x + Math.cos(a) * r, h, z.z + Math.sin(a) * r, -Math.sin(a) * spd, inFunnel ? 1.5 : 0, Math.cos(a) * spd, inFunnel ? 0.35 : 0.5, Math.random() < 0.3 ? 0xd8ecff : Math.random() < 0.5 ? 0x9fd8ff : 0x8a8a90, { alpha: 0.7, priority: 0.4, size: Math.random() < 0.3 ? 2 : 1 });
       }
       if (z.type === 'sanctuary' && Math.random() < dt * 30) {
         // Motes drifting up everywhere inside, and sparks off the candles at the rim
@@ -968,8 +1026,31 @@ export class PixelView {
         const r = rim ? z.radius : Math.sqrt(Math.random()) * z.radius * 0.9;
         pt.spawn(z.x + Math.cos(a) * r, rim ? 0.5 : 0.1, z.z + Math.sin(a) * r, 0, rim ? 1.6 : 0.8, 0, rim ? 0.5 : 1.6, Math.random() < 0.5 ? 0xfff4c0 : 0xffe87a, { priority: 0.4, alpha: 0.9 });
       }
-      if (z.type === 'storm' && Math.random() < dt * 3) pt.spawn(z.x + (Math.random() - 0.5) * 4, 4, z.z + (Math.random() - 0.5) * 4, 0, -6, 0, 0.5, 0xa8c8ff, { alpha: 0.6, priority: 0.4 });
-      if (z.type === 'blizzard' && Math.random() < dt * 40) pt.spawn(z.x + (Math.random() - 0.5) * z.radius * 2, 3.5, z.z + (Math.random() - 0.5) * z.radius * 2, 0.5, -3, 0.5, 1, 0xd0f0ff, { alpha: 0.8, priority: 0.4 });
+      if (z.type === 'storm') {
+        // Rain driving down over the whole dark patch, and low cloud drifting above it
+        if (Math.random() < dt * 90) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * z.radius;
+          pt.spawn(z.x + Math.cos(a) * r, 4.5, z.z + Math.sin(a) * r, 0.3, -9, 0.3, 0.5, 0x8aa8c8, { alpha: 0.55, priority: 0.35 });
+        }
+        if (Math.random() < dt * 6) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * z.radius * 0.9;
+          pt.spawn(z.x + Math.cos(a) * r, 4.6 + Math.random() * 0.6, z.z + Math.sin(a) * r, 0.5, 0, 0.3, 2.5, Math.random() < 0.5 ? 0x2a3040 : 0x3a4458, { alpha: 0.75, priority: 0.35, size: 3 });
+        }
+      }
+      if (z.type === 'blizzard') {
+        // A true winter storm: snow sheeting across on the wind, thick and fast, some flakes big and slow
+        const wx = Math.cos(z.id * 1.3) * 3;
+        const wz = Math.sin(z.id * 1.3) * 3;
+        // The storm covers the whole field, so the snow is spawned only as far as the frame can see
+        const spread = Math.min(z.radius, 11);
+        for (let k = 0; k < 10; k++) {
+          if (Math.random() >= dt * 60) continue;
+          const big = Math.random() < 0.2;
+          pt.spawn(z.x + (Math.random() - 0.5) * spread * 2, 3.5 + Math.random() * 1.5, z.z + (Math.random() - 0.5) * spread * 2, wx * (big ? 0.6 : 1) + Math.random(), big ? -2 : -4.5, wz * (big ? 0.6 : 1) + Math.random(), big ? 1.4 : 1, big ? 0xffffff : Math.random() < 0.5 ? 0xd0f0ff : 0xa8d8f0, { alpha: big ? 0.95 : 0.7, priority: 0.35, size: big ? 2 : 1 });
+        }
+      }
     }
   }
 
@@ -1191,7 +1272,11 @@ export class PixelView {
         this.items.push({ depth: cam.depth(bx, bz), draw: () => ctx.drawImage(f, fx - (f.width >> 1), fy - f.height + 2) });
       }
     }
-    if (w.buffs.some((b) => b.id === 'fire_armor') && !w.playerDead) this.drawFireArmor(heroY);
+    if (!w.playerDead) {
+      if (w.buffs.some((b) => b.id === 'fire_armor')) this.drawArmorBubble(heroY, 'fire');
+      if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
+      if (w.zones.some((z) => z.type === 'wind' && z.followsPlayer)) this.drawTornado(heroY);
+    }
 
     // Boulder Toss: the rock on its way down, from high above to the marked ground
     for (const z of w.zones) {
@@ -1304,7 +1389,6 @@ export class PixelView {
     };
     // Zones
     for (const z of w.zones) {
-      const pulse = 0.9 + Math.sin(this.time * 5 + z.id) * 0.1;
       switch (z.type) {
         case 'fire_prison':
           ellipse(z.x, z.z, z.radius, '#ff5a1a', true, 0.16 + Math.sin(this.time * 7 + z.id) * 0.04);
@@ -1373,7 +1457,12 @@ export class PixelView {
           this.drawSanctuary(ctx, z, ellipse);
           break;
         case 'wind':
-          ellipse(z.x, z.z, z.radius * pulse, '#8fd0ff', false, 0.4);
+          this.drawGale(ctx, z);
+          break;
+        case 'storm':
+          // The dark patch under the storm cloud; the lighting pass darkens it further (see zoneLight)
+          ellipse(z.x, z.z, z.radius, '#101828', true, 0.35);
+          ellipse(z.x, z.z, z.radius, '#5a6a90', false, 0.3, 1);
           break;
         case 'boulder': {
           // The target ring, and the rock's shadow growing as it comes down
@@ -1386,6 +1475,7 @@ export class PixelView {
           break;
       }
       this.zoneLight(z);
+      this.skyLight(z);
     }
     // Buff aura under the hero
     const buff = w.buffs[0];
@@ -1469,6 +1559,89 @@ export class PixelView {
     const [r, g, b] = rgb(color);
     const glow = z.type === 'sanctuary' ? 1.6 + Math.sin(this.time * 1.5 + z.id) * 0.25 : 0.8;
     this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W, intensity: glow, r, g, b });
+  }
+
+  /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */
+  private skyLight(z: Zone): void {
+    const cam = this.view;
+    if (z.type === 'storm') {
+      const flicker = Math.sin(this.time * 37) > 0.94 ? 0.3 : 0;
+      this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: -0.6 + flicker, r: 0, g: 0, b: 0 });
+    } else if (z.type === 'blizzard') {
+      this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: 0.35, r: 0.75, g: 0.88, b: 1 });
+    }
+  }
+
+  /** Call of the Wind on the floor: three spiral arms of wind streaks turning round the hero out to the gale's edge. */
+  private drawGale(ctx: CanvasRenderingContext2D, z: Zone): void {
+    const cam = this.view;
+    ctx.strokeStyle = '#9fd8ff';
+    ctx.lineWidth = 1;
+    for (let arm = 0; arm < 3; arm++) {
+      ctx.globalAlpha = 0.28;
+      ctx.beginPath();
+      const steps = 26;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const r = z.radius * (0.15 + 0.85 * t);
+        const a = (arm / 3) * Math.PI * 2 - this.time * 2.2 + t * 3.4;
+        const wx = z.x + Math.cos(a) * r;
+        const wz = z.z + Math.sin(a) * r;
+        const sx = Math.round(cam.frameX(wx, wz));
+        const sy = Math.round(cam.frameY(wx, 0, wz));
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 0.45;
+    ctx.beginPath();
+    ctx.ellipse(Math.round(cam.frameX(z.x, z.z)), Math.round(cam.frameY(z.x, 0, z.z)), z.radius * RING_RX, z.radius * RING_RY, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * The tornado round a hero calling the wind: nine dashed rings stacked from the
+   * feet to well over head height, each wider than the last and turning faster
+   * than the one below, the whole funnel leaning and swaying.
+   */
+  private drawTornado(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const baseY = Math.round(cam.frameY(w.px, heroY, w.pz));
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.002,
+      draw: () => {
+        const levels = 9;
+        for (let i = 0; i < levels; i++) {
+          const t = i / (levels - 1);
+          const rx = 7 + t * t * 30;
+          const ry = rx * 0.45;
+          const lean = Math.sin(this.time * 1.7 + t * 2.5) * 6 * t;
+          const cy = baseY - 2 - Math.round(t * 62);
+          const cx = fx + Math.round(lean);
+          const spin = this.time * (5 + t * 4) + i * 0.9;
+          const dashes = 6 + i;
+          ctx.lineWidth = i < 3 ? 1 : 2;
+          for (let d = 0; d < dashes; d++) {
+            const a0 = spin + (d / dashes) * Math.PI * 2;
+            const a1 = a0 + (Math.PI * 2 / dashes) * 0.55;
+            // The front of each ring is brighter than the back so the funnel reads as round
+            const front = Math.sin((a0 + a1) / 2) > 0;
+            ctx.globalAlpha = (front ? 0.75 : 0.35) * (0.5 + 0.5 * t);
+            ctx.strokeStyle = front && (d + i) % 3 === 0 ? '#e8f4ff' : '#9fd8ff';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, rx, ry, 0, a0, a1);
+            ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+    this.lights.push({ x: fx, y: baseY - 30, radius: 60, intensity: 0.6, r: 0.6, g: 0.85, b: 1 });
   }
 
   private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null): void {
