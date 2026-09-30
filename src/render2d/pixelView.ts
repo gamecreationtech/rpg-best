@@ -485,7 +485,8 @@ export class PixelView {
         break;
       case 'projectile_hit': {
         const color = ELEMENT_COLORS[ev.element];
-        if (ev.splash > 0) this.explode(ev.x, ev.z, Math.max(0.5, ev.splash / 2.5), ev.element);
+        if (ev.splash > 0 && ev.element === 'fire') this.fireWave(ev.x, ev.z, ev.splash);
+        else if (ev.splash > 0) this.explode(ev.x, ev.z, Math.max(0.5, ev.splash / 2.5), ev.element);
         else {
           pt.burst(ev.x, 0.8, ev.z, ev.shape === 'boulder' ? 16 : 8, 2, color, 0.35, { priority: 0.5 });
           this.effects.flash(ev.x, 0.8, ev.z, color, 0.9, 30, 0.15);
@@ -564,6 +565,26 @@ export class PixelView {
       default:
         break;
     }
+  }
+
+  /** Fire Ball's landing: a burst at the centre, then a wave of fire racing out to the splash radius with flames licking up along it. */
+  private fireWave(x: number, z: number, radius: number): void {
+    const frames = this.fx.explosion;
+    const big = frames[frames.length - 1]!;
+    this.effects.anim(frames, x, 0.4, z, big.width >> 1, big.height >> 1, 0.3, 'air', { color: 0xff7a2a, intensity: 2.4, radius: 50 });
+    this.effects.wave(x, z, 0.2, radius, 0xff6a1a, 0.45, 2);
+    this.effects.disc(x, z, radius, 0x5a1a08, 0.7, 0.35);
+    this.effects.ring(x, z, 0.2, radius * 1.05, 0xffb040, 0.5, 1, 0, 0.1);
+    // Flames rising off the wave as it passes, further out later
+    const n = 28;
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      const a = i * 2.399 + x;
+      const r = radius * (0.25 + 0.75 * (1 - (1 - t) * (1 - t)));
+      this.particles.spawn(x + Math.cos(a) * r, 0.1, z + Math.sin(a) * r, Math.cos(a) * 0.6, 1.6 + (i % 3) * 0.4, Math.sin(a) * 0.6, 0.4, i % 3 === 0 ? 0xffe070 : 0xff7a2a, { drag: 2, priority: 0.7, size: 2, delay: t * 0.3 });
+    }
+    this.particles.burst(x, 0.5, z, 12, 2, 0xffd060, 0.5, { gravity: 4, up: 2.5, priority: 0.7 });
+    this.view.kick(0.12);
   }
 
   private explode(x: number, z: number, radius: number, element: Element): void {

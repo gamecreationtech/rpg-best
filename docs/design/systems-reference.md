@@ -88,7 +88,8 @@ as a paper doll, the full stat sheet and the bag; Skills tab: skills, the slot
 bar and the passive trees), K straight to Skills, F to pick up or interact, Escape for the
 menu. I, C and P still open the matching tab. A damage shield (Rock Solid) lies
 over the life bar as a striped grey band sized to its share of max life, with a
-grey "Shield" chip in the buff bar showing the points left. The hero menu's frames, buttons
+grey "Shield" chip in the buff bar showing the points left. When Rock Solid's shield
+breaks, a free Boulder Toss lands on the hero (`BuffMods.onShieldBreak`, `World.dropSkill`). The hero menu's frames, buttons
 and item icons are pixel art (`src/ui/pixelChrome.ts`, `src/gen/pixel/icons.ts`)
 over the game dimmed in dithered bands; its text uses the game's normal serif
 font, by the producer's choice. The menu has a control switch:

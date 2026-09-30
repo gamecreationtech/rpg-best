@@ -214,6 +214,10 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
     b.shield -= absorbed;
     remaining -= absorbed;
     if (absorbed > 0) w.emit({ type: 'damage', ...at, amount: absorbed, crit: false, element, target: 'player', kind: 'absorb' });
+    if (absorbed > 0 && b.shield <= 0 && b.mods.onShieldBreak) {
+      // The shield's parting shot lands where the hero stands
+      if (w.dropSkill(b.mods.onShieldBreak, w.px, w.pz)) w.emit({ type: 'message', text: `${b.name} shatters!`, color: 0xff9a40 });
+    }
   }
   if (remaining > 0) {
     w.player.hp -= remaining;

@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'wave' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -77,6 +77,12 @@ export class Effects2D {
   ring(x: number, z: number, r0: number, r1: number, color: number, life: number, width = 1, light = 0, delay = 0): void {
     const fx = this.push({ kind: 'ring', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)), width, t: -delay });
     if (light > 0) this.withLight(fx, color, light, r1 * RING_RX * 1.5);
+  }
+
+  /** A wave racing out across the floor: a filled band that expands from r0 to r1, its leading edge brightest. */
+  wave(x: number, z: number, r0: number, r1: number, color: number, life: number, light = 0): void {
+    const fx = this.push({ kind: 'wave', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)) });
+    if (light > 0) this.withLight(fx, color, light, r1 * RING_RX * 1.4);
   }
 
   /** A filled patch on the floor that fades. */
@@ -207,6 +213,26 @@ export class Effects2D {
           ctx.globalAlpha = 1 - k * 0.7;
           ctx.strokeStyle = k < 0.3 ? fx.css2 : fx.css;
           ctx.lineWidth = fx.width;
+          ctx.beginPath();
+          ctx.ellipse(px, py, Math.max(1, r * RING_RX), Math.max(1, r * RING_RY), 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case 'wave': {
+          // Ease out: fast at first, slowing as it spreads; the band is a third of the way in
+          const e = 1 - (1 - k) * (1 - k);
+          const r = fx.r0 + (fx.r1 - fx.r0) * e;
+          const inner = Math.max(0, r - Math.max(0.5, fx.r1 * 0.3) * (1 - k * 0.5));
+          ctx.globalAlpha = 0.75 * (1 - k * k);
+          ctx.fillStyle = fx.css;
+          ctx.beginPath();
+          ctx.ellipse(px, py, Math.max(1, r * RING_RX), Math.max(1, r * RING_RY), 0, 0, Math.PI * 2);
+          ctx.ellipse(px, py, Math.max(1, inner * RING_RX), Math.max(1, inner * RING_RY), 0, 0, Math.PI * 2, true);
+          ctx.fill('evenodd');
+          ctx.strokeStyle = k < 0.4 ? '#ffffff' : fx.css2;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 1 - k;
           ctx.beginPath();
           ctx.ellipse(px, py, Math.max(1, r * RING_RX), Math.max(1, r * RING_RY), 0, 0, Math.PI * 2);
           ctx.stroke();

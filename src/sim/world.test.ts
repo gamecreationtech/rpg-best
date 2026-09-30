@@ -453,6 +453,27 @@ describe('rock solid', () => {
     expect(w.player.hp).toBe(hp);
     expect(buff.shield).toBeLessThan(w.derived.maxHp);
   });
+
+  it('drops a boulder on the hero when the shield breaks', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.skillRanks.rock_solid = 1;
+    w.derived.dodge = 0;
+    expect(castSkill(w, 'rock_solid', null).ok).toBe(true);
+    const buff = w.buffs.find((b) => b.id === 'rock_solid')!;
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 2, w.pz);
+    e.speed = 0;
+    e.hp = 5000;
+    e.maxHp = 5000;
+    expect(w.zones.some((z) => z.type === 'boulder')).toBe(false);
+    damagePlayer(w, buff.shield * 50, 'physical', null, false);
+    expect(buff.shield).toBe(0);
+    const boulder = w.zones.find((z) => z.type === 'boulder');
+    expect(boulder && [boulder.x, boulder.z]).toEqual([w.px, w.pz]);
+    expect(w.events.some((ev) => ev.type === 'message' && ev.text.includes('shatters'))).toBe(true);
+    run(w, 1.2);
+    expect(e.hp).toBeLessThan(5000);
+  });
 });
 
 describe('shield bash', () => {

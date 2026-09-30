@@ -60,7 +60,8 @@ What that means for each kind of asset:
   grows as it nears; on landing the rock lies there a moment
   while the ground cracks and shards fly. Rock Solid circles the hero with six
   rocks torn from the ground and drops one for every sixth of its shield
-  that breaks.
+  that breaks. Fire Ball's splash is a wave of fire racing out across the floor
+  to the splash radius with flames licking up along it.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

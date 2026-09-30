@@ -256,6 +256,12 @@ function castAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
   }
   const dir = facing(w, { x: cx, z: cz }, null);
   pay(w, def, eff.at === 'self' ? { x: Math.sin(w.pyaw), z: Math.cos(w.pyaw) } : dir, cx, cz);
+  landAoe(w, def, eff, cx, cz);
+  return { ok: true };
+}
+
+/** An aoe skill's blow at a point, paid for or not: at once, after its delay, or when the hero's jump lands. */
+function landAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe' }>, cx: number, cz: number): void {
   const radius = eff.radius * PX;
   const apply = () => {
     w.emit({ type: 'aoe', visual: eff.visual, x: cx, z: cz, radius, element: def.element });
@@ -275,7 +281,14 @@ function castAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
   } else {
     apply();
   }
-  return { ok: true };
+}
+
+/** Drops an aoe skill on a point for free, outside any cast: no mana, cooldown or rank check (Rock Solid's boulder). */
+export function dropSkillAt(w: World, id: string, x: number, z: number): boolean {
+  const def = SKILLS[id];
+  if (!def || def.effect.kind !== 'aoe') return false;
+  landAoe(w, def, def.effect, x, z);
+  return true;
 }
 
 function castBuff(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'buff' }>): CastResult {

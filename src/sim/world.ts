@@ -19,7 +19,7 @@ import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/t
 import type { Rarity } from '../data/items';
 import { setsForZone } from '../data/sets';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
-import { castSkill, type Aim } from './skills/cast';
+import { castSkill, dropSkillAt, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
 import type { DamagePacket, Drop, Enemy, Interactable, Projectile, ProjectileShape, SimEvent, Zone, ZoneType } from './types';
 
@@ -645,6 +645,11 @@ export class World {
       return;
     }
     this.castSkillId(id, aim);
+  }
+
+  /** An aoe skill landing on a point for free (a buff's parting shot). */
+  dropSkill(id: string, x: number, z: number): boolean {
+    return dropSkillAt(this, id, x, z);
   }
 
   castSkillId(id: string, aim: Aim | null): void {
