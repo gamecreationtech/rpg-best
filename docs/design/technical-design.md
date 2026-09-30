@@ -42,13 +42,14 @@ What that means for each kind of asset:
   kick; `holy_shield` (Shield Bash) raises a glowing heater shield with a cross
   over the enemy; `bloody` (Hemorrhage) tears two gashes across it with blood
   flying and a pool left on the floor; `cleave` (Cleave) paints a wide red
-  sweep across the arc with sparks along its rim; `void` (Void Slash) a purple
-  one with a splash of void rings and motes bursting out all round the hero. Single-target visuals arrive as `melee_impact` at the
+  sweep across the arc with sparks along its rim; `void` (Void Slash) draws no
+  sweep, only a splash of void rings and motes bursting out all round the hero,
+  and its trail is a floor band as wide as its hit area (2.1 tiles either side). Single-target visuals arrive as `melee_impact` at the
   target, arc ones ride the `melee_swing` event. Ground Stomp's aoe has
   `jump`: the sim leaps in place for that long and lands the blow on touchdown,
   drawn as cracks, a hard bright ring and two slower dust waves. Prayer draws
   small crosses of light climbing round the hero with a green glow while the
-  buff runs. Rite of Blood turns the hero into a daemon while it runs: horns,
+  buff runs. Rite of Blood turns the hero into a daemon while it runs:
   burning eyes, a dark red skin and outline, black smoke and a red light.
   Sanctuary is a still double rim of gold and white, a breathing glow, gold
   glitter blinking all over the floor and eight candles round the edge. Holy Smite (the

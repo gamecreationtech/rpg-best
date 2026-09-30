@@ -176,7 +176,7 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
     }
     if (eff.trail) {
       const dmg = skillDamage(w, def.id, eff.damageMult, eff.scalesWithInt);
-      w.addZone({ type: 'void_trail', x: w.px, z: w.pz, dx: dir.x, dz: dir.z, length: eff.trail.length * PX, radius: 0.7, duration: eff.trail.duration * MS, tickInterval: 0.5, damage: Math.max(1, Math.round((dmg * eff.trail.tickPct) / 100 / 2)), element: def.element, skillId: def.id });
+      w.addZone({ type: 'void_trail', x: w.px, z: w.pz, dx: dir.x, dz: dir.z, length: eff.trail.length * PX, radius: 2.1, duration: eff.trail.duration * MS, tickInterval: 0.5, damage: Math.max(1, Math.round((dmg * eff.trail.tickPct) / 100 / 2)), element: def.element, skillId: def.id });
     }
     if (eff.moveBonus) w.addBuff(def.id + '_haste', def.name, eff.moveBonus.duration * MS, { moveSpdPct: eff.moveBonus.pct }, skillColor(def));
   };

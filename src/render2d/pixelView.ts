@@ -472,7 +472,7 @@ export class PixelView {
       }
       case 'melee_swing':
         if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
-        else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
+        else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.range);
         else this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
       case 'melee_impact':
@@ -678,9 +678,8 @@ export class PixelView {
     this.view.kick(0.08);
   }
 
-  /** Void Slash: a wide purple sweep, and a splash of void bursting out all round the hero from where the cut began. */
-  private voidSlash(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
-    this.effects.sweep(x, z, dirX, dirZ, range * 1.15, arc, 0x9a40ff, 0.28);
+  /** Void Slash: a splash of void bursting out all round the hero from where the cut began; the trail itself is the zone. */
+  private voidSlash(x: number, z: number, range: number): void {
     this.effects.disc(x, z, range * 0.6, 0x3a1060, 0.5, 0.5);
     this.effects.ring(x, z, 0.2, range * 0.9, 0xc080ff, 0.35, 2, 1.5);
     this.effects.ring(x, z, 0.2, range * 1.2, 0x9a40ff, 0.5, 1, 0, 0.08);
@@ -699,7 +698,7 @@ export class PixelView {
     this.view.kick(0.08);
   }
 
-  /** Rite of Blood: the hero as a daemon. Horns, burning eyes, a dark red skin and outline, black smoke and a red light. */
+  /** Rite of Blood: the hero as a daemon. Burning eyes, a dark red skin and outline, black smoke and a red light. */
   private drawRite(): void {
     const w = this.world;
     const cam = this.view;
@@ -712,24 +711,6 @@ export class PixelView {
     this.items.push({
       depth: cam.depth(w.px, w.pz) + 0.001,
       draw: () => {
-        // Horns curving up and out from the crown
-        ctx.fillStyle = '#1a1014';
-        for (const side of [-1, 1]) {
-          const bx = fx + side * 4;
-          ctx.fillRect(bx - 1, top - 1, 3, 3);
-          ctx.fillRect(bx + side - 1, top - 4, 3, 4);
-          ctx.fillRect(bx + side * 2 - 1, top - 7, 3, 4);
-          ctx.fillRect(bx + side * 3, top - 9, 2, 3);
-        }
-        ctx.fillStyle = '#e8d8c0';
-        for (const side of [-1, 1]) {
-          const bx = fx + side * 4;
-          ctx.fillRect(bx, top, 1, 2);
-          ctx.fillRect(bx + side, top - 3, 1, 3);
-          ctx.fillRect(bx + side * 2, top - 6, 1, 3);
-        }
-        ctx.fillStyle = '#ff3030';
-        for (const side of [-1, 1]) ctx.fillRect(fx + side * 3, top - 8, 1, 1);
         // Burning eyes, unless the hero has turned away
         if (!back) {
           const blink = Math.sin(this.time * 9) > -0.9;
@@ -1250,12 +1231,31 @@ export class PixelView {
           break;
         }
         case 'void_trail': {
-          ctx.strokeStyle = '#9a40ff';
-          ctx.lineWidth = 6;
-          ctx.globalAlpha = 0.45;
+          // A band on the floor exactly as wide as the trail's hit area, rounded at both ends
+          const ex = z.x + z.dx * z.length;
+          const ez = z.z + z.dz * z.length;
+          const nx = -z.dz * z.radius;
+          const nz = z.dx * z.radius;
+          const fade = Math.min(1, z.remaining / 0.6);
+          ctx.fillStyle = '#5a20a0';
+          ctx.globalAlpha = 0.4 * fade;
+          ellipse(z.x, z.z, z.radius, '#5a20a0', true, 0.4 * fade);
+          ellipse(ex, ez, z.radius, '#5a20a0', true, 0.4 * fade);
+          ctx.globalAlpha = 0.4 * fade;
+          ctx.beginPath();
+          ctx.moveTo(Math.round(cam.frameX(z.x + nx, z.z + nz)), Math.round(cam.frameY(z.x + nx, 0, z.z + nz)));
+          ctx.lineTo(Math.round(cam.frameX(ex + nx, ez + nz)), Math.round(cam.frameY(ex + nx, 0, ez + nz)));
+          ctx.lineTo(Math.round(cam.frameX(ex - nx, ez - nz)), Math.round(cam.frameY(ex - nx, 0, ez - nz)));
+          ctx.lineTo(Math.round(cam.frameX(z.x - nx, z.z - nz)), Math.round(cam.frameY(z.x - nx, 0, z.z - nz)));
+          ctx.closePath();
+          ctx.fill();
+          // A brighter seam down the middle
+          ctx.strokeStyle = '#b070ff';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.5 * fade;
           ctx.beginPath();
           ctx.moveTo(Math.round(cam.frameX(z.x, z.z)), Math.round(cam.frameY(z.x, 0, z.z)));
-          ctx.lineTo(Math.round(cam.frameX(z.x + z.dx * z.length, z.z + z.dz * z.length)), Math.round(cam.frameY(z.x + z.dx * z.length, 0, z.z + z.dz * z.length)));
+          ctx.lineTo(Math.round(cam.frameX(ex, ez)), Math.round(cam.frameY(ex, 0, ez)));
           ctx.stroke();
           ctx.globalAlpha = 1;
           break;
