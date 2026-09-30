@@ -62,6 +62,13 @@ What that means for each kind of asset:
   rocks torn from the ground and drops one for every sixth of its shield
   that breaks. Fire Ball's splash is a wave of fire racing out across the floor
   to the splash radius with flames licking up along it, and no explosion.
+  Fire Prison stands bars of flame (a generated four-frame sprite) round its
+  ring over a burning floor. Fire Armor draws a bubble of flame round the hero
+  with a licking rim, rising embers and a warm light. Life Touch's beam is
+  blood red and pulls drops of blood along it from the enemy into the hero.
+  Poison Nova rolls two plague waves out, leaves a cloud and sends spores up
+  along the way. Death stains the ground, draws a ring in and raises a big
+  generated skull that fades into the air.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

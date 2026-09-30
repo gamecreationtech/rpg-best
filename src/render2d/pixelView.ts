@@ -656,6 +656,48 @@ export class PixelView {
     }
   }
 
+  /** Fire Armor: a bubble of flame round the hero, its rim licking and flickering, with embers rising off it and a warm light. */
+  private drawFireArmor(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, heroY + 0.75, w.pz));
+    const rx = 15;
+    const ry = 20;
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        ctx.globalAlpha = 0.14 + Math.sin(this.time * 9) * 0.03;
+        ctx.fillStyle = '#ff7a2a';
+        ctx.beginPath();
+        ctx.ellipse(fx, fy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // The rim: short tongues of flame round the ellipse, each wobbling in and out
+        const n = 22;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2 + this.time * 0.6;
+          const wob = 1 + Math.sin(this.time * 11 + i * 2.3) * 0.12;
+          const x = fx + Math.round(Math.cos(a) * rx * wob);
+          const y = fy + Math.round(Math.sin(a) * ry * wob);
+          const hot = Math.sin(this.time * 13 + i * 1.1) > 0.3;
+          ctx.fillStyle = hot ? '#ffe070' : '#ff7a2a';
+          ctx.fillRect(x - 1, y - 1, 2, 2);
+          if (hot) {
+            ctx.fillStyle = '#ff7a2a';
+            ctx.fillRect(x - 1, y - 3, 2, 2);
+          }
+        }
+      },
+    });
+    if (Math.random() < 0.6) {
+      const a = Math.random() * Math.PI * 2;
+      this.particles.spawn(w.px + Math.cos(a) * 0.45, heroY + 0.3 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.45, 0, 1.2, 0, 0.5, Math.random() < 0.5 ? 0xffb040 : 0xff7a2a, { priority: 0.4, size: 1, alpha: 0.9 });
+    }
+    this.lights.push({ x: fx, y: fy, radius: 40, intensity: 1 + Math.sin(this.time * 9) * 0.15, r: 1, g: 0.5, b: 0.2 });
+  }
+
   /** Prayer's healing: twelve small crosses rising round the hero in turn, brightest halfway up, plus a soft green light. */
   private drawPrayer(): void {
     const w = this.world;
@@ -805,11 +847,23 @@ export class PixelView {
         this.particles.burst(x, 0.3, z, 30, 4, 0xd0f0ff, 0.6, { drag: 1, priority: 0.7 });
         break;
       }
-      case 'nova_poison':
-        this.effects.ring(x, z, 0.2, radius, 0x66e070, 0.5, 2, 1);
-        this.effects.disc(x, z, radius, 0x2a7a30, 0.6, 0.35);
-        this.particles.burst(x, 0.3, z, 30, 3, 0x66e070, 0.9, { up: 0.5, priority: 0.7, size: 2 });
+      case 'nova_poison': {
+        // A plague wave rolling out, a second one behind it, a cloud left hanging and spores drifting up along the way
+        this.effects.wave(x, z, 0.2, radius, 0x3aa040, 0.6, 1.6);
+        this.effects.wave(x, z, 0.2, radius * 0.9, 0x66e070, 0.7, 0, 0.12);
+        this.effects.disc(x, z, radius, 0x1a4a20, 1.4, 0.45);
+        this.effects.ring(x, z, 0.2, radius, 0x9aff9a, 0.55, 1, 0, 0.15);
+        const n = 40;
+        for (let i = 0; i < n; i++) {
+          const t = i / n;
+          const a = i * 2.399 + z;
+          const r = radius * (0.15 + 0.85 * (1 - (1 - t) * (1 - t)));
+          this.particles.spawn(x + Math.cos(a) * r, 0.1, z + Math.sin(a) * r, Math.cos(a) * 0.4, 0.7 + (i % 3) * 0.3, Math.sin(a) * 0.4, 1.2, i % 4 === 0 ? 0xc0ffc0 : i % 2 ? 0x66e070 : 0x2a8a30, { drag: 1.5, priority: 0.7, size: i % 3 === 0 ? 3 : 2, alpha: 0.85, delay: t * 0.4 });
+        }
+        this.particles.burst(x, 0.6, z, 14, 1.2, 0x9aff9a, 0.7, { up: 1.5, drag: 1, priority: 0.6, size: 2 });
+        this.view.kick(0.06);
         break;
+      }
       case 'boulder':
         this.boulderLand(x, z, radius);
         break;
@@ -826,10 +880,17 @@ export class PixelView {
         this.particles.burst(x, 0.3, z, 12, 2, 0xd8d0c0, 0.4, { priority: 0.5 });
         this.effects.ring(x, z, 0.2, radius, 0xd8d0c0, 0.3, 1);
         break;
-      case 'curse':
-        this.effects.ring(x, z, radius, 0.2, 0xb060ff, 0.6, 2, 1);
-        this.particles.burst(x, 0.2, z, 20, 1, 0xb060ff, 1.0, { up: 1.5, priority: 0.6 });
+      case 'curse': {
+        // Death: a dark stain, a ring drawing in, and a great skull rising out of the ground and fading into the air
+        const skull = this.fx.skull;
+        this.effects.disc(x, z, radius * 1.1, 0x1a0630, 1.6, 0.6);
+        this.effects.ring(x, z, radius * 1.4, 0.2, 0xb060ff, 0.5, 2, 1.5);
+        this.effects.sprite(skull, x, 0.2, z, skull.width >> 1, skull.height, 1.5, 'air', 26, { color: 0xb060ff, intensity: 2, radius: 70 });
+        this.particles.burst(x, 0.2, z, 30, 1.2, 0xb060ff, 1.3, { up: 1.8, drag: 1, priority: 0.7, size: 2 });
+        this.particles.burst(x, 0.1, z, 16, 1.8, 0x2a0a40, 1.0, { up: 1, drag: 1, priority: 0.6, size: 3, alpha: 0.7 });
+        this.view.kick(0.08);
         break;
+      }
       default:
         this.particles.burst(x, 0.6, z, 10, 2, color, 0.4, { priority: 0.5 });
         this.effects.ring(x, z, 0.2, radius, color, 0.35, 1);
@@ -860,7 +921,19 @@ export class PixelView {
     this.particles.update(dt);
     if (this.beamTarget >= 0) {
       const t = w.enemies[this.beamTarget];
-      if (t && t.alive && !t.dead) this.effects.beamSet(w.px, 1.2, w.pz, t.x, 0.8, t.z, 0x60ff90);
+      if (t && t.alive && !t.dead) {
+        this.effects.beamSet(w.px, 1.2, w.pz, t.x, 0.8, t.z, 0xd01a30);
+        // Blood pulled along the beam from the enemy into the hero
+        const dx = w.px - t.x;
+        const dz = w.pz - t.z;
+        const dist = Math.max(0.1, Math.hypot(dx, dz));
+        const speed = 7;
+        for (let i = 0; i < 2; i++) {
+          if (Math.random() > dt * 60) continue;
+          const j = (Math.random() - 0.5) * 0.3;
+          this.particles.spawn(t.x - dz / dist * j, 0.8 + Math.random() * 0.4, t.z + dx / dist * j, (dx / dist) * speed, 0.2, (dz / dist) * speed, dist / speed, Math.random() < 0.3 ? 0xff5060 : 0x9a1020, { priority: 0.6, size: Math.random() < 0.4 ? 3 : 2 });
+        }
+      }
     }
     this.numbers.update(dt);
     this.labels.update(w.drops, this.dropVisible);
@@ -1103,6 +1176,23 @@ export class PixelView {
     if (w.buffs.some((b) => b.id === 'prayer')) this.drawPrayer();
     this.drawRockSolid();
 
+    // Fire Prison: bars of flame standing round the ring, each flickering on its own
+    for (const z of w.zones) {
+      if (z.type !== 'fire_prison') continue;
+      const bars = Math.max(10, Math.round(z.radius * 6.5));
+      const flame = this.fx.flame;
+      for (let i = 0; i < bars; i++) {
+        const a = (i / bars) * Math.PI * 2;
+        const bx = z.x + Math.cos(a) * z.radius;
+        const bz = z.z + Math.sin(a) * z.radius;
+        const fx = Math.round(cam.frameX(bx, bz));
+        const fy = Math.round(cam.frameY(bx, 0, bz));
+        const f = flame[(Math.floor(this.time * 14 + i * 1.7) % flame.length + flame.length) % flame.length]!;
+        this.items.push({ depth: cam.depth(bx, bz), draw: () => ctx.drawImage(f, fx - (f.width >> 1), fy - f.height + 2) });
+      }
+    }
+    if (w.buffs.some((b) => b.id === 'fire_armor') && !w.playerDead) this.drawFireArmor(heroY);
+
     // Boulder Toss: the rock on its way down, from high above to the marked ground
     for (const z of w.zones) {
       if (z.type !== 'boulder') continue;
@@ -1217,8 +1307,9 @@ export class PixelView {
       const pulse = 0.9 + Math.sin(this.time * 5 + z.id) * 0.1;
       switch (z.type) {
         case 'fire_prison':
-          ellipse(z.x, z.z, z.radius * pulse, '#ff7a2a', false, 0.9, 2);
-          ellipse(z.x, z.z, z.radius, '#ff5a1a', true, 0.12);
+          ellipse(z.x, z.z, z.radius, '#ff5a1a', true, 0.16 + Math.sin(this.time * 7 + z.id) * 0.04);
+          ellipse(z.x, z.z, z.radius, '#ff7a2a', false, 0.9, 2);
+          ellipse(z.x, z.z, z.radius * 0.94, '#ffd060', false, 0.5, 1);
           break;
         case 'poison':
           ellipse(z.x, z.z, z.radius, '#3a9a40', true, 0.35);

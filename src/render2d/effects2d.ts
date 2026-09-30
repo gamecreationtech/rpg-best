@@ -51,7 +51,7 @@ function lighten(color: number): number {
  */
 export class Effects2D {
   private readonly list: Fx[] = [];
-  private beam: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; css: string; css2: string; on: boolean } = { x0: 0, y0: 0, z0: 0, x1: 0, y1: 0, z1: 0, css: '#fff', css2: '#fff', on: false };
+  private beam: { x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; css: string; css2: string; lr: number; lg: number; lb: number; on: boolean } = { x0: 0, y0: 0, z0: 0, x1: 0, y1: 0, z1: 0, css: '#fff', css2: '#fff', lr: 1, lg: 1, lb: 1, on: false };
   private time = 0;
 
   private push(partial: Partial<Fx> & { kind: Fx['kind']; layer: Layer; x: number; z: number; life: number }): Fx {
@@ -80,8 +80,8 @@ export class Effects2D {
   }
 
   /** A wave racing out across the floor: a filled band that expands from r0 to r1, its leading edge brightest. */
-  wave(x: number, z: number, r0: number, r1: number, color: number, life: number, light = 0): void {
-    const fx = this.push({ kind: 'wave', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)) });
+  wave(x: number, z: number, r0: number, r1: number, color: number, life: number, light = 0, delay = 0): void {
+    const fx = this.push({ kind: 'wave', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)), t: -delay });
     if (light > 0) this.withLight(fx, color, light, r1 * RING_RX * 1.4);
   }
 
@@ -97,8 +97,9 @@ export class Effects2D {
   }
 
   /** One still frame left at a point that fades out over the second half of its life. */
-  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer): void {
-    this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy });
+  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, rise = 0, light?: { color: number; intensity: number; radius: number }): void {
+    const fx = this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy, ty: rise });
+    if (light) this.withLight(fx, light.color, light.intensity, light.radius);
   }
 
   /** The arc of a melee swing. */
@@ -168,6 +169,9 @@ export class Effects2D {
     b.x0 = x0; b.y0 = y0; b.z0 = z0; b.x1 = x1; b.y1 = y1; b.z1 = z1;
     b.css = css(color);
     b.css2 = css(lighten(color));
+    b.lr = ((color >> 16) & 255) / 255;
+    b.lg = ((color >> 8) & 255) / 255;
+    b.lb = (color & 255) / 255;
     b.on = true;
   }
 
@@ -197,7 +201,7 @@ export class Effects2D {
     }
     if (this.beam.on) {
       const b = this.beam;
-      out.push({ x: cam.frameX(b.x1, b.z1), y: cam.frameY(b.x1, b.y1, b.z1), radius: 50, intensity: 1.2, r: 0.5, g: 1, b: 0.6 });
+      out.push({ x: cam.frameX(b.x1, b.z1), y: cam.frameY(b.x1, b.y1, b.z1), radius: 50, intensity: 1.2, r: b.lr, g: b.lg, b: b.lb });
     }
   }
 
@@ -255,8 +259,9 @@ export class Effects2D {
           break;
         }
         case 'sprite': {
+          // Fades over the second half; `ty` frame pixels of rise over the life, quick at first
           ctx.globalAlpha = k < 0.5 ? 1 : 1 - (k - 0.5) * 2;
-          ctx.drawImage(fx.frames![0]!, px - fx.ox, py - fx.oy);
+          ctx.drawImage(fx.frames![0]!, px - fx.ox, py - fx.oy - Math.round(fx.ty * (1 - (1 - k) * (1 - k))));
           ctx.globalAlpha = 1;
           break;
         }

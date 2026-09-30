@@ -1,5 +1,5 @@
 import type { Palette } from './palettes';
-import { PixelBuffer, hex, noise, ramp, type Ramp } from './pixel';
+import { PixelBuffer, hex, noise, ramp, type Ramp, type Rgb } from './pixel';
 
 export type SpriteSize = 'small' | 'large';
 
@@ -196,6 +196,10 @@ export interface EffectSprites {
   boulder: HTMLCanvasElement;
   /** Three small rocks that circle a Rock Solid hero. */
   rocks: HTMLCanvasElement[];
+  /** The big skull Death raises over its area. */
+  skull: HTMLCanvasElement;
+  /** Four frames of a standing tongue of flame, a hero tall, for Fire Prison's bars. */
+  flame: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -266,5 +270,44 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
     b.shadeRamp((c) => (c[0] === rockRamp[1][0] && c[1] === rockRamp[1][1] && c[2] === rockRamp[1][2] ? rockRamp : null));
     rocks.push(b.toCanvas());
   }
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks };
+  // A skull, 26 wide: domed cranium, hollow eyes, a nose slit and a row of teeth, with a dark outline
+  const bone: Rgb = [232, 224, 200];
+  const boneDark: Rgb = [160, 150, 128];
+  const hollow: Rgb = [40, 16, 56];
+  const outline: Rgb = [26, 20, 16];
+  const skull = new PixelBuffer(26 * s, 28 * s);
+  skull.ellipse(13 * s, 11 * s, 12 * s, 11 * s, outline);
+  skull.rect(6 * s, 16 * s, 14 * s, 11 * s, outline);
+  skull.ellipse(13 * s, 11 * s, 11 * s, 10 * s, bone);
+  skull.rect(7 * s, 16 * s, 12 * s, 9 * s, bone);
+  skull.rect(7 * s, 18 * s, 12 * s, 2 * s, boneDark); // the cheek line
+  skull.ellipse(8.5 * s, 11 * s, 3.5 * s, 3.5 * s, hollow);
+  skull.ellipse(17.5 * s, 11 * s, 3.5 * s, 3.5 * s, hollow);
+  skull.rect(12 * s, 14 * s, 2 * s, 3 * s, hollow);
+  for (let i = 0; i < 5; i++) skull.rect((8 + i * 2.2) * s, 22 * s, Math.max(1, s), 4 * s, i % 2 ? boneDark : outline);
+  skull.rect(7 * s, 26 * s, 12 * s, Math.max(1, s), outline);
+  skull.set(6 * s, 6 * s, [255, 255, 255]);
+  skull.set(7 * s, 5 * s, [255, 255, 255]);
+  const flame: HTMLCanvasElement[] = [];
+  const FH = 24;
+  for (let f = 0; f < 4; f++) {
+    const b = new PixelBuffer(7 * s, FH * s);
+    for (let y = 0; y < FH * s; y++) {
+      // Wide at the foot, a point at the top, the whole tongue leaning with the frame
+      const up = 1 - y / (FH * s);
+      const half = Math.max(0.5, (3.2 * (1 - up * up) + 0.6) * s);
+      const lean = Math.sin(f * 1.6 + up * 6) * 1.2 * s * up;
+      const cx = 3.5 * s + lean;
+      for (let x = 0; x < 7 * s; x++) {
+        const d = Math.abs(x + 0.5 - cx) / half;
+        if (d > 1) continue;
+        const n = noise(x, y, f);
+        if (up > 0.82 && n < 0.45) continue;
+        const c = d < 0.3 && up < 0.7 ? core : d < 0.62 ? fire[2] : d < 0.85 ? fire[1] : fire[0];
+        b.set(x, y, up > 0.9 && n > 0.7 ? [255, 255, 255] : c);
+      }
+    }
+    flame.push(b.toCanvas());
+  }
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame };
 }
