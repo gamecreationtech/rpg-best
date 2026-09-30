@@ -1388,7 +1388,7 @@ export class PixelView {
       this.zoneLight(z);
     }
     // Buff aura under the hero
-    const buff = w.buffs.find((b) => b.id !== 'incense');
+    const buff = w.buffs[0];
     if (buff) ellipse(w.px, w.pz, 0.9, cssOf(buff.color), true, 0.18 + Math.sin(this.time * 6) * 0.06);
     // Rings under the interactable in reach and the one under the mouse
     const near = w.nearestInteractable();

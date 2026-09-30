@@ -1,6 +1,5 @@
 import { CLASSES, LEVELING, type BaseStats, type ClassId, xpForLevel } from '../data/classes';
 import type { ConsumableId } from '../data/consumables';
-import { CONSUMABLES } from '../data/consumables';
 import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/professions';
 import { passivesFor } from '../data/passives';
 import { PLEDGES } from '../data/pledges';
@@ -38,6 +37,7 @@ export interface PlayerState {
   hp: number;
   mana: number;
   gold: number;
+  /** How full each consumable's single dose is, 0 to 1; usable at 1. */
   potions: Record<ConsumableId, number>;
   professions: Record<ProfessionId, { level: number; xp: number }>;
   inventory: Inventory;
@@ -132,7 +132,7 @@ export function createPlayer(classId: ClassId, pledgeId: string | null): PlayerS
     hp: 0,
     mana: 0,
     gold: 0,
-    potions: { hp_potion: 3, bandage: 2, mp_potion: 3, incense: 1 },
+    potions: { hp_potion: 1, bandage: 1, mp_potion: 1, incense: 1 },
     professions: Object.fromEntries(PROFESSIONS.map((pr) => [pr.id, { level: 1, xp: 0 }])) as PlayerState['professions'],
     inventory: new Inventory(ITEM_RULES.inventoryCols, ITEM_RULES.inventoryRows),
     equipment: new Equipment(),
@@ -472,17 +472,6 @@ export function addProfessionXp(p: PlayerState, id: ProfessionId, amount: number
 
 export function professionXpToNext(level: number): number {
   return Math.round(PROFESSION_RULES.xpStart * Math.pow(PROFESSION_RULES.xpGrowth, level - 1));
-}
-
-/** Kills slowly refill potions. */
-export function rechargePotions(p: PlayerState, fraction: Record<ConsumableId, number>): void {
-  for (const c of CONSUMABLES) {
-    fraction[c.id] += c.rechargePerKill;
-    while (fraction[c.id] >= 1) {
-      fraction[c.id] -= 1;
-      p.potions[c.id] = Math.min(c.maxCharges, p.potions[c.id] + 1);
-    }
-  }
 }
 
 /** Puts an item into the bag; returns false if there is no room. */

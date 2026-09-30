@@ -1,4 +1,5 @@
 import { RARITIES, type EquipSlot, type OffhandKind, type Rarity, type WeaponType } from '../../data/items';
+import type { ConsumableId } from '../../data/consumables';
 import { PixelBuffer, hex, ramp } from './pixel';
 import { itemImage } from '../../art/images';
 
@@ -319,4 +320,84 @@ function drawWeapon(b: PixelBuffer, type: WeaponType, r: Ramp, steel: Ramp, wood
       b.set(o + 9, o + 5, r[1]);
       break;
   }
+}
+
+const consumableCache = new Map<string, HTMLCanvasElement>();
+
+/**
+ * The four consumables on the HUD, 14x14: a corked flask of red or blue, a
+ * rolled bandage, and a smoking incense stick in a small holder. `fill` from
+ * 0 to 1 sets how much liquid the flask holds, how much of the roll is left,
+ * and how much of the stick remains, so the button shows the dose refilling.
+ */
+export function consumableIcon(id: ConsumableId, fill: number): HTMLCanvasElement {
+  const level = Math.max(0, Math.min(8, Math.round(fill * 8)));
+  const key = `${id}:${level}`;
+  let c = consumableCache.get(key);
+  if (!c) {
+    c = drawConsumable(id, level / 8);
+    consumableCache.set(key, c);
+  }
+  return c;
+}
+
+function drawConsumable(id: ConsumableId, fill: number): HTMLCanvasElement {
+  const b = new PixelBuffer(ICON, ICON);
+  const glass = hex(0xb8c8d8);
+  const cork = hex(0x8a6030);
+  const white = hex(0xffffff);
+  if (id === 'hp_potion' || id === 'mp_potion') {
+    const liquid = ramp(id === 'hp_potion' ? 0xd82a2a : 0x3a6aff, 1.2);
+    // Neck and shoulders, then a round belly
+    b.rect(4, 3, 6, 2, OUTLINE);
+    b.rect(5, 0, 4, 3, OUTLINE);
+    b.rect(6, 1, 2, 2, cork);
+    b.ellipse(7, 9, 5.5, 4.8, OUTLINE);
+    b.ellipse(7, 9, 4.5, 3.8, glass);
+    b.rect(5, 4, 4, 3, glass);
+    // Liquid from the bottom up to the fill line
+    const top = 13 - Math.round(fill * 8);
+    for (let y = 13; y >= top; y--) {
+      for (let x = 0; x < ICON; x++) {
+        const d = Math.hypot((x + 0.5 - 7) / 4.5, (y + 0.5 - 9) / 3.8);
+        const inNeck = y < 7 && x >= 5 && x <= 8;
+        if (d <= 1 || inNeck) b.set(x, y, y === top ? liquid[3] : x < 6 ? liquid[2] : liquid[1]);
+      }
+    }
+    b.set(4, 7, white);
+    b.set(4, 8, white);
+  } else if (id === 'bandage') {
+    const cloth = ramp(0xe8dcc8, 1.1);
+    // A strip trailing off to the left of a fat roll on the right; the roll shrinks as the dose is used
+    const r = 2 + Math.round(fill * 2.5);
+    b.rect(1, 6, 10, 5, OUTLINE);
+    b.rect(2, 7, 9, 3, cloth[2]);
+    b.rect(2, 8, 9, 1, cloth[1]);
+    b.ellipse(9.5, 8.5, r + 1, r + 1, OUTLINE);
+    b.ellipse(9.5, 8.5, r, r, cloth[2]);
+    b.ellipse(9.5, 8.5, Math.max(0.6, r - 1.5), Math.max(0.6, r - 1.5), cloth[1]);
+    b.set(9, 8, cloth[0]);
+    b.set(3, 8, hex(0xc03030)); // a spot of blood on the loose end
+  } else {
+    const wood = ramp(0x6a4020, 1.1);
+    const ember = hex(0xff6a20);
+    const smoke = hex(0x9a9ab0);
+    // A small clay holder at the bottom, the stick rising from it
+    b.rect(3, 11, 8, 3, OUTLINE);
+    b.rect(4, 12, 6, 1, hex(0x7a5a40));
+    const h = 3 + Math.round(fill * 7);
+    b.rect(6, 12 - h, 2, h, OUTLINE);
+    b.rect(6, 12 - h, 1, h, wood[2]);
+    b.rect(7, 12 - h, 1, h, wood[1]);
+    b.set(6, 11 - h, ember);
+    b.set(7, 11 - h, ember);
+    // A thread of smoke curling up and away
+    const sx = [7, 8, 8, 7, 6];
+    for (let i = 0; i < 5; i++) {
+      const y = 9 - h - i;
+      if (y < 0) break;
+      b.set(sx[i]!, y, smoke, i < 3 ? 200 : 120);
+    }
+  }
+  return b.toCanvas();
 }

@@ -1,3 +1,4 @@
+import { CONSUMABLES } from '../data/consumables';
 import { xpForLevel } from '../data/classes';
 import type { ClassId } from '../data/classes';
 import { ALL_BASES, ITEM_RULES } from '../data/items';
@@ -70,6 +71,8 @@ export function deserialize(data: SaveData): PlayerState {
     stash: src.stash.map((page) => restoreInventory(page, ITEM_RULES.stashCols, ITEM_RULES.stashRows)),
   };
   while (p.stash.length < ITEM_RULES.stashPages) p.stash.push(new Inventory(ITEM_RULES.stashCols, ITEM_RULES.stashRows));
+  // Older saves stored potion charges; a dose is now a fill from 0 to 1
+  for (const c of CONSUMABLES) p.potions[c.id] = Math.min(1, p.potions[c.id] ?? 1);
   // The curve can change between builds; the level is what counts, so the need is recomputed
   p.xpToNext = xpForLevel(p.level);
   p.xp = Math.min(p.xp, p.xpToNext - 1);

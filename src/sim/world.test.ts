@@ -439,6 +439,69 @@ describe('ground stomp', () => {
   });
 });
 
+describe('consumables', () => {
+  it('holds one dose that refills with time and, for potions, with kills', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.hp = 1;
+    expect(w.useConsumable('hp_potion')).toBe(true);
+    expect(w.player.potions.hp_potion).toBe(0);
+    expect(w.player.hp).toBeGreaterThan(1);
+    expect(w.useConsumable('hp_potion')).toBe(false);
+    run(w, 10);
+    expect(w.player.potions.hp_potion).toBeCloseTo(0.1, 1);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 6, w.pz);
+    w.killEnemy(e, 0);
+    expect(w.player.potions.hp_potion).toBeCloseTo(0.2, 1);
+    // The bandage refills twice as fast and takes nothing from kills
+    expect(w.useConsumable('bandage')).toBe(true);
+    run(w, 10);
+    expect(w.player.potions.bandage).toBeCloseTo(0.2, 1);
+    const e2 = w.spawnEnemy(MONSTERS.ghoul!, w.px + 6, w.pz);
+    w.killEnemy(e2, 0);
+    expect(w.player.potions.bandage).toBeCloseTo(0.2, 1);
+  });
+
+  it('bandage heals over time and stops bleeding and burning', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.hp = 10;
+    w.pStatus.bleed = { ticks: 10, timer: 0, interval: 0.5, damage: 1 };
+    w.pStatus.burn = { ticks: 10, timer: 0, interval: 0.5, damage: 1 };
+    expect(w.useConsumable('bandage')).toBe(true);
+    expect(w.pStatus.bleed).toBeNull();
+    expect(w.pStatus.burn).toBeNull();
+    run(w, 4);
+    expect(w.player.hp).toBeGreaterThan(10 + w.derived.maxHp * 0.25);
+    expect(w.player.hp).toBeLessThan(10 + w.derived.maxHp * 0.6);
+  });
+
+  it('incense restores mana over time and clears slow, freeze and poison', () => {
+    const w = new World(createPlayer('sorcerer', null), 7);
+    w.travel('arena');
+    w.player.mana = 0;
+    w.pStatus.slow = 3;
+    w.pStatus.poison = { ticks: 10, timer: 0, interval: 0.5, damage: 1 };
+    expect(w.useConsumable('incense')).toBe(true);
+    expect(w.pStatus.slow).toBe(0);
+    expect(w.pStatus.poison).toBeNull();
+    expect(w.buffs.some((b) => b.id === 'incense')).toBe(false);
+    run(w, 4);
+    expect(w.player.mana).toBeGreaterThan(w.derived.maxMana * 0.25);
+    expect(w.player.mana).toBeLessThan(w.derived.maxMana * 0.6);
+  });
+
+  it('poison on the hero ticks into life', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    const hp = w.player.hp;
+    w.pStatus.poison = { ticks: 4, timer: 0, interval: 0.5, damage: 2 };
+    run(w, 2.5);
+    expect(w.player.hp).toBeLessThanOrEqual(hp - 8 + 1);
+    expect(w.pStatus.poison).toBeNull();
+  });
+});
+
 describe('rock solid', () => {
   it('soaks up damage of any element before life is touched', () => {
     const w = new World(createPlayer('knight', 'titan'), 7);

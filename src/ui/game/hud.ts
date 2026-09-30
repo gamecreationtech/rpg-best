@@ -1,4 +1,5 @@
 import { CONSUMABLES } from '../../data/consumables';
+import { consumableIcon } from '../../gen/pixel/icons';
 import { CLASSES } from '../../data/classes';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS } from '../../data/skills';
@@ -89,7 +90,8 @@ export class Hud {
     for (const c of CONSUMABLES) {
       const b = button('', () => host.usePotion(c.id), 'potion');
       b.style.setProperty('--c', hex(c.color));
-      b.append(h('span', { class: 'potion-key' }, c.key), h('span', { class: 'potion-count' }, '0'));
+      const icon = h('canvas', { class: 'potion-icon', width: '14', height: '14' });
+      b.append(icon, h('span', { class: 'potion-key' }, c.key), h('span', { class: 'potion-count' }, ''));
       b.title = c.name;
       if (touch) potionRow.appendChild(b);
       this.potions.push(b);
@@ -297,8 +299,16 @@ export class Hud {
     for (let i = 0; i < CONSUMABLES.length; i++) {
       const c = CONSUMABLES[i]!;
       const b = this.potions[i]!;
-      (b.querySelector('.potion-count') as HTMLSpanElement).textContent = String(p.potions[c.id]);
-      b.classList.toggle('empty', p.potions[c.id] <= 0);
+      const fill = p.potions[c.id];
+      const ready = fill >= 1;
+      // The drawing itself shows the dose: liquid level, roll size, stick length
+      const icon = consumableIcon(c.id, fill);
+      const canvas = b.querySelector('.potion-icon') as HTMLCanvasElement;
+      const cx = canvas.getContext('2d')!;
+      cx.clearRect(0, 0, 14, 14);
+      cx.drawImage(icon, 0, 0);
+      (b.querySelector('.potion-count') as HTMLSpanElement).textContent = ready ? '' : `${Math.floor(fill * 100)}%`;
+      b.classList.toggle('empty', !ready);
       b.classList.toggle('cooling', w.potionCooldowns[c.id] > 0);
     }
     for (let i = this.messages.length - 1; i >= 0; i--) {

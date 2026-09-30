@@ -18,10 +18,10 @@ import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
 import type { Rarity } from '../data/items';
 import { setsForZone } from '../data/sets';
-import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, rechargePotions, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
+import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, dropSkillAt, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
-import type { DamagePacket, Drop, Enemy, Interactable, Projectile, ProjectileShape, SimEvent, Zone, ZoneType } from './types';
+import type { DamagePacket, Drop, Enemy, Interactable, Projectile, ProjectileShape, SimEvent, Zone, ZoneType, DotState } from './types';
 
 export const SIM_DT = 1 / 60;
 const ENEMY_POOL = 256;
@@ -139,7 +139,7 @@ export class World {
   attackTimer = 0;
   castTimer = 0;
   cooldowns: Record<string, number> = {};
-  pStatus = { stun: 0, freeze: 0, slow: 0 };
+  pStatus: { stun: number; freeze: number; slow: number; poison: DotState | null; burn: DotState | null; bleed: DotState | null } = { stun: 0, freeze: 0, slow: 0, poison: null, burn: null, bleed: null };
   invulnTimer = 0;
   playerDead = false;
   /** True from the pledge level until a pledge is sworn: the hero is rooted and cannot be hurt. */
@@ -147,9 +147,10 @@ export class World {
   leap: Leap | null = null;
   charge: Charge | null = null;
   beam: Beam | null = null;
+  /** A bandage healing over time, and incense restoring mana over time. */
   bandage: { remaining: number; perSec: number } | null = null;
+  incense: { remaining: number; perSec: number } | null = null;
   potionCooldowns: Record<ConsumableId, number> = { hp_potion: 0, bandage: 0, mp_potion: 0, incense: 0 };
-  private potionFraction: Record<ConsumableId, number> = { hp_potion: 0, bandage: 0, mp_potion: 0, incense: 0 };
   private repathTimer = 0;
 
   constructor(public readonly player: PlayerState, seed: number) {
@@ -670,15 +671,16 @@ export class World {
     if (res.reason !== 'Cooling down' && res.reason !== 'Casting' && res.reason !== 'Attacking') this.message(res.reason, 0xff8080);
   }
 
+  /** Uses a consumable if its dose is full; the dose then empties and refills with time (and kills, for potions). */
   useConsumable(id: ConsumableId): boolean {
     if (this.playerDead) return false;
     const def = CONSUMABLES.find((c) => c.id === id)!;
-    if (this.player.potions[id] <= 0) {
-      this.message(`No ${def.name} left`, 0xff8080);
+    if (this.player.potions[id] < 1) {
+      this.message(`${def.name} is ${Math.floor(this.player.potions[id] * 100)}% full`, 0xff8080);
       return false;
     }
     if (this.potionCooldowns[id] > 0) return false;
-    this.player.potions[id]--;
+    this.player.potions[id] = 0;
     this.potionCooldowns[id] = def.cooldown * MS;
     const d = this.derived;
     switch (id) {
@@ -688,6 +690,8 @@ export class World {
         break;
       case 'bandage':
         this.bandage = { remaining: CONSUMABLE_RULES.bandageDuration * MS, perSec: (d.maxHp * CONSUMABLE_RULES.bandagePct) / 100 / (CONSUMABLE_RULES.bandageDuration * MS) };
+        this.pStatus.bleed = null;
+        this.pStatus.burn = null;
         this.emit({ type: 'sound', id: 'bandage' });
         break;
       case 'mp_potion':
@@ -695,12 +699,14 @@ export class World {
         this.emit({ type: 'sound', id: 'potionMp' });
         break;
       case 'incense':
+        this.incense = { remaining: CONSUMABLE_RULES.incenseDuration * MS, perSec: (d.maxMana * CONSUMABLE_RULES.incensePct) / 100 / (CONSUMABLE_RULES.incenseDuration * MS) };
         this.pStatus.slow = 0;
         this.pStatus.freeze = 0;
-        this.addBuff('incense', 'Incense', CONSUMABLE_RULES.incenseDuration * MS, { dmgPct: CONSUMABLE_RULES.incenseDmgPct }, 0xc08aff);
+        this.pStatus.poison = null;
         this.emit({ type: 'sound', id: 'incense' });
         break;
     }
+    this.markDirty();
     return true;
   }
 
@@ -987,7 +993,31 @@ export class World {
     this.pStatus.freeze = Math.max(0, this.pStatus.freeze - dt);
     this.pStatus.slow = Math.max(0, this.pStatus.slow - dt);
     for (const k in this.cooldowns) this.cooldowns[k] = Math.max(0, this.cooldowns[k]! - dt);
-    for (const c of CONSUMABLES) this.potionCooldowns[c.id] = Math.max(0, this.potionCooldowns[c.id] - dt);
+    for (const c of CONSUMABLES) {
+      this.potionCooldowns[c.id] = Math.max(0, this.potionCooldowns[c.id] - dt);
+      // Doses refill with time; potions also with kills (see killEnemy)
+      if (this.player.potions[c.id] < 1) this.player.potions[c.id] = Math.min(1, this.player.potions[c.id] + c.refillPerSec * dt);
+    }
+    this.tickPlayerDots(dt);
+  }
+
+  /** Poison, burning and bleeding on the hero tick straight into life; the bandage and incense clear them. */
+  private tickPlayerDots(dt: number): void {
+    if (this.playerDead) return;
+    const st = this.pStatus;
+    for (const key of ['poison', 'burn', 'bleed'] as const) {
+      const dot = st[key];
+      if (!dot) continue;
+      dot.timer += dt;
+      while (dot.timer >= dot.interval && dot.ticks > 0) {
+        dot.timer -= dot.interval;
+        dot.ticks--;
+        this.player.hp -= dot.damage;
+        this.emit({ type: 'damage', x: this.px, y: 2.1, z: this.pz, amount: dot.damage, crit: false, element: key === 'poison' ? 'poison' : key === 'burn' ? 'fire' : 'physical', target: 'player' });
+      }
+      if (dot.ticks <= 0) st[key] = null;
+    }
+    if (this.player.hp <= 0) this.killPlayer();
   }
 
   private tickBuffs(dt: number): void {
@@ -1069,6 +1099,11 @@ export class World {
       this.healPlayer(this.bandage.perSec * dt, true);
       this.bandage.remaining -= dt;
       if (this.bandage.remaining <= 0) this.bandage = null;
+    }
+    if (this.incense) {
+      this.player.mana = Math.min(this.derived.maxMana, this.player.mana + this.incense.perSec * dt);
+      this.incense.remaining -= dt;
+      if (this.incense.remaining <= 0) this.incense = null;
     }
   }
 
@@ -1400,7 +1435,7 @@ export class World {
     this.emit({ type: 'sound', id: 'enemyDeath' });
     if (healOnKillPct) this.healPlayer(Math.round((this.derived.maxHp * healOnKillPct) / 100), false);
     this.player.kills++;
-    rechargePotions(this.player, this.potionFraction);
+    for (const c of CONSUMABLES) if (c.refillPerKill > 0) this.player.potions[c.id] = Math.min(1, this.player.potions[c.id] + c.refillPerKill);
     this.gainXp(e.xp);
     if (e.def) {
       const gold = Math.round(this.rng.int(e.def.gold[0], e.def.gold[1]) * (1 + MONSTER_RULES.goldPerLevel * (this.monsterLevel - 1)) * (1 + this.derived.goldFind / 100));
