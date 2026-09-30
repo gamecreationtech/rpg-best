@@ -743,6 +743,10 @@ export function monsterSheet(kind: MonsterKind, pal: Palette, size: SpriteSize, 
       look = { skin: 'bone', body: 'bone', head: 'leather', legs: 'boneDark', belt: 'leather', eyes: [0x40, 0xff, 0x90], ribs: true, hood: true };
       weapon = WEAPONS.bow;
       break;
+    case 'bone_archer':
+      look = { skin: 'bone', body: 'bone', head: 'leather', legs: 'boneDark', belt: 'leather', eyes: [0xff, 0x30, 0x30], ribs: true, hood: true };
+      weapon = WEAPONS.bow;
+      break;
     case 'brute':
       look = { skin: 'brute', body: 'brute', head: 'bruteDark', legs: 'bruteDark', trim: 'leather', belt: 'leather', eyes: [0xff, 0x70, 0x20], horns: true, stout: true };
       speed = 0.65;

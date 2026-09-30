@@ -1073,7 +1073,7 @@ export class PixelView {
       if (!m.active) continue;
       let p = this.minionPuppets[i];
       if (!p) {
-        p = { sheet: this.monsterSheet('archer'), anim: 'idle', animT: Math.random(), facing: 'front', faceLeft: false, flash: 0, dying: -1 };
+        p = { sheet: this.monsterSheet('bone_archer'), anim: 'idle', animT: Math.random(), facing: 'front', faceLeft: false, flash: 0, dying: -1 };
         this.minionPuppets[i] = p;
       }
       this.face(p, Math.sin(m.yaw), Math.cos(m.yaw));
@@ -1295,7 +1295,7 @@ export class PixelView {
       const p = this.minionPuppets[i];
       if (!m.active || !p) continue;
       this.pushPuppet(p, m.x, 0, m.z, 1, null);
-      if (m.shoot > 0.25) this.lights.push({ x: Math.round(cam.frameX(m.x, m.z)), y: Math.round(cam.frameY(m.x, 1, m.z)), radius: 24, intensity: 0.8, r: 0.4, g: 1, b: 0.5 });
+      if (m.shoot > 0.25) this.lights.push({ x: Math.round(cam.frameX(m.x, m.z)), y: Math.round(cam.frameY(m.x, 1, m.z)), radius: 24, intensity: 0.8, r: 1, g: 0.3, b: 0.3 });
     }
     drawn++;
 

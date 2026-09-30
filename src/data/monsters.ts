@@ -13,7 +13,9 @@ export type MonsterLook =
   | 'ghoul' | 'skeleton' | 'brute' | 'wraith'
   | 'bat' | 'spider' | 'archer' | 'rat'
   | 'crawler' | 'wisp' | 'troll'
-  | 'frostwraith' | 'revenant' | 'golem' | 'necromancer';
+  | 'frostwraith' | 'revenant' | 'golem' | 'necromancer'
+  /** The necromancer's raised archers: the plague archer's bones with burning red eyes. */
+  | 'bone_archer';
 
 export interface EnemyDef {
   id: string;
