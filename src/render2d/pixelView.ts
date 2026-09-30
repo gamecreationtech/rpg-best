@@ -507,6 +507,17 @@ export class PixelView {
         }
         if (z.type === 'storm') this.effects.flash(z.x, 3, z.z, 0xd8e8ff, 3, 200, 0.2);
         if (z.type === 'blizzard') this.effects.ring(z.x, z.z, 0.3, 6, 0xd8f4ff, 0.6, 1, 1);
+        if (z.type === 'smoke') {
+          // The bomb pops: a flash, a fast ring, and a thick puff of smoke thrown out to the edge
+          this.effects.flash(z.x, 0.6, z.z, 0xd0d0e0, 1.6, 60, 0.15);
+          this.effects.ring(z.x, z.z, 0.2, z.radius, 0xb0b0c0, 0.3, 2);
+          for (let i = 0; i < 70; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const spd = 2 + Math.random() * 5;
+            pt.spawn(z.x, 0.3 + Math.random() * 0.6, z.z, Math.cos(a) * spd, 0.6 + Math.random() * 1.2, Math.sin(a) * spd, 1.4 + Math.random() * 1.2, [0x5a5a68, 0x7a7a88, 0x9a9aa8, 0xb4b4c0][i % 4]!, { drag: 2.2, priority: 0.7, size: 3 + (i % 2), alpha: 0.85 });
+          }
+          this.view.kick(0.06);
+        }
         if (z.type === 'poison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x66e070, 0.5, 1);
         break;
       }
@@ -1029,10 +1040,20 @@ export class PixelView {
         const a = Math.random() * Math.PI * 2;
         pt.spawn(z.x + Math.cos(a) * z.radius, 0.1, z.z + Math.sin(a) * z.radius, 0, 1.5 + Math.random(), 0, 0.5, 0xff8a2a, { priority: 0.5 });
       }
-      if ((z.type === 'poison' || z.type === 'smoke') && Math.random() < dt * 10) {
+      if (z.type === 'poison' && Math.random() < dt * 10) {
         const a = Math.random() * Math.PI * 2;
         const r = Math.random() * z.radius;
-        pt.spawn(z.x + Math.cos(a) * r, 0.1, z.z + Math.sin(a) * r, 0, 0.5, 0, 1.2, z.type === 'poison' ? 0x66e070 : 0x9090a0, { alpha: 0.6, priority: 0.4, size: 2 });
+        pt.spawn(z.x + Math.cos(a) * r, 0.1, z.z + Math.sin(a) * r, 0, 0.5, 0, 1.2, 0x66e070, { alpha: 0.6, priority: 0.4, size: 2 });
+      }
+      if (z.type === 'smoke') {
+        // Smoke billowing: fat grey puffs rolling up and drifting across the whole cloud, thickest near the middle
+        for (let k = 0; k < 7; k++) {
+          if (Math.random() >= dt * 40) continue;
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * z.radius * 0.95;
+          const drift = 0.3;
+          pt.spawn(z.x + Math.cos(a) * r, 0.05 + Math.random() * 0.4, z.z + Math.sin(a) * r, Math.cos(a + 1.2) * drift, 0.25 + Math.random() * 0.3, Math.sin(a + 1.2) * drift, 2 + Math.random() * 1.5, [0x5a5a68, 0x7a7a88, 0x9a9aa8, 0xb4b4c0][(Math.random() * 4) | 0]!, { alpha: 0.8, priority: 0.45, size: Math.random() < 0.5 ? 4 : 5, drag: 0.6 });
+        }
       }
       if (z.type === 'wind' && Math.random() < dt * 90) {
         // Debris caught in the funnel: whipping round the hero, climbing as it goes, the rest streaking round the gale's edge
@@ -1442,9 +1463,14 @@ export class PixelView {
         case 'poison':
           ellipse(z.x, z.z, z.radius, '#3a9a40', true, 0.35);
           break;
-        case 'smoke':
-          ellipse(z.x, z.z, z.radius, '#8a8a9a', true, 0.3);
+        case 'smoke': {
+          // The cloud's body on the floor: a soft grey mass, denser in the middle, fading as the smoke thins out
+          const life = Math.min(1, z.remaining / 0.8);
+          ellipse(z.x, z.z, z.radius, '#7a7a8a', true, 0.28 * life);
+          ellipse(z.x, z.z, z.radius * 0.7, '#9a9aa8', true, 0.28 * life);
+          ellipse(z.x, z.z, z.radius * 0.4, '#b4b4c0', true, 0.25 * life);
           break;
+        }
         case 'trap':
           this.drawTrap(ctx, z, ellipse);
           break;
@@ -1642,6 +1668,9 @@ export class PixelView {
       this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: -0.6 + flicker, r: 0, g: 0, b: 0 });
     } else if (z.type === 'blizzard') {
       this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: 0.35, r: 0.75, g: 0.88, b: 1 });
+    } else if (z.type === 'smoke') {
+      // Murk: the smoke swallows the light inside it
+      this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W * 1.3, intensity: -0.35 * Math.min(1, z.remaining / 0.8), r: 0, g: 0, b: 0 });
     }
   }
 

@@ -82,7 +82,9 @@ What that means for each kind of asset:
   feet (no `maxRange`) while its ultimate is thrown where the hero aims, drawn as an iron plate whose ring of spikes
   punch up and sink back without pause, snapping with a flash and shards.
   Sneak dims the whole world and cools the ambient light to blue for as long
-  as the hero is hidden, with dark wisps clinging to the half-seen hero.
+  as the hero is hidden, with dark wisps clinging to the half-seen hero. Its
+  ultimate's smoke bomb pops with a flash and a puff thrown to the edge, then
+  billows fat grey puffs over a layered floor cloud under a murky shade.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,
