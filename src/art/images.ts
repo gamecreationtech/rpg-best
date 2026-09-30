@@ -9,6 +9,9 @@
 /** Item base ids that may have an icon at `art/items/<id>.png` (16x16, transparent background). */
 export const ITEM_ART_IDS = ['sword'];
 
+/** Icons are shown at this size; a larger square image whose side is a multiple of it is shrunk once at load. */
+const ICON = 16;
+
 const itemImages = new Map<string, HTMLCanvasElement>();
 
 /** Fetches every optional image before play. Missing files are skipped quietly. */
@@ -33,7 +36,53 @@ async function loadItemImage(id: string): Promise<void> {
   const ctx = c.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
-  itemImages.set(id, c);
+  const k = img.naturalWidth / ICON;
+  itemImages.set(id, k > 1 && Number.isInteger(k) && img.naturalHeight === img.naturalWidth ? shrink(c, k) : c);
+}
+
+/**
+ * Shrinks a large icon by a whole factor: each output pixel is the
+ * alpha-weighted average of its block, and the alpha is snapped to on or off
+ * so the result has hard pixel edges like the generated icons. Done once at
+ * load, never per frame.
+ */
+function shrink(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
+  const size = src.width / k;
+  const px = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
+  const out = document.createElement('canvas');
+  out.width = size;
+  out.height = size;
+  const ctx = out.getContext('2d')!;
+  const id = ctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let wa = 0;
+      let a = 0;
+      for (let yy = 0; yy < k; yy++) {
+        for (let xx = 0; xx < k; xx++) {
+          const i = ((y * k + yy) * src.width + (x * k + xx)) * 4;
+          const al = px[i + 3]! / 255;
+          r += px[i]! * al;
+          g += px[i + 1]! * al;
+          b += px[i + 2]! * al;
+          wa += al;
+          a += px[i + 3]!;
+        }
+      }
+      const o = (y * size + x) * 4;
+      if (wa > 0) {
+        id.data[o] = r / wa;
+        id.data[o + 1] = g / wa;
+        id.data[o + 2] = b / wa;
+      }
+      id.data[o + 3] = a / (k * k) >= 128 ? 255 : 0;
+    }
+  }
+  ctx.putImageData(id, 0, 0);
+  return out;
 }
 
 /** The drawn icon for an item base, or null to use the generated one. */
