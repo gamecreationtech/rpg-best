@@ -107,12 +107,12 @@ export type SkillEffect =
       bonusVsDisabled?: number;
       /** Hits every enemy on screen regardless of radius (Arrow Storm). */
       hitsAllVisible?: boolean;
-      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'arrow_rain';
+      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning';
     }
   | { kind: 'buff'; duration: number; mods: BuffMods }
   | {
       kind: 'zone';
-      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm';
+      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm';
       duration: number;
       radius: number;
       damageMult?: number;
@@ -226,7 +226,7 @@ export const SKILLS: Record<string, SkillDef> = {
   cutthroat: { id: 'cutthroat', name: 'Cutthroat', classId: R, tier: 'pledge', pledgeId: 'silverblade', description: 'Blink behind an enemy and open its throat for six times damage.', manaCost: 40, cooldown: 12000, rank5Cooldown: 7000, rankBonus: 0.4, reqLevel: 5, element: 'physical', effect: { kind: 'melee', damageMult: 6.0, maxRange: 200, teleportBehind: true, stun: 1000, moveBonus: { pct: 50, duration: 2000 } } },
   daggers_protection: { id: 'daggers_protection', name: 'Daggers Protection', classId: R, tier: 'pledge', pledgeId: 'silverblade', description: 'Four daggers orbit you for ten seconds, cutting anything that comes close.', manaCost: 35, cooldown: 20000, rank5Cooldown: 14000, rankBonus: 0.2, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { orbitDaggers: { count: 4, radius: 100, damageMult: 1.2, hitCooldown: 600, hitRadius: 10 } } } },
   arrow_of_beyond: { id: 'arrow_of_beyond', name: 'Arrow of Beyond', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'One arrow, eight times damage, and the wound keeps bleeding.', manaCost: 50, cooldown: 45000, rank5Cooldown: 28000, rankBonus: 0.5, reqLevel: 25, element: 'physical', effect: { kind: 'projectile', damageMult: 8.0, projSpeed: 900, maxRange: 500, bleed: { ticks: 10, interval: 500, tickMult: 0.2 }, stun: 1000, shape: 'arrow' } },
-  arrow_storm: { id: 'arrow_storm', name: 'Arrow Storm', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'Sixty arrows fall on every enemy you can see.', manaCost: 60, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.3, reqLevel: 20, element: 'physical', effect: { kind: 'aoe', damageMult: 1.8, radius: 600, at: 'self', hitsAllVisible: true, visual: 'arrow_rain' } },
+  arrow_storm: { id: 'arrow_storm', name: 'Arrow Storm', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'For ten seconds, arrows fall from the sky on every enemy you can see, a volley every half second.', manaCost: 60, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.3, reqLevel: 20, element: 'physical', effect: { kind: 'zone', zone: 'arrow_storm', duration: 10000, radius: 600, damageMult: 0.15, tickInterval: 500 } },
   ricochet: { id: 'ricochet', name: 'Ricochet', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'An arrow that bounces between ten enemies.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6000, rankBonus: 0.25, reqLevel: 10, element: 'physical', effect: { kind: 'projectile', damageMult: 1.2, projSpeed: 480, maxRange: 3000, ricochets: 9, shape: 'arrow' } },
   autoaim: { id: 'autoaim', name: 'Autoaim', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'For five seconds your arrows seek the nearest enemy.', manaCost: 15, cooldown: 20000, rank5Cooldown: 14000, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 5000, mods: { homingArrows: true } } },
   quickshot: { id: 'quickshot', name: 'Quickshot', classId: R, tier: 'pledge', pledgeId: 'quiverbound', description: 'Triple attack speed and double movement for five seconds.', manaCost: 20, cooldown: 15000, rank5Cooldown: 10000, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 5000, mods: { atkSpdPct: 200, moveSpdPct: 100 } } },

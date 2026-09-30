@@ -85,6 +85,12 @@ What that means for each kind of asset:
   as the hero is hidden, with dark wisps clinging to the half-seen hero. Its
   ultimate's smoke bomb pops with a flash and a puff thrown to the edge, then
   billows fat grey puffs over a layered floor cloud under a murky shade.
+  Arrow Storm is a ten-second zone that follows the hero: every half second
+  a volley hits every enemy in its 600px reach, and the renderer drops three
+  big generated arrows from four tiles up onto each one, leaving them standing
+  in the ground a moment, with stray arrows falling across the field between
+  volleys. Autoaim draws a green target reticle under the hero instead of the
+  plain buff glow; Quickshot whips three wind streaks round the hero's waist.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

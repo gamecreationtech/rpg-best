@@ -112,7 +112,7 @@ export interface Projectile {
   skillId: string | null;
 }
 
-export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold';
+export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold';
 
 export interface Zone {
   id: number;

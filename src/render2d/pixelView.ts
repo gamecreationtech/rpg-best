@@ -521,9 +521,12 @@ export class PixelView {
         if (z.type === 'poison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x66e070, 0.5, 1);
         break;
       }
-      case 'zone_tick':
-        this.snowflakeHit(ev.x, ev.z);
+      case 'zone_tick': {
+        const zone = w.zones.find((z) => z.id === ev.id);
+        if (zone?.type === 'arrow_storm') this.arrowFall(ev.x, ev.z);
+        else this.snowflakeHit(ev.x, ev.z);
         break;
+      }
       case 'buff_start': {
         if (ev.id === 'sneak' || ev.id === 'sneak_ult') {
           // Slipping into shadow: a puff of darkness and a ring that closes in on the hero
@@ -628,6 +631,23 @@ export class PixelView {
     this.effects.ring(x, z, 0.1, 0.6, 0x66e070, 0.3, 1, 1.2);
     for (let i = 0; i < 6; i++) this.particles.spawn(x + (Math.random() - 0.5) * 0.6, 0.1, z + (Math.random() - 0.5) * 0.6, 0, 0.6, 0, 0.9, 0x9aff9a, { priority: 0.4, size: 2, alpha: 0.8, delay: 0.1 + i * 0.12 });
     this.effects.flash(x, 0.6, z, 0x66e070, 1.4, 40, 0.3);
+  }
+
+  /** Arrow Storm's volley on one enemy: three big arrows plunge from the sky round it, and stick quivering in the ground a moment. */
+  private arrowFall(x: number, z: number): void {
+    const arrow = this.fx.bigArrow;
+    for (let i = 0; i < 3; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = i === 0 ? 0 : 0.25 + Math.random() * 0.35;
+      const ax = x + Math.cos(a) * r;
+      const az = z + Math.sin(a) * r;
+      const delay = i * 0.06;
+      // Falls from four tiles up over a fifth of a second, then stands in the ground while it fades
+      this.effects.sprite(arrow, ax, 4, az, arrow.width >> 1, arrow.height, 0.22 + delay, 'air', -4 * Y_PX, undefined, true);
+      this.effects.sprite(arrow, ax, 0.15, az, arrow.width >> 1, arrow.height, 0.9, 'air', 0, undefined, false, 0.22 + delay);
+      this.particles.burst(ax, 0.1, az, 5, 1.2, 0xc8b8a0, 0.35, { gravity: 6, up: 1.5, priority: 0.4, delay: 0.2 + delay });
+    }
+    this.effects.ring(x, z, 0.1, 0.6, 0xe8e0d0, 0.25, 1, 0.6, 0.2);
   }
 
   /** Blizzard's hit: a big snowflake drops from above and bursts into ice where it lands. */
@@ -955,11 +975,6 @@ export class PixelView {
         this.effects.strike(x, z, 0xa8c8ff);
         this.particles.burst(x, 0.2, z, 10, 2, 0xd8e8ff, 0.3, { priority: 0.6 });
         break;
-      case 'arrow_rain': {
-        const arrow = this.projectileProp('arrow', 0xd8d0c0);
-        this.effects.arrows(arrow.frames, x, z, Math.min(radius, 6), arrow.originX, arrow.originY);
-        break;
-      }
       case 'trap':
         // The jaws snap: a white flash ring, sparks off the iron and shards flung outward
         this.effects.ring(x, z, 0.1, radius, 0xffffff, 0.2, 2, 1.5);
@@ -1070,6 +1085,14 @@ export class PixelView {
         const rim = Math.random() < 0.35;
         const r = rim ? z.radius : Math.sqrt(Math.random()) * z.radius * 0.9;
         pt.spawn(z.x + Math.cos(a) * r, rim ? 0.5 : 0.1, z.z + Math.sin(a) * r, 0, rim ? 1.6 : 0.8, 0, rim ? 0.5 : 1.6, Math.random() < 0.5 ? 0xfff4c0 : 0xffe87a, { priority: 0.4, alpha: 0.9 });
+      }
+      if (z.type === 'arrow_storm' && Math.random() < dt * 8) {
+        // Stray arrows dropping across the field between volleys
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * Math.min(z.radius, 9);
+        const arrow = this.fx.bigArrow;
+        this.effects.sprite(arrow, z.x + Math.cos(a) * r, 4, z.z + Math.sin(a) * r, arrow.width >> 1, arrow.height, 0.22, 'air', -4 * Y_PX, undefined, true);
+        this.effects.sprite(arrow, z.x + Math.cos(a) * r, 0.15, z.z + Math.sin(a) * r, arrow.width >> 1, arrow.height, 0.7, 'air', 0, undefined, false, 0.22);
       }
       if (z.type === 'storm') {
         // Rain driving down over the whole dark patch, and low cloud drifting above it
@@ -1333,6 +1356,7 @@ export class PixelView {
       if (w.buffs.some((b) => b.id === 'fire_armor')) this.drawArmorBubble(heroY, 'fire');
       if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
       if (w.zones.some((z) => z.type === 'wind' && z.followsPlayer)) this.drawTornado(heroY);
+      if (w.buffs.some((b) => b.id === 'quickshot')) this.drawQuickWind(heroY);
     }
 
     // Boulder Toss: the rock on its way down, from high above to the marked ground
@@ -1540,9 +1564,12 @@ export class PixelView {
       this.zoneLight(z);
       this.skyLight(z);
     }
-    // Buff aura under the hero
-    const buff = w.buffs[0];
-    if (buff) ellipse(w.px, w.pz, 0.9, cssOf(buff.color), true, 0.18 + Math.sin(this.time * 6) * 0.06);
+    // Buff aura under the hero: Autoaim draws a target reticle instead of the plain glow
+    if (w.buffs.some((b) => b.id === 'autoaim')) this.drawReticle(ctx);
+    else {
+      const buff = w.buffs[0];
+      if (buff) ellipse(w.px, w.pz, 0.9, cssOf(buff.color), true, 0.18 + Math.sin(this.time * 6) * 0.06);
+    }
     // Rings under the interactable in reach and the one under the mouse
     const near = w.nearestInteractable();
     for (const it of w.interactables) {
@@ -1658,6 +1685,78 @@ export class PixelView {
       spike(z.x + Math.cos(a) * z.radius * 0.72, z.z + Math.sin(a) * z.radius * 0.72, h, false);
     }
     spike(z.x, z.z, Math.round(2 + 6 * (0.5 + 0.5 * Math.sin(this.time * 5 + z.id))), true);
+  }
+
+  /** Autoaim: a target under the hero. Two rings, a crosshair and four ticks that turn slowly, in the hunter's green. */
+  private drawReticle(ctx: CanvasRenderingContext2D): void {
+    const w = this.world;
+    const cam = this.view;
+    const cx = Math.round(cam.frameX(w.px, w.pz));
+    const cy = Math.round(cam.frameY(w.px, 0, w.pz));
+    const rx = 1.15 * RING_RX;
+    const ry = 1.15 * RING_RY;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#55cc33';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#8fe08f';
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx * 0.45, ry * 0.45, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // Crosshair through the rings, and four ticks on the outer ring that creep round
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - rx - 3, cy);
+    ctx.lineTo(cx - rx * 0.25, cy);
+    ctx.moveTo(cx + rx * 0.25, cy);
+    ctx.lineTo(cx + rx + 3, cy);
+    ctx.moveTo(cx, cy - ry - 3);
+    ctx.lineTo(cx, cy - ry * 0.25);
+    ctx.moveTo(cx, cy + ry * 0.25);
+    ctx.lineTo(cx, cy + ry + 3);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      const a = this.time * 1.2 + (i * Math.PI) / 2;
+      ctx.fillRect(cx + Math.round(Math.cos(a) * rx) - 1, cy + Math.round(Math.sin(a) * ry) - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** Quickshot: a small wind whipping round the hero at waist height, three streaks chasing each other with specks flung off them. */
+  private drawQuickWind(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, heroY + 0.55, w.pz));
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+          const a0 = this.time * 9 + (i * Math.PI * 2) / 3;
+          const front = Math.sin(a0 + 0.5) > 0;
+          ctx.globalAlpha = front ? 0.85 : 0.35;
+          ctx.strokeStyle = i === 0 ? '#ffffff' : '#d8ecff';
+          ctx.beginPath();
+          ctx.ellipse(fx, fy, 13, 6, 0, a0, a0 + 1.0);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+    if (Math.random() < 0.5) {
+      const a = this.time * 9;
+      this.particles.spawn(w.px + Math.cos(a) * 0.55, heroY + 0.5 + (Math.random() - 0.5) * 0.3, w.pz + Math.sin(a) * 0.55, -Math.sin(a) * 3, 0.2, Math.cos(a) * 3, 0.25, 0xd8ecff, { drag: 4, priority: 0.4, alpha: 0.8 });
+    }
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

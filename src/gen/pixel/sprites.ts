@@ -202,6 +202,8 @@ export interface EffectSprites {
   flame: HTMLCanvasElement[];
   /** Two big six-armed snowflakes, the ones Blizzard drops on enemies. */
   snowflakes: HTMLCanvasElement[];
+  /** A big arrow seen point-down, the kind Arrow Storm rains from the sky. */
+  bigArrow: HTMLCanvasElement;
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -335,5 +337,28 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
     b.set(c, c, [255, 255, 255]);
     snowflakes.push(b.toCanvas());
   }
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes };
+  // The falling arrow: 22 tall, point at the bottom, fletched at the top, with a dark outline
+  const woodRamp = ramp(pal.wood, pal.contrast);
+  const steelRamp = ramp(pal.steel, pal.contrast);
+  const arrow = new PixelBuffer(7 * s, 22 * s);
+  arrow.rect(2 * s, 0, 3 * s, 22 * s, [26, 20, 16]);
+  arrow.rect(3 * s, 0, s, 18 * s, woodRamp[2]);
+  arrow.rect(3 * s, 0, s, 2 * s, woodRamp[0]);
+  // Fletching: two feathers angled off the shaft
+  for (let i = 0; i < 4; i++) {
+    arrow.rect((1 + (i >> 1)) * s, (1 + i) * s, s, s, [232, 224, 200]);
+    arrow.rect((5 - (i >> 1)) * s, (1 + i) * s, s, s, [232, 224, 200]);
+    arrow.set(1 * s, (i + 1) * s, [26, 20, 16], i > 1 ? 255 : 0);
+  }
+  arrow.rect(0, 0, s, 4 * s, [26, 20, 16]);
+  arrow.rect(6 * s, 0, s, 4 * s, [26, 20, 16]);
+  arrow.rect(1 * s, 0, s, 3 * s, [232, 224, 200]);
+  arrow.rect(5 * s, 0, s, 3 * s, [232, 224, 200]);
+  // Head: a broad steel point
+  arrow.rect(2 * s, 16 * s, 3 * s, 2 * s, steelRamp[2]);
+  arrow.rect(2 * s, 18 * s, 3 * s, 2 * s, steelRamp[1]);
+  arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
+  arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
+  arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas() };
 }

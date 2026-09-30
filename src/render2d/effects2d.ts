@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'wave' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'wave' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -97,8 +97,8 @@ export class Effects2D {
   }
 
   /** One still frame left at a point that fades out over the second half of its life. */
-  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, rise = 0, light?: { color: number; intensity: number; radius: number }, fall = false): void {
-    const fx = this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy, ty: rise, arc: fall ? 1 : 0 });
+  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, rise = 0, light?: { color: number; intensity: number; radius: number }, fall = false, delay = 0): void {
+    const fx = this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy, ty: rise, arc: fall ? 1 : 0, t: -delay });
     if (light) this.withLight(fx, light.color, light.intensity, light.radius);
   }
 
@@ -150,11 +150,6 @@ export class Effects2D {
   link(x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, color: number, life = 0.2): void {
     const fx = this.push({ kind: 'link', layer: 'air', x: x0, y: y0, z: z0, tx: x1, ty: y1, tz: z1, life, css: css(color), css2: '#ffffff' });
     this.withLight(fx, color, 1.4, 60);
-  }
-
-  /** Arrows raining on a circle. */
-  arrows(frames: HTMLCanvasElement[], x: number, z: number, radius: number, ox: number, oy: number): void {
-    this.push({ kind: 'arrows', layer: 'air', x, z, life: 0.7, r0: radius, frames, ox, oy });
   }
 
   /** Light only. */
@@ -336,29 +331,6 @@ export class Effects2D {
           const ex = Math.round(cam.frameX(fx.tx, fx.tz));
           const ey = Math.round(cam.frameY(fx.tx, fx.ty, fx.tz));
           jagged(ctx, px, py, ex, ey, fx.css, fx.css2, Math.floor(fx.t * 40) + fx.seed, 5);
-          break;
-        }
-        case 'arrows': {
-          const frames = fx.frames!;
-          const f = frames[0]!;
-          const n = 9;
-          for (let i = 0; i < n; i++) {
-            const delay = (i / n) * 0.35;
-            const tt = (fx.t - delay) / 0.3;
-            if (tt < 0 || tt > 1) continue;
-            const a = fx.seed + i * 2.4;
-            const rr = fx.r0 * Math.sqrt(((i * 7919) % 100) / 100);
-            const wx = fx.x + Math.cos(a) * rr;
-            const wz = fx.z + Math.sin(a) * rr;
-            const h = 6 * (1 - tt);
-            const sx = Math.round(cam.frameX(wx, wz));
-            const sy = Math.round(cam.frameY(wx, h, wz));
-            ctx.save();
-            ctx.translate(sx, sy);
-            ctx.rotate(Math.PI / 2 - 0.4);
-            ctx.drawImage(f, -fx.ox, -fx.oy);
-            ctx.restore();
-          }
           break;
         }
         case 'light':

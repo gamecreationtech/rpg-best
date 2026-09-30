@@ -1821,6 +1821,16 @@ export class World {
             }
           }
           break;
+        case 'arrow_storm':
+          // A volley on every enemy in sight each tick; the renderer drops the arrows where each one stands
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+              this.emit({ type: 'zone_tick', id: z.id, x: e.x, z: e.z });
+              hitEnemy(this, e, packetFor());
+            }
+          }
+          break;
         case 'blizzard':
           while (z.tickTimer >= z.tickInterval) {
             z.tickTimer -= z.tickInterval;

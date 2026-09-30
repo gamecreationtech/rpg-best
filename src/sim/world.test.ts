@@ -439,6 +439,30 @@ describe('ground stomp', () => {
   });
 });
 
+describe('arrow storm', () => {
+  it('rains a volley on every enemy in sight every half second for ten seconds', () => {
+    const w = new World(createPlayer('rogue', 'quiverbound'), 7);
+    w.travel('arena');
+    w.player.level = 20;
+    w.player.skillRanks.arrow_storm = 1;
+    const a = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    const b = w.spawnEnemy(MONSTERS.ghoul!, w.px - 2, w.pz + 4);
+    for (const e of [a, b]) {
+      e.speed = 0;
+      e.hp = 100000;
+      e.maxHp = 100000;
+    }
+    expect(castSkill(w, 'arrow_storm', null).ok).toBe(true);
+    const zone = w.zones.find((z) => z.type === 'arrow_storm')!;
+    expect(zone.remaining).toBeCloseTo(10, 1);
+    run(w, 1.05);
+    const hits = w.events.filter((ev) => ev.type === 'zone_tick' && ev.id === zone.id).length;
+    expect(hits).toBeGreaterThanOrEqual(2);
+    expect(a.hp).toBeLessThan(100000);
+    expect(b.hp).toBeLessThan(100000);
+  });
+});
+
 describe('trap', () => {
   it('is always set at the hero\'s feet, whatever is aimed at', () => {
     const w = new World(createPlayer('rogue', null), 7);

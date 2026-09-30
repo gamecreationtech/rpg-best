@@ -359,6 +359,9 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
     case 'storm':
       w.addZone({ ...common, type: 'storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, targets: eff.targets ?? 5 });
       break;
+    case 'arrow_storm':
+      w.addZone({ ...common, type: 'arrow_storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 500) * MS });
+      break;
   }
   return { ok: true };
 }
