@@ -4,6 +4,19 @@ import type { BuffMods } from '../data/skills';
 import type { Element } from '../data/stats';
 import type { Item } from './items/item';
 
+/** A skeleton archer raised by Summon Skeleton Army. Runtime only, never saved. */
+export interface Minion {
+  active: boolean;
+  x: number;
+  z: number;
+  yaw: number;
+  moving: boolean;
+  /** Seconds since its last shot. */
+  timer: number;
+  /** Seconds left of the loosing pose, for the renderer. */
+  shoot: number;
+}
+
 export interface DotState {
   ticks: number;
   timer: number;
@@ -80,6 +93,8 @@ export interface DamagePacket {
   weaponHit: boolean;
   /** Dealt by an item proc: never fires procs itself. */
   fromProc?: boolean;
+  /** Shot by a summoned skeleton, so it never changes what the hero is counted as attacking. */
+  fromMinion?: boolean;
 }
 
 export interface Projectile {

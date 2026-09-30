@@ -36,7 +36,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   necromancer: {
     id: 'necromancer', classId: 'sorcerer', name: 'Necromancer', title: 'Master of Death', color: 0xb090c8, cloth: 0x1a1620,
     description: 'A sorcerer who has gazed beyond the veil. Bends life and death itself: draining vitality, spreading plague, cursing enemies into oblivion.',
-    skills: ['death', 'poison_nova', 'life_touch'],
+    skills: ['death', 'poison_nova', 'life_touch', 'skeleton_army'],
   },
   stormsinger: {
     id: 'stormsinger', classId: 'sorcerer', name: 'Stormsinger', title: 'Voice of the Storm', color: 0xffd83a, cloth: 0x8a6a14,

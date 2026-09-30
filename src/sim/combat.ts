@@ -58,6 +58,8 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
     e.aggro = true;
     w.alertNear(e);
   }
+  // What the hero is attacking, for the skeletons to follow; their own arrows and procs do not count
+  if (!p.fromMinion && !p.fromProc) w.lastHitId = e.id;
   w.emit({ type: 'damage', x: e.x, z: e.z, y: 1.6 * e.scale, amount, crit, element: p.element, target: 'enemy' });
   w.emit({ type: 'enemy_hit', id: e.id });
   if (crit) w.emit({ type: 'sound', id: 'crit' });

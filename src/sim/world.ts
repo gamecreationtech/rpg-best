@@ -9,7 +9,7 @@ import { PLEDGES } from '../data/pledges';
 import { ELEMENT_COLORS, type Element, type StatMap } from '../data/stats';
 import { MS, PX } from '../data/units';
 import { Rng } from '../gen/rng';
-import { damagePlayer, hitEnemy, tickStatuses } from './combat';
+import { damagePlayer, hitEnemy, tickStatuses, skillDamage } from './combat';
 import type { EquipKey } from './items/equipment';
 import type { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
@@ -21,7 +21,7 @@ import { setsForZone } from '../data/sets';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, dropSkillAt, type Aim } from './skills/cast';
 import { SpatialHash } from './spatialHash';
-import type { DamagePacket, Drop, Enemy, Interactable, Projectile, ProjectileShape, SimEvent, Zone, ZoneType, DotState } from './types';
+import type { DamagePacket, Drop, Enemy, Interactable, Minion, Projectile, ProjectileShape, SimEvent, Zone, ZoneType, DotState } from './types';
 
 export const SIM_DT = 1 / 60;
 const ENEMY_POOL = 256;
@@ -31,6 +31,10 @@ const PICKUP_RADIUS = 0.9;
 /** The dev-menu pet fetches loot this far from the hero, in tiles (300 px). */
 const PET_REACH = 300 * PX;
 const PET_SPEED = 5.5;
+/** Skeleton archers: how many at most, how fast they walk, and how far from the hero they stand. */
+const MINION_POOL = 8;
+const MINION_SPEED = 6;
+const MINION_HEEL = 1.7;
 
 export type Area = 'town' | 'arena';
 
@@ -416,8 +420,96 @@ export class World {
     const buff: Buff = { id, name, remaining: duration, duration, mods, color, shield: mods.shieldPct ? (this.derived.maxHp * mods.shieldPct) / 100 : 0, data: {} };
     this.buffs.push(buff);
     this.markDirty();
+    if (mods.skeletons) this.raiseSkeletons(mods.skeletons.count, mods.skeletons.interval * MS);
     this.emit({ type: 'buff_start', id, color });
     return buff;
+  }
+
+  /** Skeleton archers come up in a ring behind the hero, their shots staggered so they do not all fire at once. */
+  private raiseSkeletons(count: number, interval: number): void {
+    const n = Math.min(count, MINION_POOL);
+    for (let i = 0; i < MINION_POOL; i++) {
+      const m = this.minions[i]!;
+      m.active = i < n;
+      if (!m.active) continue;
+      const a = this.pyaw + Math.PI + (i - (n - 1) / 2) * 0.55;
+      m.x = this.px + Math.sin(a) * MINION_HEEL;
+      m.z = this.pz + Math.cos(a) * MINION_HEEL;
+      m.yaw = this.pyaw;
+      m.moving = false;
+      m.timer = (interval * i) / n;
+      m.shoot = 0;
+    }
+  }
+
+  /** The skeletons heel behind the hero, close on whatever the hero last hit, and loose arrows at it. */
+  private tickMinions(dt: number): void {
+    const buff = this.buffs.find((b) => b.mods.skeletons);
+    if (!buff) {
+      for (const m of this.minions) m.active = false;
+      return;
+    }
+    const sk = buff.mods.skeletons!;
+    const n = Math.min(sk.count, MINION_POOL);
+    const target = this.enemies[this.lastHitId];
+    const live = target && target.alive && !target.dead ? target : null;
+    if (!live) this.lastHitId = -1;
+    const range = sk.range * PX;
+    const interval = sk.interval * MS;
+    for (let i = 0; i < n; i++) {
+      const m = this.minions[i]!;
+      if (!m.active) continue;
+      m.moving = false;
+      m.timer += dt;
+      m.shoot = Math.max(0, m.shoot - dt);
+      // Left behind by a portal: catch up at once
+      if (this.dist(m.x, m.z) > 14) {
+        m.x = this.px - Math.sin(this.pyaw) * MINION_HEEL;
+        m.z = this.pz - Math.cos(this.pyaw) * MINION_HEEL;
+      }
+      // Heel slot: a fan behind the hero
+      const a = this.pyaw + Math.PI + (i - (n - 1) / 2) * 0.55;
+      let gx = this.px + Math.sin(a) * MINION_HEEL;
+      let gz = this.pz + Math.cos(a) * MINION_HEEL;
+      let stop = 0.4;
+      const farFromHero = this.dist(m.x, m.z) > 7;
+      if (live && !farFromHero) {
+        const td = Math.hypot(live.x - m.x, live.z - m.z);
+        if (td > range * 0.9) {
+          // Close in on the target until it is in bowshot
+          gx = live.x;
+          gz = live.z;
+          stop = range * 0.8;
+        } else {
+          gx = m.x;
+          gz = m.z;
+        }
+        m.yaw = Math.atan2(live.x - m.x, live.z - m.z);
+        if (td <= range && m.timer >= interval) {
+          m.timer = 0;
+          m.shoot = 0.3;
+          const dx = (live.x - m.x) / Math.max(0.001, td);
+          const dz = (live.z - m.z) / Math.max(0.001, td);
+          this.spawnProjectile({
+            owner: 'player', shape: 'arrow', element: 'physical', x: m.x + dx * 0.4, z: m.z + dz * 0.4, dirX: dx, dirZ: dz,
+            speed: 520 * PX, radius: 8 * PX, maxRange: range * 1.4,
+            packet: { amount: skillDamage(this, buff.id, sk.damageMult), element: 'physical', canCrit: false, skillId: buff.id, weaponHit: false, fromMinion: true },
+            pierce: 0, homing: true, ricochets: 0, returns: false, throughWalls: false, splashRadius: 0, onHitZone: null, burstOnHit: null, skillId: buff.id,
+          });
+        }
+      }
+      const dx = gx - m.x;
+      const dz = gz - m.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > stop) {
+        const step = Math.min(dist, MINION_SPEED * dt);
+        this.map.slide(m.x, m.z, m.x + (dx / dist) * step, m.z + (dz / dist) * step, 0.2, this.slid);
+        m.x = this.slid.x;
+        m.z = this.slid.z;
+        m.yaw = Math.atan2(dx, dz);
+        m.moving = true;
+      }
+    }
   }
 
   private endBuff(index: number): void {
@@ -425,6 +517,7 @@ export class World {
     this.buffs.splice(index, 1);
     this.markDirty();
     this.emit({ type: 'buff_end', id: b.id });
+    if (b.mods.skeletons) for (const m of this.minions) m.active = false;
     if (b.mods.endSmoke) {
       this.addZone({ type: 'smoke', x: this.px, z: this.pz, radius: b.mods.endSmoke.radius * PX, duration: b.mods.endSmoke.slowDuration * MS, tickInterval: 0.2, slow: 0.4, damage: 0, element: 'physical', skillId: b.id });
     }
@@ -852,6 +945,7 @@ export class World {
     this.tickZones(dt);
     this.tickDrops(dt);
     this.tickPet(dt);
+    this.tickMinions(dt);
     this.tickSpawner(dt);
   }
 
@@ -860,6 +954,10 @@ export class World {
 
   /** The development menu's crab: trots behind the hero and fetches loot within PET_REACH. Never saved. */
   readonly pet = { active: false, x: 0, z: 0, yaw: 0, moving: false, targetDrop: -1 };
+  /** Summoned skeleton archers; `active` ones follow the hero. */
+  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, () => ({ active: false, x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0 }));
+  /** The enemy the hero last hit, which the skeletons shoot at; -1 for none. */
+  lastHitId = -1;
   private readonly petIgnore = new Set<number>();
 
   togglePet(on?: boolean): void {

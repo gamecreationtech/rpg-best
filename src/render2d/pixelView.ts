@@ -122,6 +122,8 @@ export class PixelView {
   private hero: Puppet;
   /** The dev-menu crab. */
   private pet: Puppet | null = null;
+  /** One puppet per skeleton archer slot, made when first needed. */
+  private readonly minionPuppets: Puppet[] = [];
   private heroKey = '';
   private areaKey = '';
   private readonly placed: Placed[] = [];
@@ -535,6 +537,18 @@ export class PixelView {
         break;
       }
       case 'buff_start': {
+        if (ev.id === 'skeleton_army') {
+          // The dead claw their way up: cracks and a spray of grave dirt under each one, a sickly green flash
+          for (const m of w.minions) {
+            if (!m.active) continue;
+            this.effects.cracks(m.x, m.z, 14, 0x66e070, 0.8, 6);
+            pt.burst(m.x, 0.1, m.z, 14, 1.6, 0x6a5a48, 0.6, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
+            pt.burst(m.x, 0.3, m.z, 8, 1, 0x9aff9a, 0.7, { up: 1.5, drag: 1, priority: 0.6 });
+            this.effects.flash(m.x, 0.8, m.z, 0x66e070, 1.2, 36, 0.35);
+          }
+          this.view.kick(0.06);
+          break;
+        }
         if (ev.id === 'sneak' || ev.id === 'sneak_ult') {
           // Slipping into shadow: a puff of darkness and a ring that closes in on the hero
           pt.burst(w.px, 0.6, w.pz, 26, 1.4, 0x080810, 0.9, { drag: 1.5, up: 0.8, priority: 0.8, size: 2, alpha: 0.85 });
@@ -597,6 +611,15 @@ export class PixelView {
         if (ev.status === 'stunned') pt.burst(e.x, 1.8, e.z, 6, 0.8, 0xffe066, 0.5, { priority: 0.5 });
         break;
       }
+      case 'buff_end':
+        if (ev.id === 'skeleton_army') {
+          // They crumble to bone dust where they stand
+          for (const m of w.minions) {
+            pt.burst(m.x, 0.6, m.z, 16, 1.2, 0xe8e0c8, 0.8, { gravity: 5, drag: 1, priority: 0.6, size: 2 });
+            pt.burst(m.x, 0.4, m.z, 8, 0.8, 0x9aff9a, 0.6, { up: 1, priority: 0.5 });
+          }
+        }
+        break;
       case 'zone_end':
       default:
         break;
@@ -1045,6 +1068,18 @@ export class PixelView {
       c.facing = 'side';
       this.advance(c, dt, w.pet.moving);
     }
+    for (let i = 0; i < w.minions.length; i++) {
+      const m = w.minions[i]!;
+      if (!m.active) continue;
+      let p = this.minionPuppets[i];
+      if (!p) {
+        p = { sheet: this.monsterSheet('archer'), anim: 'idle', animT: Math.random(), facing: 'front', faceLeft: false, flash: 0, dying: -1 };
+        this.minionPuppets[i] = p;
+      }
+      this.face(p, Math.sin(m.yaw), Math.cos(m.yaw));
+      if (m.shoot > 0.28 && p.anim !== 'attack') this.play(p, 'attack');
+      this.advance(p, dt, m.moving);
+    }
     this.syncEnemies(dt);
     this.syncZoneParticles(dt);
     this.effects.update(dt);
@@ -1255,6 +1290,13 @@ export class PixelView {
     }
     if (rite && !w.playerDead) this.drawRite();
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
+    for (let i = 0; i < w.minions.length; i++) {
+      const m = w.minions[i]!;
+      const p = this.minionPuppets[i];
+      if (!m.active || !p) continue;
+      this.pushPuppet(p, m.x, 0, m.z, 1, null);
+      if (m.shoot > 0.25) this.lights.push({ x: Math.round(cam.frameX(m.x, m.z)), y: Math.round(cam.frameY(m.x, 1, m.z)), radius: 24, intensity: 0.8, r: 0.4, g: 1, b: 0.5 });
+    }
     drawn++;
 
     // Enemies
@@ -1626,6 +1668,7 @@ export class PixelView {
     const put = (x: number, z: number) => ctx.drawImage(sh, Math.round(cam.frameX(x, z)) - (sh.width >> 1), Math.round(cam.frameY(x, 0, z)) - (sh.height >> 1));
     if (!w.playerDead) put(w.px, w.pz);
     for (const e of w.enemies) if (e.alive && !e.dead) put(e.x, e.z);
+    for (const m of w.minions) if (m.active) put(m.x, m.z);
     this.effects.draw(ctx, cam, 'floor');
   }
 

@@ -32,6 +32,8 @@ export interface BuffMods {
   orbitDaggers?: { count: number; radius: number; damageMult: number; hitCooldown: number; shape?: 'dagger' | 'hammer' | 'star'; spin?: number; /** Hit box of each orbiter in px; it only strikes what it actually touches. */ hitRadius?: number; /** Recasting while active adds another ring, `ringGap` px further out, up to `stacks`; each ring keeps its own timer and the outermost goes when the oldest runs out. */ stacks?: number; ringGap?: number };
   /** Smoke bomb dropped when the buff ends. */
   endSmoke?: { radius: number; slowDuration: number };
+  /** Skeleton archers raised for the buff's duration: they follow the hero and shoot whatever the hero last hit. `interval` ms between shots, `range` px. */
+  skeletons?: { count: number; damageMult: number; interval: number; range: number };
 }
 
 export type SkillEffect =
@@ -213,6 +215,7 @@ export const SKILLS: Record<string, SkillDef> = {
   lightning_strike: { id: 'lightning_strike', name: 'Lightning Strike', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'Call a bolt down on one enemy. Half again as strong against stunned or frozen targets.', manaCost: 28, cooldown: 6000, rank5Cooldown: 3500, rankBonus: 0.3, reqLevel: 10, element: 'lightning', effect: { kind: 'aoe', damageMult: 2.2, radius: 40, at: 'target', maxRange: 300, bonusVsDisabled: 1.5, visual: 'lightning' } },
   death: { id: 'death', name: 'Death', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Curse enemies to lose 1% of their life per second. Below 5% they die instantly.', manaCost: 60, cooldown: 20000, rank5Cooldown: 12000, reqLevel: 15, element: 'poison', effect: { kind: 'curse', maxRange: 250, radius: 50, duration: 10000, pctPerSec: 1, executeBelowPct: 5 } },
   poison_nova: { id: 'poison_nova', name: 'Poison Nova', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'A burst of plague that poisons everything nearby.', manaCost: 45, cooldown: 14000, rank5Cooldown: 8000, rankBonus: 0.25, reqLevel: 5, element: 'poison', effect: { kind: 'aoe', damageMult: 0.5, radius: 250, at: 'self', poison: { ticks: 15, tickMult: 0.55, interval: 1000 }, visual: 'nova_poison' } },
+  skeleton_army: { id: 'skeleton_army', name: 'Summon Skeleton Army', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Raise five skeleton archers from the ground. For thirty seconds they follow you and shoot whatever you attack.', manaCost: 70, cooldown: 40000, rank5Cooldown: 25000, rankBonus: 0.25, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 30000, mods: { skeletons: { count: 5, damageMult: 0.6, interval: 1200, range: 260 } } } },
   life_touch: { id: 'life_touch', name: 'Life Touch', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'A beam that drains life from an enemy into you for five seconds.', manaCost: 55, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.2, reqLevel: 10, element: 'poison', effect: { kind: 'beam', drainMult: 1.2, interval: 500, duration: 5000, maxRange: 200, extendedRange: 350, farEffectiveness: 0.5 } },
 
   // ---------------- ROGUE ----------------

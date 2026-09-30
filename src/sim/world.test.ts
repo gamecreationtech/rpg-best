@@ -159,7 +159,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(54);
+    expect(Object.keys(SKILLS).length).toBe(55);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -436,6 +436,35 @@ describe('ground stomp', () => {
     expect(e.status.slow).toBeGreaterThan(0);
     expect(w.px).toBeCloseTo(px, 3);
     expect(w.pz).toBeCloseTo(pz, 3);
+  });
+});
+
+describe('skeleton army', () => {
+  it('raises five archers that heel behind the hero and shoot what the hero hit', () => {
+    const w = new World(createPlayer('sorcerer', 'necromancer'), 7);
+    w.travel('arena');
+    w.player.level = 20;
+    w.player.mana = 500;
+    w.player.skillRanks.skeleton_army = 1;
+    expect(castSkill(w, 'skeleton_army', null).ok).toBe(true);
+    expect(w.minions.filter((m) => m.active).length).toBe(5);
+    for (const m of w.minions) if (m.active) expect(w.dist(m.x, m.z)).toBeLessThan(3);
+    // Nothing hit yet: no arrows
+    run(w, 1.5);
+    expect(w.projectiles.some((p) => p.alive)).toBe(false);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 5, w.pz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    hitEnemy(w, e, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: false });
+    expect(w.lastHitId).toBe(e.id);
+    run(w, 2.5);
+    expect(e.hp).toBeLessThan(100000 - 1);
+    // The buff ends and the bones fall
+    const b = w.buffs.find((b) => b.id === 'skeleton_army')!;
+    b.remaining = 0.01;
+    run(w, 0.1);
+    expect(w.minions.some((m) => m.active)).toBe(false);
   });
 });
 
