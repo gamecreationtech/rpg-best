@@ -39,6 +39,8 @@ export type SkillEffect =
       maxRange: number;
       /** Degrees of arc hit around the facing direction. Omit for a single target. */
       arc?: number;
+      /** How the hit is drawn: `overhead` drops a big weapon onto the target from above instead of a swing arc. */
+      visual?: 'overhead';
       radius?: number;
       stun?: number;
       slow?: number;
@@ -163,8 +165,8 @@ const R = 'rogue';
 
 export const SKILLS: Record<string, SkillDef> = {
   // ---------------- KNIGHT ----------------
-  heavy_strike: { id: 'heavy_strike', name: 'Heavy Strike', classId: K, tier: 'base', description: 'A crushing blow against one enemy.', manaCost: 10, cooldown: 1500, rank5Cooldown: 1000, rankBonus: 0.3, element: 'physical', upgradesTo: 'heavy_strike_ult', effect: { kind: 'melee', damageMult: 1.5, maxRange: 80 } },
-  heavy_strike_ult: { id: 'heavy_strike_ult', name: 'Heavy Strike', classId: K, tier: 'ultimate', description: 'Devastating blow that heals 5% of your life on cast and 10% on kill.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.2, maxRange: 80, healOnCastPct: 5, healOnKillPct: 10 } },
+  heavy_strike: { id: 'heavy_strike', name: 'Heavy Strike', classId: K, tier: 'base', description: 'A crushing blow against one enemy.', manaCost: 10, cooldown: 1500, rank5Cooldown: 1000, rankBonus: 0.3, element: 'physical', upgradesTo: 'heavy_strike_ult', effect: { kind: 'melee', damageMult: 1.5, maxRange: 80, visual: 'overhead' } },
+  heavy_strike_ult: { id: 'heavy_strike_ult', name: 'Heavy Strike', classId: K, tier: 'ultimate', description: 'Devastating blow that heals 5% of your life on cast and 10% on kill.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.2, maxRange: 80, healOnCastPct: 5, healOnKillPct: 10, visual: 'overhead' } },
   cleave: { id: 'cleave', name: 'Cleave', classId: K, tier: 'base', description: 'Sweep your weapon in a half circle.', manaCost: 20, cooldown: 3500, reqLevel: 5, element: 'physical', upgradesTo: 'cleave_ult', effect: { kind: 'melee', damageMult: 1.8, maxRange: 100, arc: 180 } },
   cleave_ult: { id: 'cleave_ult', name: 'Cleave', classId: K, tier: 'ultimate', description: 'A full spin that hits everything around you.', manaCost: 35, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.0, maxRange: 120, arc: 360 } },
   shield_bash: { id: 'shield_bash', name: 'Shield Bash', classId: K, tier: 'base', description: 'Slam an enemy with your shield, stunning it for a second.', manaCost: 15, cooldown: 5000, reqLevel: 10, element: 'physical', upgradesTo: 'shield_bash_ult', effect: { kind: 'melee', damageMult: 0.5, maxRange: 90, stun: 1000 } },

@@ -180,6 +180,8 @@ export type SimEvent =
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
   | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element }
+  /** A big weapon brought down from above onto the target standing at x, z. */
+  | { type: 'melee_smash'; x: number; z: number; element: Element }
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }
   | { type: 'projectile_hit'; x: number; z: number; element: Element; shape: ProjectileShape; splash: number }
   | { type: 'zone_start'; zone: Zone }

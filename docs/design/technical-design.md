@@ -36,6 +36,11 @@ What that means for each kind of asset:
   mirrored for left and right. Death is a fall and a fade drawn at run time.
 - **Effects.** A pooled square-particle system plus drawn effects (rings, discs,
   arcs, jagged bolts, sprite bursts). Each spell event maps to a few of them.
+  Rings and particles can start after a delay so an impact can follow a fall.
+  A single-target melee skill can ask for the `overhead` visual: the sim then
+  emits `melee_smash` at the target instead of a swing arc, and the renderer
+  drops a great maul onto it from above, flashes, cracks the ground and shakes
+  the camera. Heavy Strike and its ultimate use it.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'slash' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'slash' | 'smash' | 'strike' | 'link' | 'arrows' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -73,9 +73,9 @@ export class Effects2D {
     return fx;
   }
 
-  /** An expanding ring on the floor, from radius r0 to r1 in world units. */
-  ring(x: number, z: number, r0: number, r1: number, color: number, life: number, width = 1, light = 0): void {
-    const fx = this.push({ kind: 'ring', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)), width });
+  /** An expanding ring on the floor, from radius r0 to r1 in world units; `delay` holds it back that many seconds. */
+  ring(x: number, z: number, r0: number, r1: number, color: number, life: number, width = 1, light = 0, delay = 0): void {
+    const fx = this.push({ kind: 'ring', layer: 'floor', x, z, life, r0, r1, css: css(color), css2: css(lighten(color)), width, t: -delay });
     if (light > 0) this.withLight(fx, color, light, r1 * RING_RX * 1.5);
   }
 
@@ -93,6 +93,16 @@ export class Effects2D {
   /** The arc of a melee swing. */
   slash(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number): void {
     this.push({ kind: 'slash', layer: 'floor', x, z, life: 0.18, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)), width: 2 });
+  }
+
+  /**
+   * A big weapon brought down from above: a heavy blade drops onto the point
+   * for the first part of the life, then the impact cracks the ground and the
+   * blade fades where it landed. Takes `SMASH_DROP` seconds to land.
+   */
+  smash(x: number, z: number, color: number): void {
+    const fx = this.push({ kind: 'smash', layer: 'air', x, z, life: SMASH_LIFE, css: css(color), css2: css(lighten(color)), t: 0, light: 0 });
+    this.withLight(fx, lighten(color), 0, 70);
   }
 
   /** Lightning from the sky down to a point. */
@@ -139,6 +149,14 @@ export class Effects2D {
   /** Adds this frame's lights. */
   collectLights(cam: IsoCamera, out: Light[]): void {
     for (const fx of this.list) {
+      if (fx.t < 0) continue;
+      if (fx.kind === 'smash') {
+        // Dark on the way down, a burst of light the instant it lands
+        const landed = (fx.t - SMASH_DROP) / (fx.life - SMASH_DROP);
+        if (landed < 0) continue;
+        out.push({ x: cam.frameX(fx.x, fx.z), y: cam.frameY(fx.x, 0.3, fx.z), radius: fx.lightR, intensity: 2.6 * (1 - landed), r: fx.lr, g: fx.lg, b: fx.lb });
+        continue;
+      }
       if (fx.light <= 0) continue;
       const k = 1 - fx.t / fx.life;
       out.push({ x: cam.frameX(fx.x, fx.z), y: cam.frameY(fx.x, fx.y, fx.z), radius: fx.lightR, intensity: fx.light * k, r: fx.lr, g: fx.lg, b: fx.lb });
@@ -151,7 +169,7 @@ export class Effects2D {
 
   draw(ctx: CanvasRenderingContext2D, cam: IsoCamera, layer: Layer): void {
     for (const fx of this.list) {
-      if (fx.layer !== layer) continue;
+      if (fx.layer !== layer || fx.t < 0) continue;
       const k = fx.t / fx.life;
       const px = Math.round(cam.frameX(fx.x, fx.z));
       const py = Math.round(cam.frameY(fx.x, fx.y, fx.z));
@@ -204,6 +222,9 @@ export class Effects2D {
           ctx.globalAlpha = 1;
           break;
         }
+        case 'smash':
+          drawSmash(ctx, px, py, fx);
+          break;
         case 'strike': {
           const top = py - 140;
           jagged(ctx, px + Math.round(Math.sin(fx.seed) * 30), top, px, py, fx.css, fx.css2, Math.floor(fx.t * 40) + fx.seed, 8);
@@ -248,6 +269,104 @@ export class Effects2D {
       b.on = false;
     }
   }
+}
+
+/** Seconds the smash weapon takes to come down, and its whole life. */
+const SMASH_DROP = 0.1;
+const SMASH_LIFE = 0.38;
+/** Where the weapon starts, in frame pixels above and beside the target. */
+const SMASH_HEIGHT = 58;
+const SMASH_LEAN = 14;
+const SMASH_CRACKS = 6;
+/** The maul, measured along the haft from the striking face: head, haft, pommel. */
+const HEAD_LEN = 9;
+const HAFT_LEN = 26;
+const POMMEL_LEN = 3;
+
+/**
+ * The heavy-strike weapon: a great maul, haft first, that drops onto the target
+ * and buries its head at the feet. On the way down it trails a smear; landed,
+ * the ground cracks outward and everything fades.
+ */
+function drawSmash(ctx: CanvasRenderingContext2D, px: number, py: number, fx: Fx): void {
+  const drop = Math.min(1, fx.t / SMASH_DROP);
+  const landed = Math.max(0, (fx.t - SMASH_DROP) / (fx.life - SMASH_DROP));
+  // Ease in: it starts slow and slams
+  const d = drop * drop;
+  const tipX = px + SMASH_LEAN * (1 - d);
+  const tipY = py - SMASH_HEIGHT * (1 - d);
+  // Unit direction of travel in frame pixels, and its sideways normal
+  const len = Math.hypot(SMASH_LEAN, SMASH_HEIGHT);
+  const ux = -SMASH_LEAN / len;
+  const uy = SMASH_HEIGHT / len;
+  const sx = -uy;
+  const sy = ux;
+  // A four-sided piece of the weapon: from u0 to u1 up the haft, half-widths w0 and w1
+  const piece = (u0: number, u1: number, w0: number, w1: number, fill: string): void => {
+    const ax = tipX - ux * u0;
+    const ay = tipY - uy * u0;
+    const bx = tipX - ux * u1;
+    const by = tipY - uy * u1;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(ax - sx * w0), Math.round(ay - sy * w0));
+    ctx.lineTo(Math.round(ax + sx * w0), Math.round(ay + sy * w0));
+    ctx.lineTo(Math.round(bx + sx * w1), Math.round(by + sy * w1));
+    ctx.lineTo(Math.round(bx - sx * w1), Math.round(by - sy * w1));
+    ctx.closePath();
+    ctx.fill();
+  };
+  const alpha = landed > 0 ? 1 - landed : 1;
+  ctx.globalAlpha = alpha;
+  if (landed === 0) {
+    // Motion smear behind the head
+    ctx.globalAlpha = 0.45;
+    piece(-2, -16, 4, 1, fx.css2);
+    ctx.globalAlpha = alpha;
+  }
+  const total = HEAD_LEN + HAFT_LEN + POMMEL_LEN;
+  // Outline, one pixel larger all round
+  piece(-1, HEAD_LEN + 1, 6, 6, '#1a1410');
+  piece(HEAD_LEN, HEAD_LEN + HAFT_LEN, 2.5, 2.5, '#1a1410');
+  piece(HEAD_LEN + HAFT_LEN - 1, total + 1, 3, 3, '#1a1410');
+  // Head: steel block with a bright striking face and a lit leading edge
+  const flash = landed > 0 && landed < 0.2;
+  piece(0, HEAD_LEN, 5, 5, flash ? '#ffffff' : '#8e98a4');
+  piece(0, 2, 5, 5, flash ? '#ffffff' : '#d8e0e8');
+  piece(2, HEAD_LEN - 1, 5, 5, flash ? '#ffffff' : '#a8b2be');
+  piece(2, HEAD_LEN - 1, -4, -4, '#5a6470'); // shadow line on the trailing side (negative width flips it)
+  // Haft: dark wood with a leather grip near the top
+  piece(HEAD_LEN, HEAD_LEN + HAFT_LEN, 1.5, 1.5, '#6a4424');
+  piece(HEAD_LEN + HAFT_LEN - 9, HEAD_LEN + HAFT_LEN - 2, 1.5, 1.5, '#3a2414');
+  // Pommel
+  piece(HEAD_LEN + HAFT_LEN, total, 2, 2, '#8e98a4');
+  if (landed > 0) {
+    // Ground cracks radiating from the impact, growing then fading
+    const reach = 4 + 14 * Math.min(1, landed * 3);
+    for (let i = 0; i < SMASH_CRACKS; i++) {
+      const a = fx.seed + (i / SMASH_CRACKS) * Math.PI * 2;
+      const cx = Math.cos(a);
+      const cy = Math.sin(a) * 0.5;
+      const mx = Math.round(px + cx * reach * 0.55 + Math.sin(fx.seed + i * 3.1) * 2);
+      const my = Math.round(py + cy * reach * 0.55 + Math.cos(fx.seed + i * 2.3) * 1);
+      for (const [style, w2] of [['#1a1410', 3], [fx.css2, 1]] as const) {
+        ctx.strokeStyle = style;
+        ctx.lineWidth = w2;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(mx, my);
+        ctx.lineTo(Math.round(px + cx * reach), Math.round(py + cy * reach));
+        ctx.stroke();
+      }
+    }
+    // Impact flash: a bright cross at the landing point for the first frames
+    if (flash) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px - 8, py - 1, 17, 2);
+      ctx.fillRect(px - 1, py - 5, 2, 10);
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 /** A lightning-like line: straight segments with a sideways jitter that changes every few frames. */

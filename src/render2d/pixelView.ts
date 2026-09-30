@@ -471,6 +471,9 @@ export class PixelView {
       case 'melee_swing':
         this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
+      case 'melee_smash':
+        this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
+        break;
       case 'aoe':
         this.aoeVisual(ev.visual, ev.x, ev.z, ev.radius, ev.element);
         break;
@@ -546,6 +549,15 @@ export class PixelView {
 
   private iceImpact(x: number, z: number): void {
     this.particles.burst(x, 0.3, z, 6, 1.5, 0x9fe0ff, 0.5, { drag: 2, up: 1.5, priority: 0.3 });
+  }
+
+  /** Heavy Strike: a big weapon dropped from above; dust and a ring when it lands. */
+  private smash(x: number, z: number, color: number): void {
+    this.effects.smash(x, z, color);
+    this.effects.ring(x, z, 0.15, 1.1, 0xc8b8a0, 0.3, 1, 0, 0.1);
+    this.particles.burst(x, 0.1, z, 12, 1.6, 0xc8b8a0, 0.45, { up: 1.4, gravity: 6, priority: 0.6, size: 2, delay: 0.1 });
+    this.particles.burst(x, 0.3, z, 6, 2.2, color, 0.3, { up: 2, gravity: 8, priority: 0.5, delay: 0.1 });
+    this.view.kick(0.16);
   }
 
   private stomp(x: number, z: number, radius: number, color: number): void {

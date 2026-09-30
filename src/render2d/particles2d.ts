@@ -25,6 +25,8 @@ export interface SpawnOptions {
   size?: number;
   /** Below this, spawns are dropped first when the pool is full. */
   priority?: number;
+  /** Seconds to wait, unseen and unmoving, before the particle starts. */
+  delay?: number;
 }
 
 /**
@@ -65,7 +67,7 @@ export class Particles2D {
     p.vx = vx;
     p.vy = vy + (o.up ?? 0);
     p.vz = vz;
-    p.age = 0;
+    p.age = -(o.delay ?? 0);
     p.life = life;
     p.size = o.size ?? 1;
     p.gravity = o.gravity ?? 0;
@@ -87,6 +89,7 @@ export class Particles2D {
     for (let i = 0; i < this.count; i++) {
       const p = this.pool[i]!;
       p.age += dt;
+      if (p.age < 0) continue;
       if (p.age >= p.life) {
         // Swap with the last live particle
         const last = this.pool[this.count - 1]!;
@@ -118,6 +121,7 @@ export class Particles2D {
     let lastAlpha = -1;
     for (let i = 0; i < this.count; i++) {
       const p = this.pool[i]!;
+      if (p.age < 0) continue;
       const t = p.age / p.life;
       const alpha = p.alpha * (t < 0.66 ? 1 : 1 - (t - 0.66) / 0.34);
       if (alpha !== lastAlpha) {
