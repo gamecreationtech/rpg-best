@@ -69,6 +69,7 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   if (p.stun) applyStun(w, e, p.stun * MS);
   if (p.freeze) applyFreeze(w, e, p.freeze * MS);
   if (p.slow) e.status.slow = Math.max(e.status.slow, p.slow * MS);
+  if (p.knockback && !e.dummy) w.shove(e, p.knockback);
   const burnChance = (proc.burn ?? 0) + (p.element === 'fire' ? d.burnChance : 0);
   if (burnChance > 0 && roll() < burnChance) {
     e.status.burn = { ticks: STATUS_RULES.burnTicks, timer: 0, interval: STATUS_RULES.burnInterval * MS, damage: Math.max(1, Math.round((p.amount * STATUS_RULES.burnTickPct) / 100)) };
@@ -142,7 +143,16 @@ export function applyFreeze(w: World, e: Enemy, seconds: number): void {
 export function tickStatuses(w: World, e: Enemy, dt: number): void {
   const s = e.status;
   s.stun = Math.max(0, s.stun - dt);
+  // Winter's Heart: the ice breaks and takes a share of the life with it
+  if (s.freeze > 0 && s.freeze - dt <= 0 && s.thaw > 0) {
+    const amount = Math.max(1, Math.round((e.maxHp * s.thaw) / 100));
+    s.thaw = 0;
+    w.emit({ type: 'status', id: e.id, status: 'shattered' });
+    dotDamage(w, e, amount, 'cold');
+    if (e.dead) return;
+  }
   s.freeze = Math.max(0, s.freeze - dt);
+  s.chill = Math.max(0, s.chill - dt * 0.35);
   s.slow = Math.max(0, s.slow - dt);
   s.shock = Math.max(0, s.shock - dt);
   const dots: [keyof Pick<EnemyStatusDots, 'burn' | 'poison' | 'bleed'>, Element][] = [['burn', 'fire'], ['poison', 'poison'], ['bleed', 'physical']];

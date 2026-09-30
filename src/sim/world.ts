@@ -9,7 +9,7 @@ import { PLEDGES } from '../data/pledges';
 import { ELEMENT_COLORS, type Element, type StatMap } from '../data/stats';
 import { MS, PX } from '../data/units';
 import { Rng } from '../gen/rng';
-import { damagePlayer, hitEnemy, tickStatuses, skillDamage } from './combat';
+import { applyFreeze, damagePlayer, hitEnemy, tickStatuses, skillDamage } from './combat';
 import type { EquipKey } from './items/equipment';
 import type { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
@@ -106,7 +106,7 @@ export interface Beam {
 }
 
 function emptyStatus(): Enemy['status'] {
-  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1 };
+  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0 };
 }
 
 /**
@@ -467,6 +467,17 @@ export class World {
     t.hp = t.maxHp;
   }
 
+  /** Shoves a monster straight away from the hero by `dist` world units, stopping at walls. */
+  shove(e: Enemy, dist: number): void {
+    const dx = e.x - this.px;
+    const dz = e.z - this.pz;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.001) return;
+    this.map.slide(e.x, e.z, e.x + (dx / d) * dist, e.z + (dz / d) * dist, e.radius, this.slid);
+    e.x = this.slid.x;
+    e.z = this.slid.z;
+  }
+
   /** A blow on the titan. When its life is gone the buff ends and it crumbles. */
   damageTitan(amount: number, element: Element): void {
     const t = this.titan;
@@ -731,7 +742,7 @@ export class World {
     const zone: Zone = {
       id: this.nextZoneId++,
       dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0,
-      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null,
+      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0,
       ...spec,
     };
     if (zone.type === 'fire_prison' && zone.holds) {
@@ -2199,6 +2210,32 @@ export class World {
               hitEnemy(this, e, packetFor());
             }
           }
+          break;
+        case 'frostbite':
+          // The cold bites: life drains, feet slow, and after enough of it the blood freezes
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+              e.status.slow = Math.max(e.status.slow, z.slow + 0.1);
+              e.status.chill += z.tickInterval * 1.5;
+              const drain = Math.max(1, Math.round((e.maxHp * z.pctPerSec * z.tickInterval) / 100));
+              hitEnemy(this, e, { amount: drain, element: 'cold', canCrit: false, skillId: z.skillId, weaponHit: false });
+              if (e.status.chill >= z.freezeAfter && e.status.freeze <= 0 && !e.dummy) {
+                e.status.chill = 0;
+                applyFreeze(this, e, z.freeze);
+              }
+            }
+          }
+          break;
+        case 'frost_patch':
+          // Ice underfoot: the first step onto it freezes, once per monster
+          for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+            if (z.hit.includes(e.id) || e.dummy) continue;
+            z.hit.push(e.id);
+            applyFreeze(this, e, z.freeze);
+          }
+          break;
+        case 'winter':
           break;
         case 'summon':
           // The summoned thing acts once, when its rise is done

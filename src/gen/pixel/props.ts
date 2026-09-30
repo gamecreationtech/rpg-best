@@ -297,6 +297,27 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       frames.push(b.toCanvas());
       return prop(frames, 6 * s, s, 1);
     }
+    case 'lance': {
+      // A spear of ice: a long crystal shaft, a faceted head, a blue-white glow along the core and frost flaking off the tail
+      const L = 26 * s;
+      const ice = ramp(0x9fe0ff, pal.contrast);
+      for (let f = 0; f < 2; f++) {
+        const b = new PixelBuffer(L, 7 * s);
+        b.rect(3 * s, 2 * s, L - 8 * s, s, ice[2]);
+        b.rect(3 * s, 3 * s, L - 8 * s, s, [255, 255, 255]);
+        b.rect(3 * s, 4 * s, L - 8 * s, s, ice[1]);
+        // Head: widening then to a point
+        b.rect(L - 6 * s, s, 2 * s, 5 * s, ice[2]);
+        b.rect(L - 4 * s, 2 * s, 2 * s, 3 * s, ice[3]);
+        b.rect(L - 2 * s, 3 * s, 2 * s, s, [255, 255, 255]);
+        // Facets down the shaft
+        for (let i = 0; i < 4; i++) b.set((7 + i * 4 + f) * s, 2 * s, ice[3]);
+        // Frost flaking off behind
+        for (let i = 0; i < 3; i++) b.set((i + f) * s, (1 + i * 2) * s, ice[3], 200);
+        frames.push(b.toCanvas());
+      }
+      return prop(frames, L >> 1, 3 * s, 0.08);
+    }
     case 'greatarrow': {
       // The daemon's arrow: a black shaft as long as a hero is tall, a broad barbed head, ragged dark
       // fletching, and runes down the shaft that glow in the pledge's colour and blink between frames

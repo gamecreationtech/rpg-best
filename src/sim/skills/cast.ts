@@ -153,9 +153,9 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
 
   const strike = () => {
     if (eff.arc) {
-      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element, visual: eff.visual === 'cleave' || eff.visual === 'void' ? eff.visual : undefined });
+      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element, visual: eff.visual === 'cleave' || eff.visual === 'void' || eff.visual === 'avalanche' ? eff.visual : undefined });
       const hits = w.enemiesInArc(w.px, w.pz, dir.x, dir.z, range, eff.arc);
-      for (const e of hits) hitEnemy(w, e, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct }, eff.scalesWithInt));
+      for (const e of hits) hitEnemy(w, e, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct, knockback: eff.knockback ? eff.knockback * PX : undefined }, eff.scalesWithInt));
     } else if (target && target.alive && !target.dead) {
       if (eff.visual === 'overhead' || eff.visual === 'holy_shield' || eff.visual === 'bloody') w.emit({ type: 'melee_impact', visual: eff.visual, x: target.x, z: target.z, element: def.element });
       else w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: 60, element: def.element });
@@ -212,7 +212,7 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
   const loose = (fromX: number, fromZ: number, y?: number): void => {
     for (let i = 0; i < count; i++) {
       const a = count > 1 ? baseAngle - spread / 2 + (spread * i) / (count - 1) : baseAngle;
-      const p = packet(w, def, eff.damageMult, { stun: eff.stun });
+      const p = packet(w, def, eff.damageMult, { stun: eff.stun, bonusVsDisabled: eff.bonusVsDisabled });
       if (eff.bleed) p.bleed = { ticks: eff.bleed.ticks, interval: eff.bleed.interval, damage: Math.max(1, Math.round(p.amount * eff.bleed.tickMult)) };
       w.spawnProjectile({
         owner: 'player',
@@ -284,9 +284,11 @@ function landAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
   const apply = () => {
     w.emit({ type: 'aoe', visual: eff.visual, x: cx, z: cz, radius, element: def.element });
     const list = eff.hitsAllVisible ? w.enemiesWithin(cx, cz, 22) : w.enemiesWithin(cx, cz, radius);
+    if (eff.visual === 'winter') w.addZone({ type: 'winter', x: cx, z: cz, radius, duration: (eff.freeze ?? 3000) * MS, damage: 0, element: def.element, skillId: def.id });
     for (const e of list) {
       const p = packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, freeze: eff.freeze, bonusVsDisabled: eff.bonusVsDisabled });
       if (eff.poison) p.poison = { ticks: eff.poison.ticks, interval: eff.poison.interval, damage: Math.max(1, Math.round(p.amount * eff.poison.tickMult)) };
+      if (eff.thawPct && !e.dummy) e.status.thaw = Math.max(e.status.thaw, eff.thawPct);
       hitEnemy(w, e, p);
     }
     if (eff.visual === 'stomp' || eff.visual === 'boulder') w.emit({ type: 'kick', k: 0.35 });
@@ -380,6 +382,9 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
     case 'arrow_storm':
       w.addZone({ ...common, type: 'arrow_storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 500) * MS });
       break;
+    case 'frostbite':
+      w.addZone({ ...common, type: 'frostbite', tickInterval: (eff.tickInterval ?? 500) * MS, slow: (eff.slow ?? 1000) * MS, pctPerSec: eff.pctPerSec ?? 2, freezeAfter: (eff.freezeAfter ?? 3000) * MS, freeze: 1.5 });
+      break;
   }
   return { ok: true };
 }
@@ -398,7 +403,10 @@ function castMobility(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind:
   }
   const dest = w.clampDestination(w.px + dir.x * dist, w.pz + dir.z * dist, !!eff.throughWalls);
   if (eff.mode === 'teleport') {
+    const fromX = w.px;
+    const fromZ = w.pz;
     w.teleportTo(dest.x, dest.z);
+    if (eff.leaveFrost) w.addZone({ type: 'frost_patch', x: fromX, z: fromZ, radius: eff.leaveFrost.radius * PX, duration: eff.leaveFrost.duration * MS, freeze: eff.leaveFrost.freeze * MS, damage: 0, element: def.element, skillId: def.id });
   } else {
     w.startLeap(dest.x, dest.z, (eff.duration ?? 500) * MS, true, null, !!eff.invulnerable);
   }

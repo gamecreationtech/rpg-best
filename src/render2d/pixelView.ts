@@ -490,6 +490,7 @@ export class PixelView {
       case 'melee_swing':
         if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.range);
+        else if (ev.visual === 'avalanche') this.avalanche(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
       case 'melee_impact':
@@ -521,6 +522,15 @@ export class PixelView {
         }
         if (z.type === 'storm') this.effects.flash(z.x, 3, z.z, 0xd8e8ff, 3, 200, 0.2);
         if (z.type === 'blizzard') this.effects.ring(z.x, z.z, 0.3, 6, 0xd8f4ff, 0.6, 1, 1);
+        if (z.type === 'frostbite') {
+          this.effects.ring(z.x, z.z, 0.3, z.radius, 0x9fe0ff, 0.5, 2, 1.2);
+          pt.burst(z.x, 0.2, z.z, 24, 2.5, 0xd8f4ff, 0.7, { up: 1, drag: 1.5, priority: 0.6 });
+        }
+        if (z.type === 'frost_patch') {
+          // The ground the hero left freezes over with a crack
+          this.effects.ring(z.x, z.z, 0.1, z.radius, 0xffffff, 0.3, 1, 1);
+          pt.burst(z.x, 0.2, z.z, 14, 1.6, 0xd8f4ff, 0.5, { up: 1.5, priority: 0.6 });
+        }
         if (z.type === 'summon') {
           // The ground breaks open where the daemon comes up
           this.effects.cracks(z.x, z.z, 30, 0x55cc33, 1.2, 8);
@@ -646,6 +656,13 @@ export class PixelView {
         const e = w.enemies[ev.id]!;
         if (ev.status === 'frozen') pt.burst(e.x, 0.8, e.z, 12, 1.5, 0x9fe0ff, 0.5, { drag: 2, priority: 0.6 });
         if (ev.status === 'stunned') pt.burst(e.x, 1.8, e.z, 6, 0.8, 0xffe066, 0.5, { priority: 0.5 });
+        if (ev.status === 'shattered') {
+          // The ice breaks off the monster in shards
+          pt.burst(e.x, 0.9, e.z, 22, 2.4, 0xd8f4ff, 0.6, { gravity: 7, up: 2, priority: 0.7, size: 2 });
+          pt.burst(e.x, 0.9, e.z, 10, 1.6, 0xffffff, 0.5, { gravity: 7, up: 2.5, priority: 0.7 });
+          this.effects.flash(e.x, 0.9, e.z, 0xd8f4ff, 1.6, 40, 0.25);
+          this.effects.ring(e.x, e.z, 0.1, 0.9, 0xffffff, 0.25, 1);
+        }
         break;
       }
       case 'buff_end':
@@ -980,6 +997,23 @@ export class PixelView {
     this.lights.push({ x: fx, y: fy - 8, radius: 46, intensity: 1.1 + Math.sin(this.time * 7) * 0.2, r: 1, g: 0.15, b: 0.2 });
   }
 
+  /** Avalanche: a wall of snow rolling out through the cone, a second wave behind it, snow and fog thrown ahead, and a cold flash. */
+  private avalanche(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
+    this.effects.sweep(x, z, dirX, dirZ, range, arc, 0xd8f4ff, 0.45);
+    this.effects.sweep(x, z, dirX, dirZ, range * 0.8, arc, 0x9fe0ff, 0.5, 0.1);
+    const a0 = Math.atan2(dirZ, dirX) - (arc * Math.PI) / 360;
+    const n = 40;
+    for (let i = 0; i < n; i++) {
+      const t = i / n;
+      const a = a0 + ((arc * Math.PI) / 180) * Math.random();
+      const r = range * (0.2 + 0.8 * t);
+      const snow = Math.random() < 0.6;
+      this.particles.spawn(x + Math.cos(a) * r * 0.5, 0.2 + Math.random() * 0.8, z + Math.sin(a) * r * 0.5, Math.cos(a) * 5, 1 + Math.random(), Math.sin(a) * 5, 0.5 + Math.random() * 0.3, snow ? 0xffffff : 0xb8d8f0, { drag: 2.5, gravity: 2, priority: 0.6, size: snow ? 2 : 4, alpha: snow ? 0.95 : 0.55, delay: t * 0.3 });
+    }
+    this.effects.flash(x + dirX * range * 0.5, 0.8, z + dirZ * range * 0.5, 0xd8f4ff, 1.8, 90, 0.4);
+    this.view.kick(0.12);
+  }
+
   /** Shield Bash: a holy shield springs up over the enemy, with gold motes rising off it. */
   private holyShield(x: number, z: number): void {
     this.effects.shield(x, z, 0xffd860);
@@ -1031,6 +1065,21 @@ export class PixelView {
       case 'stomp':
         this.shockwave(x, z, radius);
         break;
+      case 'winter': {
+        // Winter's Heart: the cold takes the whole field at once. A hard white flash, a wave of frost racing to the
+        // edge of sight, frost thrown up everywhere, and the screen shakes
+        this.effects.flash(x, 1, z, 0xffffff, 4, 300, 0.35);
+        this.effects.wave(x, z, 0.3, radius, 0xd8f4ff, 0.7, 2.5);
+        this.effects.wave(x, z, 0.3, radius * 0.9, 0x9fe0ff, 0.8, 0, 0.12);
+        this.effects.disc(x, z, radius, 0xa8d8f0, 3.4, 0.22);
+        for (let i = 0; i < 60; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * Math.min(radius, 11);
+          this.particles.spawn(x + Math.cos(a) * r, 0.1, z + Math.sin(a) * r, 0, 1.5 + Math.random(), 0, 0.8, i % 3 ? 0xd8f4ff : 0xffffff, { gravity: 3, priority: 0.6, size: 2, delay: (r / 11) * 0.6 });
+        }
+        this.view.kick(0.25);
+        break;
+      }
       case 'nova_cold': {
         // A shockwave of ice from the hero: a hard white-blue wave out to the radius, a frosted floor left behind,
         // shards thrown up along the wave and a cold flash
@@ -1196,6 +1245,16 @@ export class PixelView {
         const rim = Math.random() < 0.35;
         const r = rim ? z.radius : Math.sqrt(Math.random()) * z.radius * 0.9;
         pt.spawn(z.x + Math.cos(a) * r, rim ? 0.5 : 0.1, z.z + Math.sin(a) * r, 0, rim ? 1.6 : 0.8, 0, rim ? 0.5 : 1.6, Math.random() < 0.5 ? 0xfff4c0 : 0xffe87a, { priority: 0.4, alpha: 0.9 });
+      }
+      if (z.type === 'frostbite' && Math.random() < dt * 14) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * z.radius;
+        pt.spawn(z.x + Math.cos(a) * r, 0.1, z.z + Math.sin(a) * r, 0, 0.5, 0, 1.2, Math.random() < 0.5 ? 0xffffff : 0x9fe0ff, { priority: 0.4, alpha: 0.8 });
+      }
+      if (z.type === 'winter' && Math.random() < dt * 40) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(Math.random()) * Math.min(z.radius, 11);
+        pt.spawn(z.x + Math.cos(a) * r, 3.5 + Math.random(), z.z + Math.sin(a) * r, 0.3, -2.5, 0.3, 1.2, 0xffffff, { priority: 0.35, alpha: 0.8 });
       }
       if (z.type === 'arrow_storm' && Math.random() < dt * 8) {
         // Stray arrows dropping across the field between volleys
@@ -1381,7 +1440,13 @@ export class PixelView {
       const holy = pr.shape === 'hammer' || pr.shape === 'star';
       const venom = pr.shape === 'arrow' && pr.element === 'poison' && pr.owner !== 'enemy';
       const great = pr.shape === 'greatarrow';
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : great ? 0x55cc33 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const lance = pr.shape === 'lance';
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : great ? 0x55cc33 : lance ? 0x9fe0ff : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      if (lance) {
+        // Frost crystals shed behind the lance, and a cold light on it
+        if (Math.random() < 0.8) this.particles.spawn(pr.x, pr.y + (Math.random() - 0.5) * 0.3, pr.z, (Math.random() - 0.5) * 0.5, 0.3, (Math.random() - 0.5) * 0.5, 0.45, Math.random() < 0.4 ? 0xffffff : 0x9fe0ff, { priority: 0.5, alpha: 0.9, drag: 2 });
+        this.lights.push({ x: Math.round(cam.frameX(pr.x, pr.z)), y: Math.round(cam.frameY(pr.x, pr.y, pr.z)), radius: 34, intensity: 1, r: 0.6, g: 0.85, b: 1 });
+      }
       if (great) {
         // The daemon's arrow tears the air: a green wake behind it and a hard green light
         for (let i = 0; i < 2; i++) this.particles.spawn(pr.x - (pr.vx / Math.max(1, Math.hypot(pr.vx, pr.vz))) * i * 0.4, pr.y + (Math.random() - 0.5) * 0.3, pr.z - (pr.vz / Math.max(1, Math.hypot(pr.vx, pr.vz))) * i * 0.4, (Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6, 0.35, i === 0 ? 0xc0ffa0 : 0x55cc33, { priority: 0.6, size: 2, alpha: 0.9, drag: 3 });
@@ -1680,6 +1745,35 @@ export class PixelView {
         case 'wind':
           this.drawGale(ctx, z);
           break;
+        case 'frostbite': {
+          // Ground going white with hoarfrost, sparkling, under a faint rim
+          ellipse(z.x, z.z, z.radius, '#a8d8f0', true, 0.22);
+          ellipse(z.x, z.z, z.radius, '#d8f4ff', false, 0.5, 1);
+          this.glitter(ctx, z, 30, ['#ffffff', '#d8f4ff', '#9fe0ff']);
+          break;
+        }
+        case 'frost_patch': {
+          // A sheet of ice: pale, glassy, cracked, with a slipping highlight
+          const life = Math.min(1, z.remaining / 0.5);
+          ellipse(z.x, z.z, z.radius, '#c8ecff', true, 0.55 * life);
+          ellipse(z.x, z.z, z.radius, '#ffffff', false, 0.8 * life, 1);
+          const cx = Math.round(cam.frameX(z.x, z.z));
+          const cy = Math.round(cam.frameY(z.x, 0, z.z));
+          ctx.globalAlpha = 0.7 * life;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          for (let i = 0; i < 4; i++) {
+            const a = z.id * 1.3 + i * 1.7;
+            const r = z.radius * RING_RX * 0.8;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.round(Math.cos(a) * r * 0.5), cy + Math.round(Math.sin(a) * r * 0.25));
+            ctx.lineTo(cx + Math.round(Math.cos(a + 0.4) * r), cy + Math.round(Math.sin(a + 0.4) * r * 0.5));
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
         case 'storm':
           // The dark patch under the storm cloud; the lighting pass darkens it further (see zoneLight)
           ellipse(z.x, z.z, z.radius, '#101828', true, 0.35);
@@ -1729,6 +1823,23 @@ export class PixelView {
       put(t.x, t.z + 0.3);
     }
     this.effects.draw(ctx, cam, 'floor');
+  }
+
+  /** Grains of light scattered over a zone's floor, each blinking in its own time, in the given colours (brightest first). */
+  private glitter(ctx: CanvasRenderingContext2D, z: Zone, count: number, colors: [string, string, string]): void {
+    const cam = this.view;
+    for (let i = 0; i < count; i++) {
+      const h1 = Math.sin(i * 12.9898 + z.id * 78.233) * 43758.5453;
+      const h2 = Math.sin(i * 39.3467 + z.id * 11.135) * 24634.6345;
+      const a = (h1 - Math.floor(h1)) * Math.PI * 2;
+      const r = Math.sqrt(h2 - Math.floor(h2)) * z.radius * 0.97;
+      const blink = Math.sin(this.time * 5 + i * 1.7);
+      if (blink < -0.2) continue;
+      ctx.fillStyle = blink > 0.75 ? colors[0] : blink > 0.3 ? colors[1] : colors[2];
+      const wx = z.x + Math.cos(a) * r;
+      const wz = z.z + Math.sin(a) * r;
+      ctx.fillRect(Math.round(cam.frameX(wx, wz)), Math.round(cam.frameY(wx, 0, wz)), 1, 1);
+    }
   }
 
   /**
@@ -2019,6 +2130,10 @@ export class PixelView {
       this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: -0.6 + flicker, r: 0, g: 0, b: 0 });
     } else if (z.type === 'blizzard') {
       this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 2) * TILE_W * 1.4, intensity: 0.35, r: 0.75, g: 0.88, b: 1 });
+    } else if (z.type === 'winter') {
+      // Everything in sight goes white and cold until the ice breaks
+      const k = Math.min(1, z.remaining / 0.4);
+      this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0, z.z), radius: (z.radius + 4) * TILE_W * 1.4, intensity: 0.9 * k, r: 0.8, g: 0.92, b: 1 });
     } else if (z.type === 'smoke') {
       // Murk: the smoke swallows the light inside it
       this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W * 1.3, intensity: -0.35 * Math.min(1, z.remaining / 0.8), r: 0, g: 0, b: 0 });

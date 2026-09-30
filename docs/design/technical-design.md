@@ -97,6 +97,15 @@ What that means for each kind of asset:
   renderer draws a generated two-frame daemon there, clipped at the floor as
   it rises and sinks, bow drawn until the shot, and the `greatarrow` shape is
   a hero-long black arrow with blinking green runes, a green wake and light.
+  The Wintercaller's five: Ice Lance is a piercing `lance` projectile with
+  `bonusVsDisabled`; Frostbite a `frostbite` zone (drain, slow, chill to a
+  freeze) drawn as hoarfrost with glitter; Frost Step a teleport that leaves a
+  `frost_patch` zone freezing the first step onto it, drawn as cracked ice;
+  Avalanche an arc melee with `knockback` (`World.shove`) drawn as two
+  rolling white sweeps with snow and fog thrown ahead; Winter's Heart a
+  screen-wide freeze with `thawPct`, drawn as a white flash, a frost wave to
+  the edge of sight and a `winter` zone that casts a cold white light and
+  snow until the ice breaks in shards on every monster.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

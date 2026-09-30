@@ -46,7 +46,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   wintercaller: {
     id: 'wintercaller', classId: 'sorcerer', name: 'Wintercaller', title: 'Herald of the Frost', color: 0x6aa8ff, cloth: 0x2a4a9a,
     description: 'The Wintercaller commands the eternal freeze: encasing foes in ice, blanketing the battlefield in blizzard.',
-    skills: ['frozen_armor', 'frost_nova', 'blizzard'],
+    skills: ['frozen_armor', 'frost_nova', 'blizzard', 'ice_lance', 'frostbite', 'frost_step', 'avalanche', 'winters_heart'],
   },
   quiverbound: {
     id: 'quiverbound', classId: 'rogue', name: 'Quiverbound', title: 'Master of the Hunt', color: 0x55cc33, armor: { plate: 0x3e7a2e, dark: 0x264a1e, trim: 0x8fe08f },

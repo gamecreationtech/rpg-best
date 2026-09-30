@@ -39,6 +39,10 @@ export interface EnemyStatus {
   poison: DotState | null;
   bleed: DotState | null;
   curse: { remaining: number; pctPerSec: number; executeBelow: number } | null;
+  /** Seconds of cold soaked up in a Frostbite patch; past the patch's threshold it freezes. */
+  chill: number;
+  /** Share of max life lost when the current freeze ends (Winter's Heart). */
+  thaw: number;
   /** Zone id holding this enemy in place (Fire Prison ultimate). */
   heldBy: number;
 }
@@ -81,7 +85,7 @@ export interface Enemy {
   taunt: number;
 }
 
-export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
+export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
 
 export interface DamagePacket {
   amount: number;
@@ -103,6 +107,8 @@ export interface DamagePacket {
   fromProc?: boolean;
   /** Shot by a summoned skeleton, so it never changes what the hero is counted as attacking. */
   fromMinion?: boolean;
+  /** Shove the target this many world units away from the hero. */
+  knockback?: number;
 }
 
 export interface Projectile {
@@ -135,7 +141,7 @@ export interface Projectile {
   skillId: string | null;
 }
 
-export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon';
+export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon' | 'frostbite' | 'frost_patch' | 'winter';
 
 export interface Zone {
   id: number;
@@ -167,6 +173,10 @@ export interface Zone {
   count: number;
   mods: BuffMods | null;
   onEnd: (() => void) | null;
+  /** Frostbite: life lost per second inside as a share of max, and seconds of cold before the freeze; frost patch: seconds frozen on stepping in. */
+  pctPerSec: number;
+  freezeAfter: number;
+  freeze: number;
   /** A summon's one action, run once when `tickInterval` has passed (the daemon looses its arrow). */
   onFire: (() => void) | null;
 }
@@ -204,7 +214,7 @@ export type SimEvent =
   | { type: 'player_died' }
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
-  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' }
+  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' | 'avalanche' }
   /** A companion's blow: the eagle's talons or the angel's sword, from x, z toward dirX, dirZ. */
   | { type: 'minion_strike'; kind: 'eagle' | 'angel'; x: number; z: number; dirX: number; dirZ: number }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */
@@ -228,4 +238,4 @@ export type SimEvent =
   | { type: 'open'; panel: InteractableKind }
   | { type: 'area'; area: 'town' | 'arena'; zone?: string; /** A picked monster level past the zone's own. */ level?: number }
   | { type: 'kick'; k: number }
-  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' };
+  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' | 'shattered' };

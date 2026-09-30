@@ -108,8 +108,8 @@ export class Effects2D {
   }
 
   /** A wide filled sweep for a heavy arc attack: a red band from half the reach to the full reach, drawn ahead of a thin edge. */
-  sweep(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number, life = 0.2): void {
-    const fx = this.push({ kind: 'sweep', layer: 'floor', x, z, life, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)) });
+  sweep(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number, life = 0.2, delay = 0): void {
+    const fx = this.push({ kind: 'sweep', layer: 'floor', x, z, life, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)), t: -delay });
     this.withLight(fx, color, 1.6, range * RING_RX * 1.3);
   }
 

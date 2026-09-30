@@ -6,6 +6,7 @@ import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { castSkill } from './skills/cast';
+import type { Enemy } from './types';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -159,7 +160,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(58);
+    expect(Object.keys(SKILLS).length).toBe(63);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -465,6 +466,86 @@ describe('skeleton army', () => {
     b.remaining = 0.01;
     run(w, 0.1);
     expect(w.minions.some((m) => m.active)).toBe(false);
+  });
+});
+
+describe('wintercaller', () => {
+  const setup = (): World => {
+    const w = new World(createPlayer('sorcerer', 'wintercaller'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    for (const id of ['ice_lance', 'frostbite', 'frost_step', 'avalanche', 'winters_heart']) w.player.skillRanks[id] = 1;
+    return w;
+  };
+  const ghoul = (w: World, dx: number, dz: number): Enemy => {
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + dx, w.pz + dz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    return e;
+  };
+
+  it('ice lance passes through a line of enemies and hits frozen ones twice as hard', () => {
+    const w = setup();
+    // Straight down the arena's open lane
+    const near = ghoul(w, 0, 3);
+    const far = ghoul(w, 0, 6);
+    far.status.freeze = 5;
+    expect(castSkill(w, 'ice_lance', { x: w.px, z: w.pz + 8 }).ok).toBe(true);
+    run(w, 1);
+    const nearHit = 100000 - near.hp;
+    const farHit = 100000 - far.hp;
+    expect(nearHit).toBeGreaterThan(0);
+    expect(farHit).toBeGreaterThanOrEqual(nearHit * 1.9);
+  });
+
+  it('frostbite drains, slows and freezes what stays in the cold', () => {
+    const w = setup();
+    const e = ghoul(w, 3, 0);
+    expect(castSkill(w, 'frostbite', { x: e.x, z: e.z }).ok).toBe(true);
+    run(w, 1);
+    expect(e.hp).toBeLessThan(100000);
+    expect(e.status.slow).toBeGreaterThan(0);
+    expect(e.status.freeze).toBe(0);
+    run(w, 3);
+    expect(w.events.some((ev) => ev.type === 'status' && ev.status === 'frozen' && ev.id === e.id) || e.status.freeze > 0).toBe(true);
+  });
+
+  it('avalanche throws enemies back and slows them', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 3);
+    const before = e.z;
+    expect(castSkill(w, 'avalanche', { x: w.px, z: w.pz + 5 }).ok).toBe(true);
+    expect(e.z).toBeGreaterThan(before + 2);
+    expect(e.status.slow).toBeGreaterThan(0);
+    expect(e.hp).toBeLessThan(100000);
+  });
+
+  it('frost step blinks and leaves ice that freezes the first step onto it', () => {
+    const w = setup();
+    const [px, pz] = [w.px, w.pz];
+    expect(castSkill(w, 'frost_step', { x: w.px + 5, z: w.pz }).ok).toBe(true);
+    expect(w.dist(px, pz)).toBeGreaterThan(3);
+    const patch = w.zones.find((z) => z.type === 'frost_patch')!;
+    expect([patch.x, patch.z]).toEqual([px, pz]);
+    const e = ghoul(w, px - w.px, pz - w.pz);
+    run(w, 0.1);
+    expect(e.status.freeze).toBeGreaterThan(0);
+  });
+
+  it("winter's heart freezes everything in sight and takes a fifth of its life when it thaws", () => {
+    const w = setup();
+    const a = ghoul(w, 4, 0);
+    const b = ghoul(w, -3, 5);
+    expect(castSkill(w, 'winters_heart', null).ok).toBe(true);
+    expect(a.status.freeze).toBeGreaterThan(2.5);
+    expect(b.status.freeze).toBeGreaterThan(2.5);
+    const afterHit = a.hp;
+    run(w, 3.2);
+    expect(a.status.freeze).toBe(0);
+    expect(afterHit - a.hp).toBeGreaterThanOrEqual(100000 * 0.2 - 1);
+    expect(w.events.some((ev) => ev.type === 'status' && ev.status === 'shattered')).toBe(true);
   });
 });
 

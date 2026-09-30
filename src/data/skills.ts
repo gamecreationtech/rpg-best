@@ -54,7 +54,9 @@ export type SkillEffect =
        * wide red sweep instead of the thin swing line, `void` a purple one
        * with a splash of void all round the hero.
        */
-      visual?: 'overhead' | 'holy_shield' | 'bloody' | 'cleave' | 'void';
+      visual?: 'overhead' | 'holy_shield' | 'bloody' | 'cleave' | 'void' | 'avalanche';
+      /** Arc only: everything hit is shoved this many px away from the hero (Avalanche). */
+      knockback?: number;
       radius?: number;
       stun?: number;
       slow?: number;
@@ -93,10 +95,12 @@ export type SkillEffect =
       stun?: number;
       /** No cooldown; limited by cast rate or attack speed instead. */
       rateLimited?: 'cast' | 'attack';
+      /** Multiplier against stunned or frozen targets (Ice Lance). */
+      bonusVsDisabled?: number;
       /** The shot is loosed by something summoned behind the hero: it rises for `delay` ms, `behind` px back along the line of fire, then fires from there (Arrow of Beyond's daemon). */
       summon?: { delay: number; behind: number };
       /** Which projectile visual to use. */
-      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'hammer' | 'star' | 'boulder';
+      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'hammer' | 'star' | 'boulder';
     }
   | {
       kind: 'aoe';
@@ -115,12 +119,14 @@ export type SkillEffect =
       bonusVsDisabled?: number;
       /** Hits every enemy on screen regardless of radius (Arrow Storm). */
       hitsAllVisible?: boolean;
-      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning';
+      /** Everything frozen by this takes this share of its max life when it thaws (Winter's Heart). */
+      thawPct?: number;
+      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'winter';
     }
   | { kind: 'buff'; duration: number; mods: BuffMods }
   | {
       kind: 'zone';
-      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm';
+      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'frostbite';
       duration: number;
       radius: number;
       damageMult?: number;
@@ -130,6 +136,9 @@ export type SkillEffect =
       slowPct?: number;
       /** Trap: area damaged when triggered. */
       aoeRadius?: number;
+      /** Frostbite: life lost per second inside, percent of max, and ms of cold before the freeze. */
+      pctPerSec?: number;
+      freezeAfter?: number;
       holds?: boolean;
       /** Spear wall. */
       count?: number;
@@ -145,6 +154,8 @@ export type SkillEffect =
       kind: 'mobility';
       mode: 'leap' | 'teleport' | 'charge';
       maxRange: number;
+      /** Teleport: a patch of ice left where the hero stood that freezes what steps on it (Frost Step). */
+      leaveFrost?: { radius: number; duration: number; freeze: number };
       duration?: number;
       invulnerable?: boolean;
       throughWalls?: boolean;
@@ -214,6 +225,11 @@ export const SKILLS: Record<string, SkillDef> = {
   teleport: { id: 'teleport', name: 'Teleport', classId: S, tier: 'base', description: 'Blink to a point, passing through walls.', manaCost: 25, cooldown: 5000, rank5Cooldown: 2500, reqLevel: 20, element: 'fire', effect: { kind: 'mobility', mode: 'teleport', maxRange: 400, throughWalls: true } },
   frost_nova: { id: 'frost_nova', name: 'Frost Nova', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'A ring of frost that freezes everything nearby.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6000, rankBonus: 0.25, reqLevel: 5, element: 'cold', effect: { kind: 'aoe', damageMult: 1.0, radius: 200, at: 'self', freeze: 2000, slow: 5000, visual: 'nova_cold' } },
   frozen_armor: { id: 'frozen_armor', name: 'Frozen Armor', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'An ice shield equal to your max life. Attackers are frozen for two seconds.', manaCost: 50, cooldown: 30000, rank5Cooldown: 20000, reqLevel: 10, element: 'cold', effect: { kind: 'buff', duration: 10000, mods: { armor: 50, shieldPct: 100, freezeAttackersMs: 2000 } } },
+  ice_lance: { id: 'ice_lance', name: 'Ice Lance', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'A spear of ice that passes through every enemy in a line. Frozen or stunned enemies take double damage.', manaCost: 18, cooldown: 2000, rank5Cooldown: 1200, rankBonus: 0.25, reqLevel: 5, element: 'cold', effect: { kind: 'projectile', damageMult: 1.6, projSpeed: 900, projRadius: 10, maxRange: 420, pierce: Infinity, bonusVsDisabled: 2, shape: 'lance' } },
+  frostbite: { id: 'frostbite', name: 'Frostbite', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'Cold settles on the ground for eight seconds. Enemies in it lose 2% of their life a second, slow, and freeze once the cold has had three seconds to bite.', manaCost: 35, cooldown: 12000, rank5Cooldown: 8000, reqLevel: 10, element: 'cold', effect: { kind: 'zone', zone: 'frostbite', duration: 8000, radius: 100, maxRange: 300, tickInterval: 500, slow: 1000, pctPerSec: 2, freezeAfter: 3000 } },
+  frost_step: { id: 'frost_step', name: 'Frost Step', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'Blink a short way. The ground you left freezes over for five seconds and freezes whatever steps on it.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, reqLevel: 10, element: 'cold', effect: { kind: 'mobility', mode: 'teleport', maxRange: 250, leaveFrost: { radius: 60, duration: 5000, freeze: 1500 } } },
+  avalanche: { id: 'avalanche', name: 'Avalanche', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'A wall of snow rolls out ahead of you, throwing enemies back and slowing them.', manaCost: 40, cooldown: 9000, rank5Cooldown: 6000, rankBonus: 0.25, reqLevel: 15, element: 'cold', effect: { kind: 'melee', damageMult: 1.5, maxRange: 250, arc: 70, slow: 3000, knockback: 120, visual: 'avalanche' } },
+  winters_heart: { id: 'winters_heart', name: "Winter's Heart", classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'Everything you can see freezes solid for three seconds. When the ice breaks, each of them loses a fifth of its life.', manaCost: 100, cooldown: 60000, rank5Cooldown: 40000, rankBonus: 0.25, reqLevel: 25, element: 'cold', effect: { kind: 'aoe', damageMult: 0.5, radius: 600, at: 'self', hitsAllVisible: true, freeze: 3000, thawPct: 20, visual: 'winter' } },
   blizzard: { id: 'blizzard', name: 'Blizzard', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'Ten seconds of falling ice across the whole battlefield. Slows everything by half.', manaCost: 90, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.25, reqLevel: 20, element: 'cold', effect: { kind: 'zone', zone: 'blizzard', duration: 10000, radius: 600, damageMult: 0.8, tickInterval: 500, perWave: 15, slowPct: 50 } },
   call_of_the_wind: { id: 'call_of_the_wind', name: 'Call of the Wind', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'A gale that slows enemies by half and doubles your speed for ten seconds.', manaCost: 60, cooldown: 35000, rank5Cooldown: 22000, reqLevel: 10, element: 'lightning', effect: { kind: 'zone', zone: 'wind', duration: 10000, radius: 300, slowPct: 50, playerMoveSpdPct: 100 } },
   storm: { id: 'storm', name: 'Storm', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'For ten seconds, lightning strikes the five nearest enemies every second.', manaCost: 80, cooldown: 30000, rank5Cooldown: 20000, rankBonus: 0.25, reqLevel: 15, element: 'lightning', effect: { kind: 'zone', zone: 'storm', duration: 10000, radius: 300, damageMult: 1.5, tickInterval: 1000, targets: 5 } },
