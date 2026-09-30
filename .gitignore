@@ -28,3 +28,6 @@ tmp/
 # Node and build output
 node_modules/
 dist/
+
+# Verification screenshots taken during development; never committed
+shots/
