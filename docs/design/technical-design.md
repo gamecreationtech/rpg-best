@@ -78,8 +78,8 @@ What that means for each kind of asset:
   snow drifting off it. Call of the Wind draws a dashed nine-ring tornado
   funnel round the hero and spiral wind streaks over the gale's floor.
   Poison Shot's arrow is fletched green, drips venom and glows as it flies,
-  and lands in a splash with a stain and bubbles. Trap is always set at the
-  hero's feet (no `maxRange`), drawn as an iron plate whose ring of spikes
+  and lands in a splash with a stain and bubbles. Trap is set at the hero's
+  feet (no `maxRange`) while its ultimate is thrown where the hero aims, drawn as an iron plate whose ring of spikes
   punch up and sink back without pause, snapping with a flash and shards.
   Sneak dims the whole world and cools the ambient light to blue for as long
   as the hero is hidden, with dark wisps clinging to the half-seen hero.

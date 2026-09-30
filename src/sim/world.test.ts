@@ -449,6 +449,16 @@ describe('trap', () => {
     const z = w.zones.find((z) => z.type === 'trap')!;
     expect([z.x, z.z]).toEqual([w.px, w.pz]);
   });
+
+  it('the ultimate is thrown where the hero aims', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    w.player.level = 15;
+    w.player.skillRanks.trap_ult = 1;
+    expect(castSkill(w, 'trap_ult', { x: w.px + 5, z: w.pz + 2 }).ok).toBe(true);
+    const z = w.zones.find((z) => z.type === 'trap')!;
+    expect(Math.hypot(z.x - (w.px + 5), z.z - (w.pz + 2))).toBeLessThan(0.6);
+  });
 });
 
 describe('consumables', () => {
