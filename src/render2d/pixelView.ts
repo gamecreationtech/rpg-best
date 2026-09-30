@@ -1974,8 +1974,8 @@ export class PixelView {
 
   /**
    * The eagle wheels a hero's height above the ground beating its wings, and
-   * folds them for the dive when it strikes. The angel hovers a little off
-   * the floor with a slow rise and fall, sword low until it cuts.
+   * folds them for the dive when it strikes. The Angel Knight hovers a little
+   * off the floor with a slow rise and fall, sword upright until it cuts.
    */
   private drawCompanion(m: Minion): void {
     const cam = this.view;
@@ -2005,9 +2005,9 @@ export class PixelView {
       },
     });
     if (!eagle) {
-      // A cold light off the halo, and a feather now and then
-      this.lights.push({ x: fx, y: fy - 36, radius: 34, intensity: 0.7, r: 0.8, g: 0.75, b: 0.45 });
-      if (Math.random() < 0.06) this.particles.spawn(m.x + (Math.random() - 0.5) * 0.8, y + 1 + Math.random() * 0.6, m.z + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.4, -0.35, (Math.random() - 0.5) * 0.4, 1.6, 0x24202c, { priority: 0.3, size: 2, alpha: 0.9 });
+      // Holy light off the halo and the plate, and golden motes drifting up round it
+      this.lights.push({ x: fx, y: fy - 30, radius: 52, intensity: 1.1 + Math.sin(this.time * 3) * 0.1, r: 1, g: 0.85, b: 0.5 });
+      if (Math.random() < 0.35) this.particles.spawn(m.x + (Math.random() - 0.5) * 1.4, y + Math.random() * 1.8, m.z + (Math.random() - 0.5) * 1.4, 0, 0.5, 0, 1.2, Math.random() < 0.4 ? 0xffffff : 0xffe070, { priority: 0.3, size: 1, alpha: 0.9 });
     }
   }
 

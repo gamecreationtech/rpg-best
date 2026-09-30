@@ -991,24 +991,29 @@ function eagleFrames(s: number): HTMLCanvasElement[] {
 }
 
 /**
- * The fallen angel, 40 wide and 44 tall, facing right: tarnished silver-blue
- * plate over a grey robe, a long sword, a broken halo tilted over the head,
- * and two great wings of black feathers spread behind. Frame 0 stands with
- * the sword low; frame 1 has swept it up and across.
+ * The Angel Knight, 64 wide and 52 tall, facing right: a great helm of gold
+ * with a white feather crest and a glowing halo, gold plate with wide
+ * pauldrons over a white tabard bearing a gold cross, a heater shield on the
+ * left arm, a greatsword in the right, and two great wings of white feathers
+ * spread behind. Frame 0 holds the sword upright, frame 1 sweeps it out.
  */
 function angelFrames(s: number): HTMLCanvasElement[] {
-  const W = 40;
-  const H = 44;
-  const plate: Rgb[] = [[64, 72, 92], [104, 114, 138], [150, 160, 184], [204, 212, 228]];
-  const robe: Rgb[] = [[40, 38, 50], [70, 66, 84], [100, 96, 118]];
-  const feather: Rgb[] = [[16, 14, 20], [36, 32, 44], [58, 52, 70]];
-  const skin: Rgb = [214, 196, 184];
-  const hair: Rgb = [230, 226, 210];
-  const halo: Rgb = [230, 190, 80];
-  const haloDim: Rgb = [150, 120, 50];
-  const steel: Rgb = [200, 208, 220];
-  const steelDark: Rgb = [120, 128, 144];
-  const eye: Rgb = [120, 200, 255];
+  const W = 64;
+  const H = 52;
+  const cx = 32;
+  const gold: Rgb[] = [[110, 74, 20], [178, 128, 36], [232, 186, 64], [255, 236, 150]];
+  const white: Rgb = [246, 244, 236];
+  const whiteShade: Rgb = [212, 208, 196];
+  const featherShade: Rgb = [168, 164, 156];
+  const halo: Rgb = [255, 240, 160];
+  const haloCore: Rgb = [255, 255, 230];
+  const skin: Rgb = [226, 200, 180];
+  const eye: Rgb = [140, 220, 255];
+  const blade: Rgb = [226, 234, 244];
+  const bladeDark: Rgb = [150, 160, 176];
+  const bladeGlow: Rgb = [255, 250, 210];
+  const gem: Rgb = [90, 170, 255];
+  const grip: Rgb = [70, 40, 30];
   const outline: Rgb = [10, 8, 12];
   const frames: HTMLCanvasElement[] = [];
   for (let f = 0; f < 2; f++) {
@@ -1016,6 +1021,9 @@ function angelFrames(s: number): HTMLCanvasElement[] {
     for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
     const put = (x: number, y: number, c: Rgb): void => {
       if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
+    };
+    const rect = (x: number, y: number, w: number, h: number, c: Rgb): void => {
+      for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) put(xx, yy, c);
     };
     const line = (x0: number, y0: number, x1: number, y1: number, c: Rgb, half = 0): void => {
       const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
@@ -1025,58 +1033,163 @@ function angelFrames(s: number): HTMLCanvasElement[] {
         for (let d = -half; d <= half; d++) put(x, y + d, c);
       }
     };
-    // Wings: two fans of black feathers behind, each a row of long primaries from a shoulder
+    // Gold plate lit from the upper left: highlight band, mid, then shadow toward the right and bottom
+    const plate = (x: number, y: number, w: number, h: number): void => {
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const fl = xx - x;
+          const fr = x + w - 1 - xx;
+          const ft = yy - y;
+          let c = gold[2]!;
+          if (fr <= 1 || yy === y + h - 1) c = gold[1]!;
+          if (fl <= 1 && ft >= 1) c = gold[3]!;
+          if (ft === 0) c = gold[3]!;
+          if (fr === 0 && ft > 0) c = gold[0]!;
+          put(xx, yy, c);
+        }
+      }
+    };
+    // ---- wings, behind everything: a curved leading edge from the shoulder up and out, then rows of feathers
+    // hanging from it, long white primaries at the tip, shorter coverts near the body, each feather shaded underneath
     for (const side of [-1, 1] as const) {
-      const sx = 18 + side * 4;
-      const sy = 14;
-      for (let i = 0; i < 7; i++) {
-        const a = -1.2 + side * (0.15 + i * 0.18) * (side === 1 ? 1 : 1) - i * 0.12;
-        const len = 18 - Math.abs(i - 3) * 1.2;
-        const tx = sx + side * Math.round(Math.cos(a + (side === 1 ? 0 : Math.PI)) * len * (side === 1 ? 1 : -1));
-        const ty = sy - Math.round(Math.sin(-a) * len) + i * 2;
-        line(sx, sy, tx, ty, feather[i % 3]!, 1);
-        put(tx, ty, feather[2]!);
+      const ax = cx + side * 5;
+      const ay = 15;
+      const edge: [number, number][] = [];
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12;
+        edge.push([ax + side * Math.round(t * 26), ay - Math.round(Math.sin(t * Math.PI * 0.85) * 13)]);
+      }
+      // Coverts first (they sit under the primaries), then primaries from the outer part of the edge
+      for (let i = 1; i <= 5; i++) {
+        const [ex, ey] = edge[i * 2]!;
+        const len = 9 + i;
+        line(ex, ey, ex + side * Math.round(i * 1.2), ey + len, featherShade, 1);
+        line(ex, ey, ex + side * Math.round(i * 1.2), ey + len, whiteShade, 0);
+      }
+      for (let i = 3; i <= 12; i++) {
+        const [ex, ey] = edge[i]!;
+        const t = (i - 3) / 9;
+        const len = 14 + Math.round(t * 12);
+        const tx = ex + side * Math.round(4 + t * 8);
+        const ty = ey + len;
+        line(ex, ey, tx, ty, whiteShade, 1);
+        line(ex, ey, tx, ty, white, 0);
+        put(tx, ty, white);
+        put(tx, ty + 1, whiteShade);
+      }
+      // The leading edge itself, thick and bright
+      for (let i = 0; i < edge.length - 1; i++) {
+        const [x0, y0] = edge[i]!;
+        const [x1, y1] = edge[i + 1]!;
+        line(x0, y0, x1, y1, whiteShade, 1);
+        line(x0, y0 - 1, x1, y1 - 1, white, 0);
       }
     }
-    // Robe: a long skirt widening to the hem
-    for (let y = 24; y <= 41; y++) {
-      const half = 4 + Math.round((y - 24) * 0.45);
-      for (let x = 18 - half; x <= 18 + half; x++) put(x, y, x < 15 ? robe[2]! : x > 20 ? robe[0]! : robe[1]!);
-      if (y % 4 === 1) put(18, y, robe[0]!);
+    // ---- legs: gold greaves and sabatons
+    for (const lx of [cx - 6, cx + 1]) {
+      plate(lx, 38, 5, 9);
+      put(lx + 1, 41, gold[3]!); // the knee
+      rect(lx - 1, 47, 7, 3, gold[1]!);
+      rect(lx - 1, 47, 7, 1, gold[2]!);
     }
-    // Plate: breastplate and pauldrons, lit from the upper left
-    for (let y = 14; y <= 24; y++) {
-      const half = y < 17 ? 7 : 5;
-      for (let x = 18 - half; x <= 18 + half; x++) put(x, y, x < 15 ? plate[3]! : x < 19 ? plate[2]! : x < 22 ? plate[1]! : plate[0]!);
+    // ---- tabard: white, gold hem, a gold cross
+    for (let y = 29; y <= 43; y++) {
+      const half = 6 + (y > 36 ? 1 : 0);
+      for (let x = cx - half; x <= cx + half; x++) put(x, y, x > cx + 3 ? whiteShade : white);
     }
-    for (const side of [-1, 1] as const) for (let y = 13; y <= 16; y++) for (let x = 18 + side * 6; x !== 18 + side * 10; x += side) put(x, y, y === 13 ? plate[3]! : plate[1]!);
-    put(18, 18, plate[0]!); // the seam down the chest
-    put(18, 20, plate[0]!);
-    put(18, 22, plate[0]!);
-    // Head: pale, long white hair, a cold blue eye; the halo broken and tilted over it
-    for (let y = 6; y <= 12; y++) for (let x = 15; x <= 21; x++) put(x, y, y >= 11 || x === 15 ? hair : skin);
-    for (let y = 5; y <= 13; y++) put(14, y, hair);
-    for (let y = 8; y <= 15; y++) put(13, y, hair);
-    put(20, 9, eye);
-    put(17, 9, eye);
-    for (let x = 12; x <= 24; x++) if (x < 16 || x > 18) put(x, 3 + (x > 20 ? 1 : 0), x % 4 === 1 ? haloDim : halo);
-    put(12, 4, haloDim);
-    put(24, 5, haloDim);
-    // Arms and the sword: at rest it hangs by the leg; swinging it sweeps up and out to the right
+    rect(cx - 7, 43, 15, 1, gold[2]!);
+    rect(cx - 1, 31, 2, 11, gold[2]!);
+    rect(cx - 4, 34, 8, 2, gold[2]!);
+    put(cx - 1, 31, gold[3]!);
+    put(cx - 4, 34, gold[3]!);
+    // ---- breastplate and belt
+    for (let y = 17; y <= 30; y++) {
+      const half = y < 20 ? 8 : y < 27 ? 7 : 6;
+      plate(cx - half, y, half * 2 + 1, 1);
+    }
+    for (let y = 18; y <= 27; y++) put(cx, y, gold[1]!); // the seam
+    put(cx - 4, 21, gold[3]!);
+    put(cx - 3, 21, gold[3]!);
+    put(cx - 4, 22, gold[3]!);
+    rect(cx - 6, 29, 13, 2, gold[0]!);
+    rect(cx - 1, 29, 3, 2, gold[2]!);
+    put(cx, 29, gem);
+    put(cx, 30, gem);
+    // ---- pauldrons: wide, rounded, with a bright rim
+    for (const side of [-1, 1] as const) {
+      for (let y = 14; y <= 20; y++) {
+        const t = (y - 14) / 6;
+        const half = Math.round(4 + t * 2);
+        const px = cx + side * 10;
+        for (let x = px - half; x <= px + half; x++) put(x, y, y === 14 ? gold[3]! : (side === -1 ? x < px : x > px) ? gold[1]! : gold[2]!);
+      }
+      put(cx + side * 10, 17, gold[3]!);
+    }
+    // ---- neck and the great helm with its visor and a white feather crest on each side
+    rect(cx - 2, 14, 5, 3, skin);
+    for (let y = 3; y <= 14; y++) {
+      const half = y < 5 ? 3 : y < 7 ? 5 : 6;
+      plate(cx - half, y, half * 2 + 1, 1);
+    }
+    rect(cx - 6, 8, 13, 1, outline); // the visor slit
+    put(cx - 2, 8, eye);
+    put(cx + 2, 8, eye);
+    rect(cx, 9, 1, 4, outline); // the nasal
+    put(cx + 4, 11, gold[1]!);
+    put(cx - 4, 11, gold[1]!);
+    for (const side of [-1, 1] as const) {
+      // Feather crests sweeping back and up off the temples
+      for (let i = 0; i < 6; i++) {
+        put(cx + side * (7 + i), 7 - i, i > 3 ? whiteShade : white);
+        put(cx + side * (7 + i), 8 - i, i > 2 ? whiteShade : white);
+      }
+    }
+    // ---- halo: a ring of light floating over the helm
+    for (let x = cx - 7; x <= cx + 7; x++) {
+      const t = (x - cx) / 7;
+      const dy = Math.round((1 - t * t) * 1.2);
+      put(x, 1 - dy + 1, Math.abs(t) < 0.35 ? haloCore : halo);
+      put(x, 3 - dy + 1, halo);
+    }
+    // ---- shield on the left arm: a gold heater with a white cross
+    line(cx - 10, 19, cx - 14, 25, gold[1]!, 1);
+    for (let y = 22; y <= 36; y++) {
+      const t = (y - 22) / 14;
+      const half = y < 28 ? 5 : Math.round(5 * (1 - (t - 0.43) * 1.6));
+      if (half < 1) continue;
+      const sx = cx - 16;
+      for (let x = sx - half; x <= sx + half; x++) put(x, y, y === 22 || x === sx - half ? gold[3]! : x === sx + half ? gold[0]! : gold[2]!);
+    }
+    rect(cx - 17, 24, 3, 8, white);
+    rect(cx - 19, 26, 7, 2, white);
+    // ---- sword arm and the greatsword: upright at rest, swept out and up on the cut
     if (f === 0) {
-      line(24, 17, 26, 27, plate[1]!, 1);
-      line(26, 28, 26, 42, steel, 0);
-      line(27, 28, 27, 42, steelDark, 0);
-      put(26, 43, steel);
-      for (let x = 24; x <= 29; x++) put(x, 27, haloDim); // crossguard
+      line(cx + 11, 19, cx + 13, 27, gold[2]!, 1);
+      line(cx + 13, 27, cx + 14, 33, gold[2]!, 1);
+      rect(cx + 12, 33, 5, 3, gold[1]!); // gauntlet
+      rect(cx + 14, 9, 1, 24, blade);
+      rect(cx + 15, 9, 1, 24, bladeDark);
+      rect(cx + 13, 9, 1, 24, bladeGlow);
+      put(cx + 14, 7, blade);
+      put(cx + 14, 8, blade);
+      rect(cx + 10, 32, 9, 1, gold[2]!); // crossguard
+      put(cx + 10, 32, gold[3]!);
+      rect(cx + 14, 36, 1, 3, grip);
+      put(cx + 14, 39, gold[2]!); // pommel
     } else {
-      line(24, 17, 31, 12, plate[1]!, 1);
-      line(31, 12, 39, 4, steel, 0);
-      line(32, 13, 39, 6, steelDark, 0);
-      put(39, 4, [255, 255, 255]);
-      for (let i = -2; i <= 2; i++) put(31 + i, 12 - i, haloDim); // crossguard
+      line(cx + 11, 19, cx + 17, 20, gold[2]!, 1);
+      line(cx + 17, 20, cx + 21, 18, gold[2]!, 1);
+      rect(cx + 20, 16, 4, 4, gold[1]!);
+      // Blade up and out to the right, glowing along its edge
+      line(cx + 23, 17, cx + 31, 2, bladeDark, 0);
+      line(cx + 22, 17, cx + 30, 2, blade, 0);
+      line(cx + 21, 17, cx + 29, 2, bladeGlow, 0);
+      put(cx + 30, 1, haloCore);
+      line(cx + 19, 15, cx + 25, 21, gold[2]!, 0); // crossguard
+      put(cx + 19, 15, gold[3]!);
+      line(cx + 20, 20, cx + 18, 23, grip, 0);
+      put(cx + 17, 24, gold[2]!);
     }
-    line(12, 17, 10, 26, plate[1]!, 1); // the off arm
     frames.push(paintGrid(grid, W, H, s, outline));
   }
   return frames;
