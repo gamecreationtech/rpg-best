@@ -128,6 +128,8 @@ export class PixelView {
   /** Life bars to draw this frame: frame x, frame y, fraction, targeted, four numbers each. */
   private readonly bars: number[] = [];
   private beamTarget = -1;
+  /** Rocks shown by Rock Solid last frame, so a lost one can shatter. */
+  private rockCount = -1;
   private time = 0;
   private lastW = 0;
   private lastH = 0;
@@ -500,6 +502,13 @@ export class PixelView {
         this.iceImpact(ev.x, ev.z);
         break;
       case 'buff_start': {
+        if (ev.id === 'rock_solid') {
+          // Rocks tear out of the ground round the hero
+          this.effects.cracks(w.px, w.pz, 22, 0x9a8a70, 0.6, 6);
+          pt.burst(w.px, 0.1, w.pz, 20, 1.6, 0x8a7a68, 0.6, { up: 2, gravity: 5, priority: 0.7, size: 2 });
+          this.view.kick(0.1);
+          break;
+        }
         if (ev.id === 'prayer') {
           pt.burst(w.px, 0.2, w.pz, 30, 1.2, 0x8aff8a, 1.2, { up: 2.5, drag: 1, priority: 0.8, size: 2 });
           this.effects.ring(w.px, w.pz, 0.2, 1.6, 0x8aff8a, 0.6, 2, 1.5);
@@ -511,6 +520,7 @@ export class PixelView {
       }
       case 'leap':
         this.stomp(ev.fromX, ev.fromZ, 0.8, 0x6a6058);
+        pt.burst(ev.fromX, 0.2, ev.fromZ, 10, 1.2, 0x8a7a68, 0.6, { up: 2.5, gravity: 4, priority: 0.5, size: 2 });
         break;
       case 'teleport': {
         const color = w.player.pledgeId ? PLEDGES[w.player.pledgeId]!.color : 0x9fd0ff;
@@ -556,6 +566,64 @@ export class PixelView {
 
   private iceImpact(x: number, z: number): void {
     this.particles.burst(x, 0.3, z, 6, 1.5, 0x9fe0ff, 0.5, { drag: 2, up: 1.5, priority: 0.3 });
+  }
+
+  /** How high the hero is off the floor: a leap arcs higher the further it goes. */
+  private heroHeight(): number {
+    const l = this.world.leap;
+    if (!l || !l.arc) return 0;
+    const k = Math.min(1, l.t / l.duration);
+    const dist = Math.hypot(l.toX - l.fromX, l.toZ - l.fromZ);
+    return Math.sin(k * Math.PI) * (1.6 + Math.min(2.6, dist * 0.32));
+  }
+
+  /** Boulder Toss: the rock lands. It stays a moment, the ground cracks, waves of dust go out and shards fly. */
+  private boulderLand(x: number, z: number, radius: number): void {
+    const rock = this.fx.boulder;
+    this.effects.sprite(rock, x, 0, z, rock.width >> 1, rock.height - 6, 1.0, 'air');
+    this.effects.cracks(x, z, 36, 0x9a8a70, 0.8, 10);
+    this.effects.ring(x, z, 0.1, radius * 0.6, 0xfff0d0, 0.18, 3, 1.5);
+    this.effects.ring(x, z, 0.3, radius, 0xc8b8a0, 0.45, 3, 1);
+    this.effects.ring(x, z, 0.3, radius * 1.2, 0x9a8a70, 0.6, 1, 0, 0.1);
+    this.particles.burst(x, 0.3, z, 22, 3.5, 0x6a6058, 0.7, { up: 3, gravity: 8, priority: 0.7, size: 2 });
+    this.particles.burst(x, 0.3, z, 10, 2.5, 0x8a7a68, 0.8, { up: 3.5, gravity: 8, priority: 0.6, size: 3 });
+    this.particles.burst(x, 0.1, z, 26, 3 * radius, 0xc8b8a0, 0.6, { up: 1.5, gravity: 5, priority: 0.5, size: 2 });
+    this.view.kick(0.35);
+  }
+
+  /** Rock Solid: six rocks torn from the ground circle the hero; one leaves for each sixth of the shield that breaks. */
+  private drawRockSolid(): void {
+    const w = this.world;
+    const rs = w.buffs.find((b) => b.id === 'rock_solid');
+    if (!rs) {
+      this.rockCount = -1;
+      return;
+    }
+    const full = (w.derived.maxHp * (rs.mods.shieldPct ?? 100)) / 100;
+    const n = rs.shield > 0 ? Math.max(1, Math.ceil((6 * rs.shield) / full)) : 0;
+    const age = rs.duration - rs.remaining;
+    const rise = Math.min(1, age / 0.35);
+    const cam = this.view;
+    const ctx = this.ctx;
+    const heroY = this.heroHeight();
+    const place = (i: number): [number, number, number] => {
+      const a = this.time * 1.8 + (i * Math.PI) / 3;
+      const r = 0.85 * rise;
+      return [w.px + Math.sin(a) * r, heroY + 0.1 + rise * (0.5 + Math.sin(this.time * 2.5 + i * 1.3) * 0.15), w.pz + Math.cos(a) * r];
+    };
+    if (this.rockCount > n && this.rockCount <= 6) {
+      // A rock shatters
+      const [x, y, z] = place(this.rockCount - 1);
+      this.particles.burst(x, y, z, 10, 1.5, 0x6a6058, 0.5, { gravity: 6, priority: 0.7, size: 2 });
+    }
+    this.rockCount = n;
+    for (let i = 0; i < n; i++) {
+      const [x, y, z] = place(i);
+      const rock = this.fx.rocks[i % this.fx.rocks.length]!;
+      const fx = Math.round(cam.frameX(x, z));
+      const fy = Math.round(cam.frameY(x, y, z));
+      this.items.push({ depth: cam.depth(x, z), draw: () => ctx.drawImage(rock, fx - (rock.width >> 1), fy - (rock.height >> 1)) });
+    }
   }
 
   /** Prayer's healing: twelve small crosses rising round the hero in turn, brightest halfway up, plus a soft green light. */
@@ -662,8 +730,7 @@ export class PixelView {
         this.particles.burst(x, 0.3, z, 30, 3, 0x66e070, 0.9, { up: 0.5, priority: 0.7, size: 2 });
         break;
       case 'boulder':
-        this.explode(x, z, 1.2, 'physical');
-        this.stomp(x, z, radius, 0x9a8a70);
+        this.boulderLand(x, z, radius);
         break;
       case 'lightning':
         this.effects.strike(x, z, 0xa8c8ff);
@@ -724,6 +791,8 @@ export class PixelView {
 
   private syncZoneParticles(dt: number): void {
     const pt = this.particles;
+    // A leaping hero leaves a trail of dust in the air behind
+    if (this.world.leap && this.world.leap.arc && Math.random() < dt * 50) pt.spawn(this.world.px, this.heroHeight() + 0.2, this.world.pz, 0, -0.5, 0, 0.35, 0x8a7a68, { alpha: 0.7, priority: 0.5, size: 2 });
     for (const z of this.world.zones) {
       if (z.type === 'fire_prison' && Math.random() < dt * 30) {
         const a = Math.random() * Math.PI * 2;
@@ -845,11 +914,7 @@ export class PixelView {
     }
 
     // Hero
-    let heroY = 0;
-    if (w.leap) {
-      const k = w.leap.t / w.leap.duration;
-      heroY = w.leap.arc ? Math.sin(Math.min(1, k) * Math.PI) * 1.6 : 0;
-    }
+    const heroY = this.heroHeight();
     this.pushPuppet(this.hero, w.px, heroY, w.pz, w.invisible ? 0.45 : 1, null);
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
     drawn++;
@@ -953,6 +1018,18 @@ export class PixelView {
 
     // Prayer: little crosses of light climbing all over the hero, and a green glow
     if (w.buffs.some((b) => b.id === 'prayer')) this.drawPrayer();
+    this.drawRockSolid();
+
+    // Boulder Toss: the rock on its way down, from high above to the marked ground
+    for (const z of w.zones) {
+      if (z.type !== 'boulder') continue;
+      const k = 1 - z.remaining / z.duration;
+      const h = 7 * (1 - k) * (1 - k);
+      const rock = this.fx.boulder;
+      const fx = Math.round(cam.frameX(z.x, z.z));
+      const fy = Math.round(cam.frameY(z.x, h, z.z));
+      this.items.push({ depth: cam.depth(z.x, z.z) + 0.02, draw: () => ctx.drawImage(rock, fx - (rock.width >> 1), fy - rock.height + 6) });
+    }
 
     // Drops
     for (const d of w.drops) {
@@ -1103,9 +1180,13 @@ export class PixelView {
         case 'wind':
           ellipse(z.x, z.z, z.radius * pulse, '#8fd0ff', false, 0.4);
           break;
-        case 'boulder':
-          ellipse(z.x, z.z, z.radius * pulse, '#ff9a40', false, 0.7);
+        case 'boulder': {
+          // The target ring, and the rock's shadow growing as it comes down
+          const k = 1 - z.remaining / z.duration;
+          ellipse(z.x, z.z, z.radius, '#ff9a40', false, 0.7);
+          ellipse(z.x, z.z, 0.35 + 0.5 * k, '#000000', true, 0.2 + 0.3 * k);
           break;
+        }
         default:
           break;
       }

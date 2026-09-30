@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'slash' | 'sweep' | 'smash' | 'shield' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'slash' | 'sweep' | 'smash' | 'shield' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -88,6 +88,11 @@ export class Effects2D {
   anim(frames: HTMLCanvasElement[], x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, light?: { color: number; intensity: number; radius: number }): void {
     const fx = this.push({ kind: 'anim', layer, x, y, z, life, frames, ox, oy });
     if (light) this.withLight(fx, light.color, light.intensity, light.radius);
+  }
+
+  /** One still frame left at a point that fades out over the second half of its life. */
+  sprite(frame: HTMLCanvasElement, x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer): void {
+    this.push({ kind: 'sprite', layer, x, y, z, life, frames: [frame], ox, oy });
   }
 
   /** The arc of a melee swing. */
@@ -217,6 +222,12 @@ export class Effects2D {
           ctx.drawImage(f, px - fx.ox, py - fx.oy);
           break;
         }
+        case 'sprite': {
+          ctx.globalAlpha = k < 0.5 ? 1 : 1 - (k - 0.5) * 2;
+          ctx.drawImage(fx.frames![0]!, px - fx.ox, py - fx.oy);
+          ctx.globalAlpha = 1;
+          break;
+        }
         case 'slash': {
           // The arc sweeps from one edge of the cone to the other over the life
           const a0 = Math.atan2(fx.dirZ, fx.dirX) - fx.arc / 2;
@@ -308,8 +319,9 @@ const SMASH_LIFE = 0.38;
 const SMASH_HEIGHT = 58;
 const SMASH_LEAN = 14;
 const SMASH_CRACKS = 6;
-/** The maul, measured along the haft from the striking face: head, haft, pommel. */
-const HEAD_LEN = 9;
+/** The war hammer, measured along the haft from the striking face: head, haft, pommel. The head is a crossbar half as wide as the haft is long. */
+const HEAD_LEN = 8;
+const HEAD_HALF = 9;
 const HAFT_LEN = 26;
 const POMMEL_LEN = 3;
 
@@ -351,20 +363,31 @@ function drawSmash(ctx: CanvasRenderingContext2D, px: number, py: number, fx: Fx
   if (landed === 0) {
     // Motion smear behind the head
     ctx.globalAlpha = 0.45;
-    piece(-2, -16, 4, 1, fx.css2);
+    piece(-2, -16, HEAD_HALF - 2, 2, fx.css2);
     ctx.globalAlpha = alpha;
   }
   const total = HEAD_LEN + HAFT_LEN + POMMEL_LEN;
   // Outline, one pixel larger all round
-  piece(-1, HEAD_LEN + 1, 6, 6, '#1a1410');
+  piece(-1, HEAD_LEN + 1, HEAD_HALF + 1, HEAD_HALF + 1, '#1a1410');
   piece(HEAD_LEN, HEAD_LEN + HAFT_LEN, 2.5, 2.5, '#1a1410');
   piece(HEAD_LEN + HAFT_LEN - 1, total + 1, 3, 3, '#1a1410');
-  // Head: steel block with a bright striking face and a lit leading edge
+  // Head: a steel crossbar across the haft, the striking face bright along its whole width, a dark band where the haft goes through
   const flash = landed > 0 && landed < 0.2;
-  piece(0, HEAD_LEN, 5, 5, flash ? '#ffffff' : '#8e98a4');
-  piece(0, 2, 5, 5, flash ? '#ffffff' : '#d8e0e8');
-  piece(2, HEAD_LEN - 1, 5, 5, flash ? '#ffffff' : '#a8b2be');
-  piece(2, HEAD_LEN - 1, -4, -4, '#5a6470'); // shadow line on the trailing side (negative width flips it)
+  piece(0, HEAD_LEN, HEAD_HALF, HEAD_HALF, flash ? '#ffffff' : '#8e98a4');
+  piece(0, 2, HEAD_HALF, HEAD_HALF, flash ? '#ffffff' : '#d8e0e8');
+  piece(HEAD_LEN - 2, HEAD_LEN, HEAD_HALF, HEAD_HALF, flash ? '#ffffff' : '#6a7480');
+  piece(2, HEAD_LEN - 2, 2, 2, flash ? '#ffffff' : '#5a6470');
+  // Iron bands at both ends of the head
+  const bandA = tipX - ux * 1;
+  const bandB = tipX - ux * (HEAD_LEN - 1);
+  ctx.strokeStyle = flash ? '#ffffff' : '#c8d0d8';
+  ctx.lineWidth = 1;
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(Math.round(bandA + sx * side * (HEAD_HALF - 1)), Math.round(tipY - uy * 1 + sy * side * (HEAD_HALF - 1)));
+    ctx.lineTo(Math.round(bandB + sx * side * (HEAD_HALF - 1)), Math.round(tipY - uy * (HEAD_LEN - 1) + sy * side * (HEAD_HALF - 1)));
+    ctx.stroke();
+  }
   // Haft: dark wood with a leather grip near the top
   piece(HEAD_LEN, HEAD_LEN + HAFT_LEN, 1.5, 1.5, '#6a4424');
   piece(HEAD_LEN + HAFT_LEN - 9, HEAD_LEN + HAFT_LEN - 2, 1.5, 1.5, '#3a2414');

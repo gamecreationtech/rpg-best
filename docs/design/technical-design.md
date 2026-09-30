@@ -49,7 +49,12 @@ What that means for each kind of asset:
   buff runs. Sanctuary is a still double rim of gold and white, a breathing
   glow, a cross of light and eight candles round the edge. Holy Smite (the
   thrown one, formerly Hammer of Gods) and Holy Smite (spin) share the star
-  sprite.
+  sprite. A leap arcs higher the further it goes and trails dust. Boulder
+  Toss draws its rock falling from high above onto the target ring, with a
+  shadow that grows as it nears; on landing the rock lies there a moment
+  while the ground cracks and shards fly. Rock Solid circles the hero with six
+  rocks torn from the ground and drops one for every sixth of its shield
+  that breaks.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

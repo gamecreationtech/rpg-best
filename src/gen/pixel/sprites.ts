@@ -192,6 +192,10 @@ export interface EffectSprites {
   explosion: HTMLCanvasElement[];
   frostRing: HTMLCanvasElement[];
   shadow: HTMLCanvasElement;
+  /** The boulder Boulder Toss drops: a rock wider than the hero is tall. */
+  boulder: HTMLCanvasElement;
+  /** Three small rocks that circle a Rock Solid hero. */
+  rocks: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -240,5 +244,27 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   }
   const shadow = new PixelBuffer(12 * s, 6 * s);
   for (let y = 0; y < 6 * s; y++) for (let x = 0; x < 12 * s; x++) if (Math.hypot((x - 6 * s) / (6 * s), (y - 3 * s) / (3 * s)) <= 1 && (x + y) % 2 === 0) shadow.set(x, y, [0, 0, 0], 255);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas() };
+  const rockRamp = ramp(0x6a6058, pal.contrast);
+  const boulderBuf = new PixelBuffer(30 * s, 24 * s);
+  boulderBuf.ellipse(15 * s, 12 * s, 14 * s, 11 * s, rockRamp[1]);
+  boulderBuf.ellipse(9 * s, 7 * s, 5 * s, 4 * s, rockRamp[2]);
+  boulderBuf.ellipse(20 * s, 16 * s, 6 * s, 4 * s, rockRamp[0]);
+  boulderBuf.shadeRamp((c) => (c[0] === rockRamp[1][0] && c[1] === rockRamp[1][1] && c[2] === rockRamp[1][2] ? rockRamp : null));
+  // Cracks and a chipped edge
+  boulderBuf.line(17 * s, 4 * s, 13 * s, 12 * s, rockRamp[0]);
+  boulderBuf.line(13 * s, 12 * s, 16 * s, 20 * s, rockRamp[0]);
+  boulderBuf.line(5 * s, 14 * s, 9 * s, 16 * s, rockRamp[0]);
+  boulderBuf.set(4 * s, 8 * s, rockRamp[3]);
+  boulderBuf.set(8 * s, 5 * s, rockRamp[3]);
+  const rocks: HTMLCanvasElement[] = [];
+  const rockShapes: [number, number][] = [[9, 7], [10, 8], [8, 6]];
+  for (let i = 0; i < rockShapes.length; i++) {
+    const [rw, rh] = rockShapes[i]!;
+    const b = new PixelBuffer(rw * s + 2, rh * s + 2);
+    b.ellipse((rw / 2) * s + 1, (rh / 2) * s + 1, (rw / 2) * s, (rh / 2) * s, rockRamp[1]);
+    b.set(Math.round(rw * 0.35) * s + 1, Math.round(rh * 0.3) * s + 1, rockRamp[3]);
+    b.shadeRamp((c) => (c[0] === rockRamp[1][0] && c[1] === rockRamp[1][1] && c[2] === rockRamp[1][2] ? rockRamp : null));
+    rocks.push(b.toCanvas());
+  }
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks };
 }
