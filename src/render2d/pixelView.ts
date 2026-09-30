@@ -475,6 +475,18 @@ export class PixelView {
         pt.burst(ev.x + ev.dirX * 0.5, 1.2, ev.z + ev.dirZ * 0.5, 6, 1.5, color, 0.35, { priority: 0.5 });
         break;
       }
+      case 'minion_strike':
+        if (ev.kind === 'eagle') {
+          // Talons: a quick white rake and a few feathers knocked loose
+          this.effects.slash(ev.x + ev.dirX * 0.3, ev.z + ev.dirZ * 0.3, ev.dirX, ev.dirZ, 0.8, 50, 0xf0ece0);
+          pt.burst(ev.x + ev.dirX * 0.6, 1.0, ev.z + ev.dirZ * 0.6, 6, 1.2, 0xe8e0d0, 0.5, { gravity: 3, drag: 1.5, priority: 0.5 });
+        } else {
+          // The sword: a golden sweep and a flash of holy light
+          this.effects.sweep(ev.x, ev.z, ev.dirX, ev.dirZ, 1.3, 100, 0xffd860, 0.22);
+          this.effects.flash(ev.x + ev.dirX * 0.6, 1.0, ev.z + ev.dirZ * 0.6, 0xffe8a0, 1.6, 40, 0.2);
+          pt.burst(ev.x + ev.dirX * 0.8, 0.9, ev.z + ev.dirZ * 0.8, 8, 1.6, 0xfff0b0, 0.4, { drag: 2, up: 1, priority: 0.6 });
+        }
+        break;
       case 'melee_swing':
         if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.range);
@@ -537,6 +549,20 @@ export class PixelView {
         break;
       }
       case 'buff_start': {
+        if (ev.id === 'summon_eagle' || ev.id === 'summon_angel') {
+          const m = w.minions.find((q) => q.active && q.kind === (ev.id === 'summon_eagle' ? 'eagle' : 'angel'));
+          if (m) {
+            if (ev.id === 'summon_eagle') pt.burst(m.x, 1.8, m.z, 12, 1.5, 0xe8e0d0, 0.6, { drag: 1.5, priority: 0.6 });
+            else {
+              // The angel comes down in a column of light
+              this.effects.ring(m.x, m.z, 0.2, 1.4, 0xffe8a0, 0.5, 2, 1.5);
+              pt.burst(m.x, 0.5, m.z, 30, 1.2, 0xfff0b0, 0.9, { up: 2.5, drag: 1, priority: 0.8 });
+              this.effects.flash(m.x, 1.5, m.z, 0xffe8a0, 3, 90, 0.5);
+              for (let i = 0; i < 10; i++) pt.spawn(m.x + (Math.random() - 0.5) * 0.6, 3 + Math.random(), m.z + (Math.random() - 0.5) * 0.6, 0, -3, 0, 0.6, 0xffffff, { priority: 0.7, size: 2, delay: i * 0.03 });
+            }
+          }
+          break;
+        }
         if (ev.id === 'meat_shield' && w.titan) {
           // The titan heaves itself out of the earth: the ground splits, dirt flies, the screen shakes
           const t = w.titan;
@@ -623,6 +649,10 @@ export class PixelView {
         break;
       }
       case 'buff_end':
+        if (ev.id === 'summon_eagle' || ev.id === 'summon_angel') {
+          const m = w.minions.find((q) => q.kind === (ev.id === 'summon_eagle' ? 'eagle' : 'angel'));
+          if (m) pt.burst(m.x, ev.id === 'summon_eagle' ? 1.8 : 1, m.z, 16, 1.2, ev.id === 'summon_eagle' ? 0xe8e0d0 : 0xfff0b0, 0.8, { drag: 1, up: 0.5, priority: 0.6 });
+        }
         if (ev.id === 'meat_shield') {
           // It comes apart: a heap of flesh and bone dust where it stood
           const t = w.minions[w.minions.length - 1]!;
@@ -1310,6 +1340,7 @@ export class PixelView {
     if (rite && !w.playerDead) this.drawRite();
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
     if (w.titan) this.drawTitan(w.titan);
+    for (const m of w.minions) if (m.active && (m.kind === 'eagle' || m.kind === 'angel')) this.drawCompanion(m);
     for (let i = 0; i < w.minions.length; i++) {
       const m = w.minions[i]!;
       const p = this.minionPuppets[i];
@@ -1688,7 +1719,7 @@ export class PixelView {
     const put = (x: number, z: number) => ctx.drawImage(sh, Math.round(cam.frameX(x, z)) - (sh.width >> 1), Math.round(cam.frameY(x, 0, z)) - (sh.height >> 1));
     if (!w.playerDead) put(w.px, w.pz);
     for (const e of w.enemies) if (e.alive && !e.dead) put(e.x, e.z);
-    for (const m of w.minions) if (m.active && m.kind === 'archer') put(m.x, m.z);
+    for (const m of w.minions) if (m.active && m.kind !== 'titan') put(m.x, m.z);
     if (w.titan) {
       // A big body throws a big shadow
       const t = w.titan;
@@ -1939,6 +1970,45 @@ export class PixelView {
     this.bars.push(fx, fy - frame.height - 6, t.hp / t.maxHp, 0);
     this.lights.push({ x: fx + (flip ? -5 : 5), y: fy - frame.height + 14, radius: 30, intensity: 0.5, r: 1, g: 0.3, b: 0.25 });
     if (t.moving && Math.random() < 0.4) this.particles.spawn(t.x + (Math.random() - 0.5) * 1.2, 0.05, t.z + (Math.random() - 0.5) * 1.2, 0, 0.8, 0, 0.5, 0x8a7a68, { priority: 0.4, size: 2, alpha: 0.7 });
+  }
+
+  /**
+   * The eagle wheels a hero's height above the ground beating its wings, and
+   * folds them for the dive when it strikes. The angel hovers a little off
+   * the floor with a slow rise and fall, sword low until it cuts.
+   */
+  private drawCompanion(m: Minion): void {
+    const cam = this.view;
+    const ctx = this.ctx;
+    const eagle = m.kind === 'eagle';
+    const frames = eagle ? this.fx.eagle : this.fx.angel;
+    let frame: HTMLCanvasElement;
+    let y: number;
+    if (eagle) {
+      frame = m.shoot > 0 ? frames[3]! : frames[Math.floor(this.time * 9) % 3]!;
+      y = m.shoot > 0 ? 0.9 : 1.9 + Math.sin(this.time * 2.5) * 0.15;
+    } else {
+      frame = m.shoot > 0.15 ? frames[1]! : frames[0]!;
+      y = 0.3 + Math.sin(this.time * 1.8) * 0.12;
+    }
+    const flip = Math.sin(m.yaw) - Math.cos(m.yaw) < 0;
+    const fx = Math.round(cam.frameX(m.x, m.z));
+    const fy = Math.round(cam.frameY(m.x, y, m.z));
+    this.items.push({
+      depth: cam.depth(m.x, m.z) + 0.005,
+      draw: () => {
+        ctx.save();
+        ctx.translate(fx, fy);
+        if (flip) ctx.scale(-1, 1);
+        ctx.drawImage(frame, -(frame.width >> 1), -frame.height + (eagle ? 4 : 0));
+        ctx.restore();
+      },
+    });
+    if (!eagle) {
+      // A cold light off the halo, and a feather now and then
+      this.lights.push({ x: fx, y: fy - 36, radius: 34, intensity: 0.7, r: 0.8, g: 0.75, b: 0.45 });
+      if (Math.random() < 0.06) this.particles.spawn(m.x + (Math.random() - 0.5) * 0.8, y + 1 + Math.random() * 0.6, m.z + (Math.random() - 0.5) * 0.8, (Math.random() - 0.5) * 0.4, -0.35, (Math.random() - 0.5) * 0.4, 1.6, 0x24202c, { priority: 0.3, size: 2, alpha: 0.9 });
+    }
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

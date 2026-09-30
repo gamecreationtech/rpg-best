@@ -34,7 +34,10 @@ const PET_SPEED = 5.5;
 /** Summons: archer slots and one titan slot, how fast they walk, and how far from the hero they stand. */
 const ARCHER_SLOTS = 6;
 const TITAN_SLOT = ARCHER_SLOTS;
-const MINION_POOL = ARCHER_SLOTS + 1;
+const EAGLE_SLOT = ARCHER_SLOTS + 1;
+const ANGEL_SLOT = ARCHER_SLOTS + 2;
+const MINION_POOL = ARCHER_SLOTS + 3;
+const COMPANION_SPEED = 7.5;
 const MINION_SPEED = 6;
 const MINION_HEEL = 1.7;
 const TITAN_SPEED = 4.2;
@@ -428,6 +431,7 @@ export class World {
     this.markDirty();
     if (mods.skeletons) this.raiseSkeletons(mods.skeletons.count, mods.skeletons.interval * MS);
     if (mods.titan) this.raiseTitan(mods.titan.hpMult);
+    if (mods.companion) this.callCompanion(mods.companion.kind);
     this.emit({ type: 'buff_start', id, color });
     return buff;
   }
@@ -481,6 +485,93 @@ export class World {
   private tickMinions(dt: number): void {
     this.tickArchers(dt);
     this.tickTitan(dt);
+    this.tickCompanion(dt, EAGLE_SLOT, 'eagle');
+    this.tickCompanion(dt, ANGEL_SLOT, 'angel');
+  }
+
+  /** The eagle or the angel arrives at the hero's side: the eagle on the left, the angel on the right. */
+  private callCompanion(kind: 'eagle' | 'angel'): void {
+    const m = this.minions[kind === 'eagle' ? EAGLE_SLOT : ANGEL_SLOT]!;
+    const side = kind === 'eagle' ? 1 : -1;
+    m.active = true;
+    m.x = this.px + Math.cos(this.pyaw) * side * 1.2;
+    m.z = this.pz - Math.sin(this.pyaw) * side * 1.2;
+    m.yaw = this.pyaw;
+    m.moving = false;
+    m.timer = 0;
+    m.shoot = 0;
+  }
+
+  /**
+   * A companion keeps to the hero's side. The eagle goes only for what the
+   * hero attacks; the angel takes that too, or else the nearest monster that
+   * has noticed the hero. In reach, it strikes every interval.
+   */
+  private tickCompanion(dt: number, slot: number, kind: 'eagle' | 'angel'): void {
+    const m = this.minions[slot]!;
+    const buff = this.buffs.find((b) => b.mods.companion?.kind === kind);
+    if (!buff) {
+      m.active = false;
+      return;
+    }
+    const cfg = buff.mods.companion!;
+    m.moving = false;
+    m.timer += dt;
+    m.shoot = Math.max(0, m.shoot - dt);
+    const side = kind === 'eagle' ? 1 : -1;
+    if (this.dist(m.x, m.z) > 14) {
+      m.x = this.px + Math.cos(this.pyaw) * side * 1.2;
+      m.z = this.pz - Math.sin(this.pyaw) * side * 1.2;
+    }
+    const last = this.enemies[this.lastHitId];
+    let target: Enemy | null = last && last.alive && !last.dead ? last : null;
+    if (!target && kind === 'angel') {
+      let bestD = 7 * 7;
+      for (const e of this.enemies) {
+        if (!e.alive || e.dead || e.dummy || !e.aggro) continue;
+        const dd = (e.x - this.px) ** 2 + (e.z - this.pz) ** 2;
+        if (dd < bestD) {
+          bestD = dd;
+          target = e;
+        }
+      }
+    }
+    const reach = cfg.reach * PX;
+    let gx = this.px + Math.cos(this.pyaw) * side * 1.2 - Math.sin(this.pyaw) * 0.3;
+    let gz = this.pz - Math.sin(this.pyaw) * side * 1.2 - Math.cos(this.pyaw) * 0.3;
+    let stop = 0.35;
+    if (target && this.dist(target.x, target.z) < 9) {
+      const td = Math.hypot(target.x - m.x, target.z - m.z);
+      gx = target.x;
+      gz = target.z;
+      stop = reach + target.radius - 0.15;
+      m.yaw = Math.atan2(target.x - m.x, target.z - m.z);
+      if (td <= reach + target.radius + 0.25 && m.timer >= cfg.interval * MS) {
+        m.timer = 0;
+        m.shoot = 0.35;
+        const dx = (target.x - m.x) / Math.max(0.001, td);
+        const dz = (target.z - m.z) / Math.max(0.001, td);
+        hitEnemy(this, target, { amount: skillDamage(this, buff.id, cfg.damageMult), element: 'physical', canCrit: true, skillId: buff.id, weaponHit: false, fromMinion: true });
+        this.emit({ type: 'minion_strike', kind, x: m.x, z: m.z, dirX: dx, dirZ: dz });
+      }
+    }
+    const dx = gx - m.x;
+    const dz = gz - m.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > stop) {
+      const step = Math.min(dist, COMPANION_SPEED * dt);
+      // The eagle flies over walls; the angel walks round them
+      if (kind === 'eagle') {
+        m.x += (dx / dist) * step;
+        m.z += (dz / dist) * step;
+      } else {
+        this.map.slide(m.x, m.z, m.x + (dx / dist) * step, m.z + (dz / dist) * step, 0.2, this.slid);
+        m.x = this.slid.x;
+        m.z = this.slid.z;
+      }
+      m.yaw = Math.atan2(dx, dz);
+      m.moving = true;
+    }
   }
 
   /**
@@ -630,6 +721,7 @@ export class World {
     this.emit({ type: 'buff_end', id: b.id });
     if (b.mods.skeletons) for (let i = 0; i < ARCHER_SLOTS; i++) this.minions[i]!.active = false;
     if (b.mods.titan) this.minions[TITAN_SLOT]!.active = false;
+    if (b.mods.companion) this.minions[b.mods.companion.kind === 'eagle' ? EAGLE_SLOT : ANGEL_SLOT]!.active = false;
     if (b.mods.endSmoke) {
       this.addZone({ type: 'smoke', x: this.px, z: this.pz, radius: b.mods.endSmoke.radius * PX, duration: b.mods.endSmoke.slowDuration * MS, tickInterval: 0.2, slow: 0.4, damage: 0, element: 'physical', skillId: b.id });
     }
@@ -1067,7 +1159,7 @@ export class World {
   /** The development menu's crab: trots behind the hero and fetches loot within PET_REACH. Never saved. */
   readonly pet = { active: false, x: 0, z: 0, yaw: 0, moving: false, targetDrop: -1 };
   /** Summoned skeleton archers; `active` ones follow the hero. */
-  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, (_, i) => ({ active: false, kind: i === TITAN_SLOT ? 'titan' : 'archer', x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0, hp: 0, maxHp: 0, radius: i === TITAN_SLOT ? TITAN_RADIUS : 0.3 }));
+  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, (_, i) => ({ active: false, kind: i === TITAN_SLOT ? 'titan' : i === EAGLE_SLOT ? 'eagle' : i === ANGEL_SLOT ? 'angel' : 'archer', x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0, hp: 0, maxHp: 0, radius: i === TITAN_SLOT ? TITAN_RADIUS : 0.3 }));
 
   /** The titan, if one stands. */
   get titan(): Minion | null {

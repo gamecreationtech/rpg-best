@@ -159,7 +159,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(56);
+    expect(Object.keys(SKILLS).length).toBe(58);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -465,6 +465,50 @@ describe('skeleton army', () => {
     b.remaining = 0.01;
     run(w, 0.1);
     expect(w.minions.some((m) => m.active)).toBe(false);
+  });
+});
+
+describe('companions', () => {
+  it('the eagle flies at the rogue\'s side and dives on what the rogue hits', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    w.player.level = 20;
+    w.player.mana = 500;
+    w.player.skillRanks.summon_eagle = 1;
+    expect(castSkill(w, 'summon_eagle', null).ok).toBe(true);
+    const eagle = w.minions.find((m) => m.kind === 'eagle')!;
+    expect(eagle.active).toBe(true);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 4, w.pz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    run(w, 1.5);
+    expect(e.hp).toBe(100000); // nothing hit yet
+    hitEnemy(w, e, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: false });
+    run(w, 2.5);
+    expect(e.hp).toBeLessThan(100000 - 1);
+    expect(w.events.some((ev) => ev.type === 'minion_strike' && ev.kind === 'eagle')).toBe(true);
+  });
+
+  it('the angel fights whatever has noticed the paladin', () => {
+    const w = new World(createPlayer('knight', 'paladin'), 7);
+    w.travel('arena');
+    w.player.level = 20;
+    w.player.mana = 500;
+    w.player.skillRanks.summon_angel = 1;
+    expect(castSkill(w, 'summon_angel', null).ok).toBe(true);
+    expect(w.minions.find((m) => m.kind === 'angel')!.active).toBe(true);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    e.aggro = true;
+    run(w, 3);
+    expect(e.hp).toBeLessThan(100000);
+    const b = w.buffs.find((b) => b.id === 'summon_angel')!;
+    b.remaining = 0.01;
+    run(w, 0.1);
+    expect(w.minions.find((m) => m.kind === 'angel')!.active).toBe(false);
   });
 });
 

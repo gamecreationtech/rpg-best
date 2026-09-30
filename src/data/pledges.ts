@@ -21,7 +21,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   paladin: {
     id: 'paladin', classId: 'knight', name: 'Paladin', title: 'Knight of Light', color: 0xffe87a, armor: { plate: 0xc8a040, dark: 0x8a6a20, trim: 0xffe87a },
     description: 'Blessed by the heavens, the Paladin wields divine power to smite evil and protect the innocent.',
-    skills: ['prayer', 'hammer_of_gods', 'sanctuary'],
+    skills: ['prayer', 'hammer_of_gods', 'sanctuary', 'summon_angel'],
   },
   titan: {
     id: 'titan', classId: 'knight', name: 'Titan', title: 'God of Earth', color: 0xc8945a, armor: { plate: 0x7a5636, dark: 0x7a2a2a, trim: 0xb03a2a },

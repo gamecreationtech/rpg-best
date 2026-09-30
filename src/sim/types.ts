@@ -7,8 +7,8 @@ import type { Item } from './items/item';
 /** A skeleton archer raised by Summon Skeleton Army. Runtime only, never saved. */
 export interface Minion {
   active: boolean;
-  /** A skeleton archer, or the titan of Meat Shield. */
-  kind: 'archer' | 'titan';
+  /** A skeleton archer, the titan of Meat Shield, the rogue's eagle or the paladin's fallen angel. */
+  kind: 'archer' | 'titan' | 'eagle' | 'angel';
   x: number;
   z: number;
   yaw: number;
@@ -205,6 +205,8 @@ export type SimEvent =
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
   | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' }
+  /** A companion's blow: the eagle's talons or the angel's sword, from x, z toward dirX, dirZ. */
+  | { type: 'minion_strike'; kind: 'eagle' | 'angel'; x: number; z: number; dirX: number; dirZ: number }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */
   | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody'; x: number; z: number; element: Element }
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }

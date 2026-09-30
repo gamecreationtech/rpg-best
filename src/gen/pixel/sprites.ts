@@ -208,6 +208,10 @@ export interface EffectSprites {
   daemon: HTMLCanvasElement[];
   /** Meat Shield's titan: standing, fists raised, fists down. Faces right. */
   titan: HTMLCanvasElement[];
+  /** The rogue's eagle: wings up, wings level, wings down, then the dive with talons out. Faces right. */
+  eagle: HTMLCanvasElement[];
+  /** The paladin's fallen angel: at rest, and mid-cut. Faces right. */
+  angel: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -364,7 +368,7 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
   arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
   arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s) };
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s), eagle: eagleFrames(s), angel: angelFrames(s) };
 }
 
 /** Head and horns of the daemon, placed pixel by pixel, 52 wide. See `DAEMON_INK` for what each mark means. */
@@ -888,6 +892,192 @@ function titanFrames(s: number): HTMLCanvasElement[] {
       }
     }
     frames.push(b.toCanvas());
+  }
+  return frames;
+}
+
+/** Paints a grid of colour cells into a scaled pixel buffer, outlining every painted edge first. */
+function paintGrid(grid: (Rgb | null)[][], W: number, H: number, s: number, outline: Rgb): HTMLCanvasElement {
+  const painted = grid.map((r) => r.map((c) => c !== null));
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (painted[y]![x]) continue;
+      const near = (painted[y - 1]?.[x] ?? false) || (painted[y + 1]?.[x] ?? false) || (painted[y]![x - 1] ?? false) || (painted[y]![x + 1] ?? false);
+      if (near) grid[y]![x] = outline;
+    }
+  }
+  const b = new PixelBuffer(W * s, H * s);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const c = grid[y]![x];
+      if (c) b.rect(x * s, y * s, s, s, c);
+    }
+  }
+  return b.toCanvas();
+}
+
+/**
+ * The eagle, 30 wide and 18 tall, facing right: a dark brown body, a white
+ * head with a hooked yellow beak, wide wings in three beats and a fourth
+ * frame folded back for the dive with the talons thrust forward.
+ */
+function eagleFrames(s: number): HTMLCanvasElement[] {
+  const W = 30;
+  const H = 18;
+  const brown: Rgb[] = [[52, 34, 22], [92, 60, 34], [128, 88, 50]];
+  const white: Rgb = [236, 232, 220];
+  const whiteDark: Rgb = [190, 184, 170];
+  const beak: Rgb = [230, 180, 40];
+  const talon: Rgb = [214, 170, 50];
+  const eye: Rgb = [20, 14, 10];
+  const outline: Rgb = [10, 8, 12];
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < 4; f++) {
+    const grid: (Rgb | null)[][] = [];
+    for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
+    const put = (x: number, y: number, c: Rgb): void => {
+      if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
+    };
+    const dive = f === 3;
+    // Body: a tapered oval, dark above and lighter below, tail feathers fanned behind
+    const by = dive ? 8 : 10;
+    for (let x = 6; x <= 21; x++) {
+      const t = (x - 6) / 15;
+      const half = Math.round(2.5 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.5);
+      for (let d = -half; d <= half; d++) put(x, by + d, d < 0 ? brown[0]! : d === 0 ? brown[1]! : brown[2]!);
+    }
+    for (let i = 0; i < 3; i++) put(3 + i, by - 1 + i, i === 2 ? white : brown[1]!); // tail
+    for (let i = 0; i < 3; i++) put(3 + i, by + 1 + (i >> 1), white);
+    // Wings: one beat per frame, spread wide in flight and swept back in the dive
+    const wing = (dir: -1 | 1): void => {
+      if (dive) {
+        for (let i = 0; i < 9; i++) {
+          const x = 8 + i;
+          const y = by + 2 + (i >> 1);
+          put(x, y, brown[0]!);
+          put(x, y + 1, brown[1]!);
+        }
+        return;
+      }
+      const lift = f === 0 ? -6 : f === 1 ? -2 : 3;
+      for (let i = 0; i < 11; i++) {
+        const x = 9 + i;
+        const y = by + Math.round(lift * (i / 10)) - (dir === 1 ? 0 : 1) + (f === 2 ? 0 : -1);
+        put(x, y, brown[0]!);
+        put(x, y + 1, i % 3 === 2 ? brown[2]! : brown[1]!);
+        if (i > 6) put(x, y + 2, brown[0]!); // primaries fingered at the tip
+      }
+    };
+    wing(1);
+    // Head: white, hooked beak, a dark eye
+    for (let x = 21; x <= 25; x++) for (let d = -2; d <= 1; d++) put(x, by + d, d === 1 ? whiteDark : white);
+    put(26, by - 1, beak);
+    put(27, by - 1, beak);
+    put(27, by, beak);
+    put(23, by - 1, eye);
+    // Talons, tucked in flight, thrust forward in the dive
+    if (dive) {
+      for (let i = 0; i < 3; i++) {
+        put(22 + i, by + 3 + i, talon);
+        put(18 + i, by + 3 + i, talon);
+      }
+    } else {
+      put(16, by + 3, talon);
+      put(18, by + 3, talon);
+    }
+    frames.push(paintGrid(grid, W, H, s, outline));
+  }
+  return frames;
+}
+
+/**
+ * The fallen angel, 40 wide and 44 tall, facing right: tarnished silver-blue
+ * plate over a grey robe, a long sword, a broken halo tilted over the head,
+ * and two great wings of black feathers spread behind. Frame 0 stands with
+ * the sword low; frame 1 has swept it up and across.
+ */
+function angelFrames(s: number): HTMLCanvasElement[] {
+  const W = 40;
+  const H = 44;
+  const plate: Rgb[] = [[64, 72, 92], [104, 114, 138], [150, 160, 184], [204, 212, 228]];
+  const robe: Rgb[] = [[40, 38, 50], [70, 66, 84], [100, 96, 118]];
+  const feather: Rgb[] = [[16, 14, 20], [36, 32, 44], [58, 52, 70]];
+  const skin: Rgb = [214, 196, 184];
+  const hair: Rgb = [230, 226, 210];
+  const halo: Rgb = [230, 190, 80];
+  const haloDim: Rgb = [150, 120, 50];
+  const steel: Rgb = [200, 208, 220];
+  const steelDark: Rgb = [120, 128, 144];
+  const eye: Rgb = [120, 200, 255];
+  const outline: Rgb = [10, 8, 12];
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < 2; f++) {
+    const grid: (Rgb | null)[][] = [];
+    for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
+    const put = (x: number, y: number, c: Rgb): void => {
+      if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
+    };
+    const line = (x0: number, y0: number, x1: number, y1: number, c: Rgb, half = 0): void => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let i = 0; i <= n; i++) {
+        const x = Math.round(x0 + ((x1 - x0) * i) / n);
+        const y = Math.round(y0 + ((y1 - y0) * i) / n);
+        for (let d = -half; d <= half; d++) put(x, y + d, c);
+      }
+    };
+    // Wings: two fans of black feathers behind, each a row of long primaries from a shoulder
+    for (const side of [-1, 1] as const) {
+      const sx = 18 + side * 4;
+      const sy = 14;
+      for (let i = 0; i < 7; i++) {
+        const a = -1.2 + side * (0.15 + i * 0.18) * (side === 1 ? 1 : 1) - i * 0.12;
+        const len = 18 - Math.abs(i - 3) * 1.2;
+        const tx = sx + side * Math.round(Math.cos(a + (side === 1 ? 0 : Math.PI)) * len * (side === 1 ? 1 : -1));
+        const ty = sy - Math.round(Math.sin(-a) * len) + i * 2;
+        line(sx, sy, tx, ty, feather[i % 3]!, 1);
+        put(tx, ty, feather[2]!);
+      }
+    }
+    // Robe: a long skirt widening to the hem
+    for (let y = 24; y <= 41; y++) {
+      const half = 4 + Math.round((y - 24) * 0.45);
+      for (let x = 18 - half; x <= 18 + half; x++) put(x, y, x < 15 ? robe[2]! : x > 20 ? robe[0]! : robe[1]!);
+      if (y % 4 === 1) put(18, y, robe[0]!);
+    }
+    // Plate: breastplate and pauldrons, lit from the upper left
+    for (let y = 14; y <= 24; y++) {
+      const half = y < 17 ? 7 : 5;
+      for (let x = 18 - half; x <= 18 + half; x++) put(x, y, x < 15 ? plate[3]! : x < 19 ? plate[2]! : x < 22 ? plate[1]! : plate[0]!);
+    }
+    for (const side of [-1, 1] as const) for (let y = 13; y <= 16; y++) for (let x = 18 + side * 6; x !== 18 + side * 10; x += side) put(x, y, y === 13 ? plate[3]! : plate[1]!);
+    put(18, 18, plate[0]!); // the seam down the chest
+    put(18, 20, plate[0]!);
+    put(18, 22, plate[0]!);
+    // Head: pale, long white hair, a cold blue eye; the halo broken and tilted over it
+    for (let y = 6; y <= 12; y++) for (let x = 15; x <= 21; x++) put(x, y, y >= 11 || x === 15 ? hair : skin);
+    for (let y = 5; y <= 13; y++) put(14, y, hair);
+    for (let y = 8; y <= 15; y++) put(13, y, hair);
+    put(20, 9, eye);
+    put(17, 9, eye);
+    for (let x = 12; x <= 24; x++) if (x < 16 || x > 18) put(x, 3 + (x > 20 ? 1 : 0), x % 4 === 1 ? haloDim : halo);
+    put(12, 4, haloDim);
+    put(24, 5, haloDim);
+    // Arms and the sword: at rest it hangs by the leg; swinging it sweeps up and out to the right
+    if (f === 0) {
+      line(24, 17, 26, 27, plate[1]!, 1);
+      line(26, 28, 26, 42, steel, 0);
+      line(27, 28, 27, 42, steelDark, 0);
+      put(26, 43, steel);
+      for (let x = 24; x <= 29; x++) put(x, 27, haloDim); // crossguard
+    } else {
+      line(24, 17, 31, 12, plate[1]!, 1);
+      line(31, 12, 39, 4, steel, 0);
+      line(32, 13, 39, 6, steelDark, 0);
+      put(39, 4, [255, 255, 255]);
+      for (let i = -2; i <= 2; i++) put(31 + i, 12 - i, haloDim); // crossguard
+    }
+    line(12, 17, 10, 26, plate[1]!, 1); // the off arm
+    frames.push(paintGrid(grid, W, H, s, outline));
   }
   return frames;
 }
