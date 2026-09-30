@@ -426,8 +426,6 @@ function daemonFrames(s: number): HTMLCanvasElement[] {
     R(26, 12, 3, 2, eye);
     R(22, 12, 1, 1, eyeCore);
     R(27, 12, 1, 1, eyeCore);
-    // Jagged teeth along the jaw
-    for (let i = 0; i < 4; i++) R(20 + i * 3, 19, 1, 2, bone);
     // The bow: a great arc out to the right, in dark wood with a pale string
     const bx = 38;
     for (let y = 6; y <= 50; y++) {
