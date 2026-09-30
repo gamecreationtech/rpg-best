@@ -507,6 +507,13 @@ export class PixelView {
         }
         if (z.type === 'storm') this.effects.flash(z.x, 3, z.z, 0xd8e8ff, 3, 200, 0.2);
         if (z.type === 'blizzard') this.effects.ring(z.x, z.z, 0.3, 6, 0xd8f4ff, 0.6, 1, 1);
+        if (z.type === 'summon') {
+          // The ground breaks open where the daemon comes up
+          this.effects.cracks(z.x, z.z, 30, 0x55cc33, 1.2, 8);
+          this.effects.ring(z.x, z.z, 0.2, 1.4, 0x55cc33, 0.5, 2, 1.2);
+          pt.burst(z.x, 0.1, z.z, 24, 2.2, 0x8a7a68, 0.6, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
+          this.view.kick(0.12);
+        }
         if (z.type === 'smoke') {
           // The bomb pops: a flash, a fast ring, and a thick puff of smoke thrown out to the edge
           this.effects.flash(z.x, 0.6, z.z, 0xd0d0e0, 1.6, 60, 0.15);
@@ -1280,7 +1287,13 @@ export class PixelView {
       if (!pr.alive) continue;
       const holy = pr.shape === 'hammer' || pr.shape === 'star';
       const venom = pr.shape === 'arrow' && pr.element === 'poison' && pr.owner !== 'enemy';
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const great = pr.shape === 'greatarrow';
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : great ? 0x55cc33 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      if (great) {
+        // The daemon's arrow tears the air: a green wake behind it and a hard green light
+        for (let i = 0; i < 2; i++) this.particles.spawn(pr.x - (pr.vx / Math.max(1, Math.hypot(pr.vx, pr.vz))) * i * 0.4, pr.y + (Math.random() - 0.5) * 0.3, pr.z - (pr.vz / Math.max(1, Math.hypot(pr.vx, pr.vz))) * i * 0.4, (Math.random() - 0.5) * 0.6, 0.2, (Math.random() - 0.5) * 0.6, 0.35, i === 0 ? 0xc0ffa0 : 0x55cc33, { priority: 0.6, size: 2, alpha: 0.9, drag: 3 });
+        this.lights.push({ x: Math.round(cam.frameX(pr.x, pr.z)), y: Math.round(cam.frameY(pr.x, pr.y, pr.z)), radius: 44, intensity: 1.4, r: 0.4, g: 1, b: 0.3 });
+      }
       if (venom) {
         // Venom dripping off the arrowhead as it flies, and a sickly glow round it
         if (Math.random() < 0.7) this.particles.spawn(pr.x, pr.y - 0.05, pr.z, (Math.random() - 0.5) * 0.3, -0.8, (Math.random() - 0.5) * 0.3, 0.4, Math.random() < 0.3 ? 0xc0ffc0 : 0x66e070, { priority: 0.5, alpha: 0.9, gravity: 2 });
@@ -1379,6 +1392,12 @@ export class PixelView {
       if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
       if (w.zones.some((z) => z.type === 'wind' && z.followsPlayer)) this.drawTornado(heroY);
       if (w.buffs.some((b) => b.id === 'quickshot')) this.drawQuickWind(heroY);
+    }
+
+    // Arrow of Beyond: the daemon, rising out of the ground, drawing, loosing, and sinking back
+    for (const z of w.zones) {
+      if (z.type !== 'summon') continue;
+      this.drawDaemon(z);
     }
 
     // Boulder Toss: the rock on its way down, from high above to the marked ground
@@ -1779,6 +1798,47 @@ export class PixelView {
       const a = this.time * 9;
       this.particles.spawn(w.px + Math.cos(a) * 0.55, heroY + 0.5 + (Math.random() - 0.5) * 0.3, w.pz + Math.sin(a) * 0.55, -Math.sin(a) * 3, 0.2, Math.cos(a) * 3, 0.25, 0xd8ecff, { drag: 4, priority: 0.4, alpha: 0.8 });
     }
+  }
+
+  /**
+   * The daemon of the beyond. It comes up out of the ground over the first
+   * half second, clipped at the floor so only what has risen shows, stands
+   * with the bow drawn until it fires, holds the loosed pose a moment and
+   * sinks back down at the end. Faces the target; dirt boils at its feet
+   * while it moves and its eyes throw a green light.
+   */
+  private drawDaemon(z: Zone): void {
+    const cam = this.view;
+    const ctx = this.ctx;
+    const frames = this.fx.daemon;
+    const age = z.duration - z.remaining;
+    const riseTime = 0.5;
+    const sinkTime = 0.35;
+    let rise = Math.min(1, age / riseTime);
+    if (z.remaining < sinkTime) rise = Math.max(0, z.remaining / sinkTime);
+    const loosed = z.triggered;
+    const frame = frames[loosed ? 1 : 0]!;
+    const flip = z.dx - z.dz < 0;
+    const fx = Math.round(cam.frameX(z.x, z.z));
+    const fy = Math.round(cam.frameY(z.x, 0, z.z));
+    const shown = Math.max(1, Math.round(frame.height * rise));
+    const moving = rise < 1;
+    this.items.push({
+      depth: cam.depth(z.x, z.z),
+      draw: () => {
+        ctx.save();
+        ctx.translate(fx, fy + 2);
+        if (flip) ctx.scale(-1, 1);
+        // Only the risen part, drawn from the floor up
+        ctx.drawImage(frame, 0, 0, frame.width, shown, -(frame.width >> 1), -shown, frame.width, shown);
+        ctx.restore();
+      },
+    });
+    if (moving && Math.random() < 0.9) {
+      const a = Math.random() * Math.PI * 2;
+      this.particles.spawn(z.x + Math.cos(a) * 0.5, 0.05, z.z + Math.sin(a) * 0.5, Math.cos(a) * 1.2, 1.5 + Math.random(), Math.sin(a) * 1.2, 0.5, Math.random() < 0.5 ? 0x6a5a48 : 0x9a8a70, { gravity: 6, priority: 0.5, size: 2 });
+    }
+    if (rise > 0.6) this.lights.push({ x: fx + (flip ? -2 : 2), y: fy - Math.round(46 * rise), radius: 50, intensity: 1.2 + (loosed ? 0.6 : 0), r: 0.5, g: 1, b: 0.35 });
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

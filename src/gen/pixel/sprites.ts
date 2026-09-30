@@ -204,6 +204,8 @@ export interface EffectSprites {
   snowflakes: HTMLCanvasElement[];
   /** A big arrow seen point-down, the kind Arrow Storm rains from the sky. */
   bigArrow: HTMLCanvasElement;
+  /** The daemon Arrow of Beyond raises: bow drawn, then loosed. Faces right. */
+  daemon: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -360,5 +362,104 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
   arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
   arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas() };
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s) };
+}
+
+/**
+ * The daemon of the beyond, 46 wide and 58 tall: a hunched horned brute of
+ * dark crimson with burning green eyes and a great black bow in its left
+ * hand. Frame 0 has the string drawn back with the arrow nocked, frame 1 has
+ * just loosed it, arm forward and string straight.
+ */
+function daemonFrames(s: number): HTMLCanvasElement[] {
+  const W = 46;
+  const H = 58;
+  const skin = ramp(0x4a1626, 1.25);
+  const bone: Rgb = [232, 224, 200];
+  const eye: Rgb = [140, 255, 90];
+  const eyeCore: Rgb = [240, 255, 220];
+  const wood = ramp(0x2a1a14, 1.1);
+  const outline: Rgb = [10, 8, 12];
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < 2; f++) {
+    const b = new PixelBuffer(W * s, H * s);
+    const R = (x: number, y: number, w: number, h: number, c: Rgb): void => b.rect(x * s, y * s, w * s, h * s, c);
+    const E = (x: number, y: number, rx: number, ry: number, c: Rgb): void => b.ellipse(x * s, y * s, rx * s, ry * s, c);
+    // Legs and cloven hooves
+    R(13, 40, 8, 15, outline);
+    R(14, 41, 6, 13, skin[1]);
+    R(24, 40, 8, 15, outline);
+    R(25, 41, 6, 13, skin[1]);
+    R(12, 53, 10, 5, outline);
+    R(13, 54, 3, 3, skin[0]);
+    R(18, 54, 3, 3, skin[0]);
+    R(23, 53, 10, 5, outline);
+    R(24, 54, 3, 3, skin[0]);
+    R(29, 54, 3, 3, skin[0]);
+    // Hunched torso, broad at the shoulders
+    E(22, 29, 15, 14, outline);
+    E(22, 29, 14, 13, skin[1]);
+    E(19, 27, 6, 8, skin[2]);
+    R(9, 18, 27, 6, outline);
+    R(10, 19, 25, 5, skin[1]);
+    // Head, low between the shoulders, with a heavy jaw
+    E(24, 13, 8, 8, outline);
+    E(24, 13, 7, 7, skin[2]);
+    R(19, 16, 11, 4, skin[1]);
+    // Horns sweeping up and out
+    for (let i = 0; i < 9; i++) {
+      const y = 9 - i;
+      const lx = 18 - Math.round(i * 0.9);
+      const rx = 30 + Math.round(i * 0.9);
+      R(lx - 1, y - 1, 3, 3, outline);
+      R(rx - 1, y - 1, 3, 3, outline);
+    }
+    for (let i = 0; i < 9; i++) {
+      const y = 9 - i;
+      const lx = 18 - Math.round(i * 0.9);
+      const rx = 30 + Math.round(i * 0.9);
+      R(lx, y, 1, 1, i > 6 ? bone : skin[3]);
+      R(rx, y, 1, 1, i > 6 ? bone : skin[3]);
+    }
+    // Eyes: burning green with a white core
+    R(21, 12, 3, 2, eye);
+    R(26, 12, 3, 2, eye);
+    R(22, 12, 1, 1, eyeCore);
+    R(27, 12, 1, 1, eyeCore);
+    // Jagged teeth along the jaw
+    for (let i = 0; i < 4; i++) R(20 + i * 3, 19, 1, 2, bone);
+    // The bow: a great arc out to the right, in dark wood with a pale string
+    const bx = 38;
+    for (let y = 6; y <= 50; y++) {
+      const t = (y - 28) / 22;
+      const x = bx + Math.round(6 * (1 - t * t));
+      R(x - 1, y, 3, 1, outline);
+      R(x, y, 1, 1, Math.abs(t) < 0.15 ? wood[3] : wood[2]);
+    }
+    // String: drawn back to the daemon's cheek, or straight after the shot
+    const pull = f === 0 ? bx - 8 : bx + 1;
+    for (let y = 6; y <= 50; y++) {
+      const t = Math.abs(y - 28) / 22;
+      const x = Math.round(pull + (bx + 1 - pull) * t);
+      b.set(x * s, y * s, bone, 230);
+    }
+    // Bow arm, straight out to the grip; string arm drawn back to the cheek or thrown forward
+    R(30, 24, 9, 4, outline);
+    R(31, 25, 8, 2, skin[1]);
+    if (f === 0) {
+      R(24, 22, 8, 4, outline);
+      R(25, 23, 7, 2, skin[2]);
+      // The nocked arrow: from the hand out past the bow, with a green rune glowing on it
+      R(29, 27, 16, 2, outline);
+      R(29, 28, 15, 1, [26, 20, 24]);
+      R(43, 27, 3, 2, bone);
+      R(36, 28, 1, 1, eye);
+    } else {
+      R(30, 28, 8, 4, outline);
+      R(31, 29, 7, 2, skin[2]);
+    }
+    b.shadeRamp((c) => (c[0] === skin[1][0] && c[1] === skin[1][1] && c[2] === skin[1][2] ? skin : null));
+    frames.push(b.toCanvas());
+  }
+  return frames;
 }

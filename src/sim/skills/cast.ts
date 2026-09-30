@@ -209,32 +209,50 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
   const spread = ((eff.spreadAngle ?? 0) * Math.PI) / 180;
   const homing = !!eff.homing || (eff.shape === 'arrow' && w.buffs.some((b) => b.mods.homingArrows));
   const baseAngle = Math.atan2(dir.x, dir.z);
-  for (let i = 0; i < count; i++) {
-    const a = count > 1 ? baseAngle - spread / 2 + (spread * i) / (count - 1) : baseAngle;
-    const p = packet(w, def, eff.damageMult, { stun: eff.stun });
-    if (eff.bleed) p.bleed = { ticks: eff.bleed.ticks, interval: eff.bleed.interval, damage: Math.max(1, Math.round(p.amount * eff.bleed.tickMult)) };
-    w.spawnProjectile({
-      owner: 'player',
-      shape: eff.shape,
-      element: def.element,
-      x: w.px + Math.sin(a) * 0.5,
-      z: w.pz + Math.cos(a) * 0.5,
-      dirX: Math.sin(a),
-      dirZ: Math.cos(a),
-      speed: eff.projSpeed * PX * (1 + w.derived.projSpeedPct / 100),
-      radius: (eff.projRadius ?? 8) * PX,
-      maxRange: range * PX,
-      packet: p,
-      pierce: eff.pierce ?? (eff.shape === 'arrow' ? w.derived.pierce : 0),
-      homing,
-      ricochets: eff.ricochets ?? 0,
-      returns: !!eff.returns,
-      throughWalls: !!eff.throughWalls,
-      splashRadius: (eff.splashRadius ?? 0) * PX,
-      onHitZone: eff.onHitZone ? { radius: eff.onHitZone.radius * PX, duration: eff.onHitZone.duration * MS, damage: Math.max(1, Math.round(p.amount * eff.onHitZone.tickMult)), tickInterval: eff.onHitZone.tickInterval * MS } : null,
-      burstOnHit: eff.burstOnHit ? { count: eff.burstOnHit.count, damage: Math.max(1, Math.round(p.amount * eff.burstOnHit.damageMult)), projSpeed: eff.burstOnHit.projSpeed * PX, maxRange: eff.burstOnHit.maxRange * PX } : null,
-      skillId: def.id,
+  const loose = (fromX: number, fromZ: number, y?: number): void => {
+    for (let i = 0; i < count; i++) {
+      const a = count > 1 ? baseAngle - spread / 2 + (spread * i) / (count - 1) : baseAngle;
+      const p = packet(w, def, eff.damageMult, { stun: eff.stun });
+      if (eff.bleed) p.bleed = { ticks: eff.bleed.ticks, interval: eff.bleed.interval, damage: Math.max(1, Math.round(p.amount * eff.bleed.tickMult)) };
+      w.spawnProjectile({
+        owner: 'player',
+        shape: eff.shape,
+        element: def.element,
+        y,
+        x: fromX + Math.sin(a) * 0.5,
+        z: fromZ + Math.cos(a) * 0.5,
+        dirX: Math.sin(a),
+        dirZ: Math.cos(a),
+        speed: eff.projSpeed * PX * (1 + w.derived.projSpeedPct / 100),
+        radius: (eff.projRadius ?? 8) * PX,
+        maxRange: range * PX,
+        packet: p,
+        pierce: eff.pierce ?? (eff.shape === 'arrow' ? w.derived.pierce : 0),
+        homing,
+        ricochets: eff.ricochets ?? 0,
+        returns: !!eff.returns,
+        throughWalls: !!eff.throughWalls,
+        splashRadius: (eff.splashRadius ?? 0) * PX,
+        onHitZone: eff.onHitZone ? { radius: eff.onHitZone.radius * PX, duration: eff.onHitZone.duration * MS, damage: Math.max(1, Math.round(p.amount * eff.onHitZone.tickMult)), tickInterval: eff.onHitZone.tickInterval * MS } : null,
+        burstOnHit: eff.burstOnHit ? { count: eff.burstOnHit.count, damage: Math.max(1, Math.round(p.amount * eff.burstOnHit.damageMult)), projSpeed: eff.burstOnHit.projSpeed * PX, maxRange: eff.burstOnHit.maxRange * PX } : null,
+        skillId: def.id,
+      });
+    }
+  };
+  if (eff.summon) {
+    // Something rises behind the hero and looses the shot from there once it stands
+    const sx = w.px - dir.x * eff.summon.behind * PX;
+    const sz = w.pz - dir.z * eff.summon.behind * PX;
+    const delay = eff.summon.delay * MS;
+    w.addZone({
+      type: 'summon', x: sx, z: sz, dx: dir.x, dz: dir.z, radius: 1, duration: delay + 0.9, tickInterval: delay, damage: 0, element: def.element, skillId: def.id,
+      onFire: () => {
+        loose(sx, sz, 2.4);
+        w.emit({ type: 'kick', k: 0.18 });
+      },
     });
+  } else {
+    loose(w.px, w.pz);
   }
   return { ok: true };
 }

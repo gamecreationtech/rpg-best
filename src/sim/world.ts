@@ -38,6 +38,8 @@ export interface ProjectileSpec {
   owner: 'player' | 'enemy';
   shape: ProjectileShape;
   element: Element;
+  /** Height off the floor; shoulder height when left out. */
+  y?: number;
   x: number;
   z: number;
   dirX: number;
@@ -432,7 +434,7 @@ export class World {
     const zone: Zone = {
       id: this.nextZoneId++,
       dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0,
-      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null,
+      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null,
       ...spec,
     };
     if (zone.type === 'fire_prison' && zone.holds) {
@@ -452,7 +454,7 @@ export class World {
     p.element = spec.element;
     p.x = spec.x;
     p.z = spec.z;
-    p.y = 1.1;
+    p.y = spec.y ?? 1.1;
     p.vx = spec.dirX * spec.speed;
     p.vz = spec.dirZ * spec.speed;
     p.speed = spec.speed;
@@ -1860,6 +1862,13 @@ export class World {
               this.emit({ type: 'aoe', visual: 'lightning', x: e.x, z: e.z, radius: 1, element: 'lightning' });
               hitEnemy(this, e, packetFor());
             }
+          }
+          break;
+        case 'summon':
+          // The summoned thing acts once, when its rise is done
+          if (!z.triggered && z.tickTimer >= z.tickInterval) {
+            z.triggered = true;
+            z.onFire?.();
           }
           break;
         case 'sanctuary':

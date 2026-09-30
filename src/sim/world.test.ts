@@ -439,6 +439,30 @@ describe('ground stomp', () => {
   });
 });
 
+describe('arrow of beyond', () => {
+  it('raises a daemon behind the hero that looses a great arrow after its delay', () => {
+    const w = new World(createPlayer('rogue', 'quiverbound'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.skillRanks.arrow_of_beyond = 1;
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 4, w.pz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    expect(castSkill(w, 'arrow_of_beyond', { x: e.x, z: e.z }).ok).toBe(true);
+    const summon = w.zones.find((z) => z.type === 'summon')!;
+    expect(summon).toBeDefined();
+    expect(summon.x).toBeLessThan(w.px); // behind the hero, away from the target
+    expect(w.projectiles.some((p) => p.alive)).toBe(false);
+    run(w, 0.75);
+    const arrow = w.projectiles.find((p) => p.alive);
+    expect(arrow?.shape).toBe('greatarrow');
+    run(w, 1.5);
+    expect(e.hp).toBeLessThan(100000);
+    expect(e.status.bleed).not.toBeNull();
+  });
+});
+
 describe('arrow storm', () => {
   it('rains a volley on every enemy in sight every half second for ten seconds', () => {
     const w = new World(createPlayer('rogue', 'quiverbound'), 7);

@@ -297,6 +297,36 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       frames.push(b.toCanvas());
       return prop(frames, 6 * s, s, 1);
     }
+    case 'greatarrow': {
+      // The daemon's arrow: a black shaft as long as a hero is tall, a broad barbed head, ragged dark
+      // fletching, and runes down the shaft that glow in the pledge's colour and blink between frames
+      const L = 30 * s;
+      const dark = ramp(0x1a1418, pal.contrast);
+      for (let f = 0; f < 2; f++) {
+        const b = new PixelBuffer(L, 7 * s);
+        b.rect(0, 3 * s, L - 6 * s, Math.max(1, s), dark[2]);
+        b.rect(0, 2 * s, L - 6 * s, Math.max(1, s), dark[1]);
+        b.rect(0, 4 * s, L - 6 * s, Math.max(1, s), dark[0]);
+        // Barbed head
+        b.rect(L - 7 * s, 2 * s, 5 * s, 3 * s, dark[3]);
+        b.rect(L - 9 * s, s, 3 * s, s, dark[3]);
+        b.rect(L - 9 * s, 5 * s, 3 * s, s, dark[3]);
+        b.rect(L - 2 * s, 3 * s, 2 * s, s, c[3]);
+        // Fletching: three ragged vanes
+        for (let i = 0; i < 3; i++) {
+          b.rect((1 + i * 2) * s, 0, s, 2 * s, dark[2]);
+          b.rect((1 + i * 2) * s, 5 * s, s, 2 * s, dark[2]);
+        }
+        // Runes
+        for (let i = 0; i < 5; i++) {
+          const on = (i + f) % 2 === 0;
+          b.set((9 + i * 3) * s, 3 * s, on ? c[3] : c[1]);
+          if (on) b.set((9 + i * 3) * s, 2 * s, c[2]);
+        }
+        frames.push(b.toCanvas());
+      }
+      return prop(frames, L >> 1, 3 * s, 0.1);
+    }
     case 'star': {
       // A holy star: a crisp five-pointed star with a dark outline so it reads
       // against the floor, a bright inner star, and sparkles off the tips

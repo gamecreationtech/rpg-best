@@ -60,7 +60,7 @@ export interface Enemy {
   aggro: boolean;
 }
 
-export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
+export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
 
 export interface DamagePacket {
   amount: number;
@@ -112,7 +112,7 @@ export interface Projectile {
   skillId: string | null;
 }
 
-export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold';
+export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon';
 
 export interface Zone {
   id: number;
@@ -144,6 +144,8 @@ export interface Zone {
   count: number;
   mods: BuffMods | null;
   onEnd: (() => void) | null;
+  /** A summon's one action, run once when `tickInterval` has passed (the daemon looses its arrow). */
+  onFire: (() => void) | null;
 }
 
 export interface Drop {

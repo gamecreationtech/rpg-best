@@ -91,6 +91,12 @@ What that means for each kind of asset:
   in the ground a moment, with stray arrows falling across the field between
   volleys. Autoaim draws a green target reticle under the hero instead of the
   plain buff glow; Quickshot whips three wind streaks round the hero's waist.
+  Arrow of Beyond is a projectile with `summon`: a `summon` zone appears
+  `behind` px back along the line of fire, fires the shot from there once
+  `delay` ms have passed (`Zone.onFire`), and lives a moment longer. The
+  renderer draws a generated two-frame daemon there, clipped at the floor as
+  it rises and sinks, bow drawn until the shot, and the `greatarrow` shape is
+  a hero-long black arrow with blinking green runes, a green wake and light.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,
