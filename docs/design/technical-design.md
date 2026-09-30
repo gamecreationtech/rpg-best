@@ -111,7 +111,7 @@ Rules, in priority order:
 2. **One sort per frame.** Walls, props, characters, drops and projectiles go
    into one list sorted by depth (painter's order). No per-object allocation:
    the list is reused.
-3. **Effects budget.** One pooled particle system with a fixed maximum (1500)
+3. **Effects budget.** One pooled particle system with a fixed maximum (3000)
    and a priority per spawn; when the pool is full, low-priority particles
    are dropped. Drawn effects are capped at 400 live entries.
 4. **Cheap lighting.** The compositor uploads the frame as one texture and a

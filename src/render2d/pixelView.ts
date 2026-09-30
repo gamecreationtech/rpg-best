@@ -85,7 +85,7 @@ export class PixelView {
   readonly labels: DropLabels;
   readonly minimap: Minimap;
   readonly interactLabels: InteractLabels;
-  readonly particles = new Particles2D(1500);
+  readonly particles = new Particles2D(3000);
   readonly effects = new Effects2D();
   /** Interactable under the mouse, set by the game each frame. */
   hoverInteractable = -1;
@@ -1045,7 +1045,7 @@ export class PixelView {
         const wz = Math.sin(z.id * 1.3) * 3;
         // The storm covers the whole field, so the snow is spawned only as far as the frame can see
         const spread = Math.min(z.radius, 11);
-        for (let k = 0; k < 10; k++) {
+        for (let k = 0; k < 20; k++) {
           if (Math.random() >= dt * 60) continue;
           const big = Math.random() < 0.2;
           pt.spawn(z.x + (Math.random() - 0.5) * spread * 2, 3.5 + Math.random() * 1.5, z.z + (Math.random() - 0.5) * spread * 2, wx * (big ? 0.6 : 1) + Math.random(), big ? -2 : -4.5, wz * (big ? 0.6 : 1) + Math.random(), big ? 1.4 : 1, big ? 0xffffff : Math.random() < 0.5 ? 0xd0f0ff : 0xa8d8f0, { alpha: big ? 0.95 : 0.7, priority: 0.35, size: big ? 2 : 1 });
