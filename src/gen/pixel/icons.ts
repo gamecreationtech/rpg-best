@@ -1,5 +1,6 @@
 import { RARITIES, type EquipSlot, type OffhandKind, type Rarity, type WeaponType } from '../../data/items';
 import { PixelBuffer, hex, ramp } from './pixel';
+import { itemImage } from '../../art/images';
 
 /**
  * Item icons for the bag and the paper doll: 14x14 pixel drawings by slot and
@@ -14,6 +15,9 @@ const cache = new Map<string, HTMLCanvasElement>();
 const CUSTOM_ICONS = new Set(['prisoner_cuffs', 'prisoner_ball']);
 
 export function itemIconSprite(slot: EquipSlot, weaponType: WeaponType | null, rarity: Rarity, offhand: OffhandKind | null = null, baseId = ''): HTMLCanvasElement {
+  // A hand-made icon, when one was dropped into public/art, wins over the drawing
+  const drawn = itemImage(baseId);
+  if (drawn) return drawn;
   const key = `${slot}:${weaponType ?? ''}:${rarity}:${offhand ?? ''}:${slot === 'shield' || CUSTOM_ICONS.has(baseId) ? baseId : ''}`;
   let c = cache.get(key);
   if (!c) {

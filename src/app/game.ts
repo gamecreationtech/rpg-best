@@ -16,6 +16,7 @@ import { DevMenu } from '../ui/game/devMenu';
 import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
 import { deleteSave, hiddenLoot, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
+import { loadArt } from '../art/images';
 
 type State = 'title' | 'class' | 'pledge' | 'playing';
 
@@ -148,7 +149,8 @@ export class Game {
   }
 
   async init(): Promise<void> {
-    const save = await loadGame();
+    // Optional hand-made images load alongside the save, before anything is drawn
+    const [save] = await Promise.all([loadGame(), loadArt()]);
     this.hasSave = !!save;
     this.showTitle();
   }

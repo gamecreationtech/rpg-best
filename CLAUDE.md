@@ -10,9 +10,14 @@ before making changes. They hold the decisions; do not relitigate them in code.
 
 ## Hard rules
 
-- **All art is code.** Never commit image, model, texture, font or audio files.
-  Sprites, tiles, animation, effects, UI icons and sounds are generated at
-  runtime by code in `src/gen/`, `src/render2d/`, `src/audio/` or `src/ui/`.
+- **All art is code, with one opt-in exception.** Sprites, tiles, animation,
+  effects, UI icons and sounds are generated at runtime by code in `src/gen/`,
+  `src/render2d/`, `src/audio/` or `src/ui/`. Since 2026-09-30 the producer may
+  drop hand-made PNGs into `public/art/` (see its README); `src/art/images.ts`
+  loads them at start-up and they replace the generated drawing for that one
+  thing. Every image is optional and the game must always work with none
+  present. Never generate or commit images yourself: only the producer adds
+  files there. No model, texture, font or audio files.
 - **The look is isometric pixel art.** A 640x360 frame scaled by a whole
   number of device pixels, 32x16 diamond tiles, a 22px hero, outlines, the Grim palette,
   dithered torchlight. Draw at integer pixel positions; never scale a sprite
