@@ -41,10 +41,12 @@ export type SkillEffect =
       arc?: number;
       /**
        * How the hit is drawn. Single target: `overhead` drops a big weapon onto
-       * the target from above, `holy_shield` raises a holy shield over it.
-       * Arc: `cleave` is a wide red sweep instead of the thin swing line.
+       * the target from above, `holy_shield` raises a holy shield over it,
+       * `bloody` tears a gash across it with blood flying. Arc: `cleave` is a
+       * wide red sweep instead of the thin swing line, `void` a purple one
+       * with a splash of void all round the hero.
        */
-      visual?: 'overhead' | 'holy_shield' | 'cleave';
+      visual?: 'overhead' | 'holy_shield' | 'bloody' | 'cleave' | 'void';
       radius?: number;
       stun?: number;
       slow?: number;
@@ -187,8 +189,8 @@ export const SKILLS: Record<string, SkillDef> = {
   boulder_toss: { id: 'boulder_toss', name: 'Boulder Toss', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Throw a boulder that lands after a short delay and crushes a wide area.', manaCost: 45, cooldown: 14000, rank5Cooldown: 9000, rankBonus: 0.35, reqLevel: 10, element: 'physical', effect: { kind: 'aoe', damageMult: 3.5, radius: 200, at: 'target', maxRange: 320, delay: 900, visual: 'boulder' } },
   leap: { id: 'leap', name: 'Leap', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Jump over walls and enemies. Invulnerable while airborne.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, reqLevel: 5, element: 'physical', effect: { kind: 'mobility', mode: 'leap', maxRange: 300, duration: 520, invulnerable: true, throughWalls: true } },
   rite_of_blood: { id: 'rite_of_blood', name: 'Rite of Blood', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Double your damage, attack speed and movement for ten seconds. Every hit costs 2% of your life.', manaCost: 40, cooldown: 45000, rank5Cooldown: 32000, reqLevel: 15, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { atkSpdPct: 100, dmgPct: 100, moveSpdPct: 100, selfCostPct: 2 } } },
-  hemorrhage: { id: 'hemorrhage', name: 'Hemorrhage', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Open a wound that bleeds away a quarter of the target\'s life over twenty seconds.', manaCost: 25, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.2, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 0, maxRange: 80, noInitialDamage: true, bleed: { pctOfMaxHp: 25, duration: 20000, interval: 500 } } },
-  void_slash: { id: 'void_slash', name: 'Void Slash', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'A slash that leaves a burning void trail. Scales with strength and intelligence.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'melee', damageMult: 1.8, maxRange: 80, arc: 90, scalesWithInt: true, trail: { length: 300, duration: 5000, tickPct: 10 } } },
+  hemorrhage: { id: 'hemorrhage', name: 'Hemorrhage', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Open a wound that bleeds away a quarter of the target\'s life over twenty seconds.', manaCost: 25, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.2, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 0, maxRange: 80, noInitialDamage: true, bleed: { pctOfMaxHp: 25, duration: 20000, interval: 500 }, visual: 'bloody' } },
+  void_slash: { id: 'void_slash', name: 'Void Slash', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'A slash that leaves a burning void trail. Scales with strength and intelligence.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'melee', damageMult: 1.8, maxRange: 80, arc: 120, scalesWithInt: true, trail: { length: 300, duration: 5000, tickPct: 10 }, visual: 'void' } },
 
   // ---------------- SORCERER ----------------
   fire_bolt: { id: 'fire_bolt', name: 'Fire Bolt', classId: S, tier: 'base', description: 'A quick bolt of flame. Limited only by your cast rate.', manaCost: 8, cooldown: 0, element: 'fire', upgradesTo: 'fire_bolt_ult', effect: { kind: 'projectile', damageMult: 1.2, projSpeed: 420, projRadius: 7, maxRange: 380, rateLimited: 'cast', shape: 'bolt' } },

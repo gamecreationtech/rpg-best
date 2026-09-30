@@ -472,10 +472,12 @@ export class PixelView {
       }
       case 'melee_swing':
         if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
+        else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
       case 'melee_impact':
         if (ev.visual === 'overhead') this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
+        else if (ev.visual === 'bloody') this.bloodyHit(ev.x, ev.z);
         else this.holyShield(ev.x, ev.z);
         break;
       case 'aoe':
@@ -502,6 +504,16 @@ export class PixelView {
         this.iceImpact(ev.x, ev.z);
         break;
       case 'buff_start': {
+        if (ev.id === 'rite_of_blood') {
+          // The change: a black-red eruption round the hero and a hard red flash
+          pt.burst(w.px, 0.2, w.pz, 36, 1.8, 0x1a0a14, 1.0, { up: 3, drag: 1, priority: 0.8, size: 2 });
+          pt.burst(w.px, 0.4, w.pz, 20, 2.4, 0xc01828, 0.7, { up: 2, gravity: 4, priority: 0.8, size: 2 });
+          this.effects.ring(w.px, w.pz, 0.2, 1.8, 0xff2040, 0.5, 2, 2);
+          this.effects.disc(w.px, w.pz, 1.2, 0x2a0410, 1.2, 0.6);
+          this.effects.flash(w.px, 1, w.pz, 0xff2030, 3, 90, 0.4);
+          this.view.kick(0.15);
+          break;
+        }
         if (ev.id === 'rock_solid') {
           // Rocks tear out of the ground round the hero
           this.effects.cracks(w.px, w.pz, 22, 0x9a8a70, 0.6, 6);
@@ -661,9 +673,79 @@ export class PixelView {
     const n = Math.max(6, Math.round(arc / 20));
     for (let i = 0; i < n; i++) {
       const a = a0 + ((arc * Math.PI) / 180) * ((i + 0.5) / n);
-      this.particles.spawn(x + Math.cos(a) * range * 0.9, 0.4, z + Math.sin(a) * range * 0.9, Math.cos(a) * 2.5, 1.5, Math.sin(a) * 2.5, 0.35, i % 2 ? 0xff6a4a : 0xffd0a0, { gravity: 6, priority: 0.6, delay: (i / n) * 0.12 });
+      this.particles.spawn(x + Math.cos(a) * range * 0.9, 0.4, z + Math.sin(a) * range * 0.9, Math.cos(a) * 2.5, 1.5, Math.sin(a) * 2.5, 0.35, i % 2 ? 0xff6a4a : 0xffd0a0, { gravity: 6, priority: 0.6, delay: (i / n) * 0.06 });
     }
     this.view.kick(0.08);
+  }
+
+  /** Void Slash: a wide purple sweep, and a splash of void bursting out all round the hero from where the cut began. */
+  private voidSlash(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
+    this.effects.sweep(x, z, dirX, dirZ, range * 1.15, arc, 0x9a40ff, 0.28);
+    this.effects.disc(x, z, range * 0.6, 0x3a1060, 0.5, 0.5);
+    this.effects.ring(x, z, 0.2, range * 0.9, 0xc080ff, 0.35, 2, 1.5);
+    this.effects.ring(x, z, 0.2, range * 1.2, 0x9a40ff, 0.5, 1, 0, 0.08);
+    this.particles.burst(x, 0.3, z, 30, 3.5, 0x9a40ff, 0.5, { up: 1.5, drag: 1.5, priority: 0.7, size: 2 });
+    this.particles.burst(x, 0.5, z, 14, 2, 0xe0c0ff, 0.4, { up: 2, drag: 1, priority: 0.6 });
+    this.effects.flash(x, 0.8, z, 0x9a40ff, 2, 70, 0.3);
+    this.view.kick(0.1);
+  }
+
+  /** Hemorrhage: two gashes across the enemy, blood flung out and a dark pool left on the floor. */
+  private bloodyHit(x: number, z: number): void {
+    this.effects.gash(x, z);
+    this.particles.burst(x, 0.8, z, 22, 2.2, 0xc01828, 0.6, { up: 2, gravity: 7, priority: 0.7, size: 2 });
+    this.particles.burst(x, 0.9, z, 10, 1.4, 0x6a0810, 0.8, { up: 2.5, gravity: 7, priority: 0.6, size: 3, delay: 0.1 });
+    this.effects.disc(x, z, 0.7, 0x5a0810, 2.5, 0.6);
+    this.view.kick(0.08);
+  }
+
+  /** Rite of Blood: the hero as a daemon. Horns, burning eyes, a dark red skin and outline, black smoke and a red light. */
+  private drawRite(): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const heroY = this.heroHeight();
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, heroY, w.pz));
+    const top = fy - this.hero.sheet.height;
+    const back = this.hero.facing === 'back';
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        // Horns curving up and out from the crown
+        ctx.fillStyle = '#1a1014';
+        for (const side of [-1, 1]) {
+          const bx = fx + side * 4;
+          ctx.fillRect(bx - 1, top - 1, 3, 3);
+          ctx.fillRect(bx + side - 1, top - 4, 3, 4);
+          ctx.fillRect(bx + side * 2 - 1, top - 7, 3, 4);
+          ctx.fillRect(bx + side * 3, top - 9, 2, 3);
+        }
+        ctx.fillStyle = '#e8d8c0';
+        for (const side of [-1, 1]) {
+          const bx = fx + side * 4;
+          ctx.fillRect(bx, top, 1, 2);
+          ctx.fillRect(bx + side, top - 3, 1, 3);
+          ctx.fillRect(bx + side * 2, top - 6, 1, 3);
+        }
+        ctx.fillStyle = '#ff3030';
+        for (const side of [-1, 1]) ctx.fillRect(fx + side * 3, top - 8, 1, 1);
+        // Burning eyes, unless the hero has turned away
+        if (!back) {
+          const blink = Math.sin(this.time * 9) > -0.9;
+          ctx.fillStyle = blink ? '#ff2020' : '#800000';
+          const ey = top + 5;
+          if (this.hero.facing === 'front') {
+            ctx.fillRect(fx - 2, ey, 1, 1);
+            ctx.fillRect(fx + 2, ey, 1, 1);
+          } else {
+            ctx.fillRect(fx + (this.hero.faceLeft ? -2 : 2), ey, 1, 1);
+          }
+        }
+      },
+    });
+    if (Math.random() < 0.5) this.particles.spawn(w.px + (Math.random() - 0.5) * 0.6, heroY + 0.2 + Math.random() * 0.8, w.pz + (Math.random() - 0.5) * 0.6, 0, 0.8, 0, 0.8, Math.random() < 0.7 ? 0x1a0a14 : 0x8a1020, { alpha: 0.7, priority: 0.5, size: 2 });
+    this.lights.push({ x: fx, y: fy - 8, radius: 46, intensity: 1.1 + Math.sin(this.time * 7) * 0.2, r: 1, g: 0.15, b: 0.2 });
   }
 
   /** Shield Bash: a holy shield springs up over the enemy, with gold motes rising off it. */
@@ -807,7 +889,7 @@ export class PixelView {
         const a = Math.random() * Math.PI * 2;
         pt.spawn(z.x + Math.cos(a) * z.radius * 0.9, 0.4 + Math.random(), z.z + Math.sin(a) * z.radius * 0.9, -Math.sin(a) * 4, 0, Math.cos(a) * 4, 0.5, 0x9fd8ff, { alpha: 0.6, priority: 0.4 });
       }
-      if (z.type === 'sanctuary' && Math.random() < dt * 14) {
+      if (z.type === 'sanctuary' && Math.random() < dt * 30) {
         // Motes drifting up everywhere inside, and sparks off the candles at the rim
         const a = Math.random() * Math.PI * 2;
         const rim = Math.random() < 0.35;
@@ -915,7 +997,9 @@ export class PixelView {
 
     // Hero
     const heroY = this.heroHeight();
-    this.pushPuppet(this.hero, w.px, heroY, w.pz, w.invisible ? 0.45 : 1, null);
+    const rite = w.buffs.some((b) => b.id === 'rite_of_blood');
+    this.pushPuppet(this.hero, w.px, heroY, w.pz, w.invisible ? 0.45 : 1, rite ? '#7a0a2a' : null, rite ? '#ff2040' : null);
+    if (rite && !w.playerDead) this.drawRite();
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
     drawn++;
 
@@ -1223,16 +1307,27 @@ export class PixelView {
     const breathe = 0.16 + Math.sin(this.time * 1.5 + z.id) * 0.04;
     ellipse(z.x, z.z, z.radius, '#ffe87a', true, breathe);
     ellipse(z.x, z.z, z.radius * 0.55, '#fff4c0', true, breathe * 0.6);
-    // The cross of light
-    const cx = Math.round(cam.frameX(z.x, z.z));
-    const cy = Math.round(cam.frameY(z.x, 0, z.z));
-    ctx.globalAlpha = 0.28;
-    ctx.fillStyle = '#fff4c0';
-    const rx = Math.round(z.radius * RING_RX * 0.8);
-    const ry = Math.round(z.radius * RING_RY * 0.8);
-    ctx.fillRect(cx - rx, cy - 1, rx * 2, 2);
-    ctx.fillRect(cx - 1, cy - ry, 2, ry * 2);
-    ctx.globalAlpha = 1;
+    // Gold glitter scattered over the whole floor, each grain blinking in its own time
+    for (let i = 0; i < 48; i++) {
+      const h1 = Math.sin(i * 12.9898 + z.id * 78.233) * 43758.5453;
+      const h2 = Math.sin(i * 39.3467 + z.id * 11.135) * 24634.6345;
+      const a = (h1 - Math.floor(h1)) * Math.PI * 2;
+      const r = Math.sqrt(h2 - Math.floor(h2)) * z.radius * 0.97;
+      const wx = z.x + Math.cos(a) * r;
+      const wz = z.z + Math.sin(a) * r;
+      const blink = Math.sin(this.time * 5 + i * 1.7);
+      if (blink < -0.2) continue;
+      ctx.fillStyle = blink > 0.75 ? '#ffffff' : blink > 0.3 ? '#fff4c0' : '#e0b840';
+      const sx = Math.round(cam.frameX(wx, wz));
+      const sy = Math.round(cam.frameY(wx, 0, wz));
+      ctx.fillRect(sx, sy, 1, 1);
+      if (blink > 0.75) {
+        ctx.fillRect(sx - 1, sy, 1, 1);
+        ctx.fillRect(sx + 1, sy, 1, 1);
+        ctx.fillRect(sx, sy - 1, 1, 1);
+        ctx.fillRect(sx, sy + 1, 1, 1);
+      }
+    }
     // The rim: does not move
     ellipse(z.x, z.z, z.radius, '#ffe87a', false, 0.9, 2);
     ellipse(z.x, z.z, z.radius * 0.93, '#fff8e0', false, 0.6, 1);

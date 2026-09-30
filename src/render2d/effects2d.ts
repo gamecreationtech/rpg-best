@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'slash' | 'sweep' | 'smash' | 'shield' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -101,8 +101,8 @@ export class Effects2D {
   }
 
   /** A wide filled sweep for a heavy arc attack: a red band from half the reach to the full reach, drawn ahead of a thin edge. */
-  sweep(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number): void {
-    const fx = this.push({ kind: 'sweep', layer: 'floor', x, z, life: 0.3, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)) });
+  sweep(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number, life = 0.2): void {
+    const fx = this.push({ kind: 'sweep', layer: 'floor', x, z, life, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)) });
     this.withLight(fx, color, 1.6, range * RING_RX * 1.3);
   }
 
@@ -110,6 +110,12 @@ export class Effects2D {
   shield(x: number, z: number, color: number): void {
     const fx = this.push({ kind: 'shield', layer: 'air', x, y: 0.55, z, life: 0.7, css: css(color), css2: css(lighten(color)) });
     this.withLight(fx, color, 2.2, 60);
+  }
+
+  /** Two crossed gashes torn across a body standing at the point, red on dark, brightest as they open. */
+  gash(x: number, z: number): void {
+    const fx = this.push({ kind: 'gash', layer: 'air', x, y: 0.6, z, life: 0.5, css: '#c01828', css2: '#ff4a58' });
+    this.withLight(fx, 0xff2030, 1.4, 40);
   }
 
   /** Cracks radiating from a point out to `reach` frame pixels, growing fast then fading. */
@@ -259,6 +265,28 @@ export class Effects2D {
         case 'shield':
           drawShield(ctx, px, py, fx, k);
           break;
+        case 'gash': {
+          // Each gash opens over the first fifth, the second a beat after the first
+          const fade = k < 0.5 ? 1 : 1 - (k - 0.5) * 2;
+          ctx.globalAlpha = fade;
+          const cuts: [number, number, number, number, number][] = [[-9, -7, 8, 7, 0], [7, -8, -8, 6, 0.12]];
+          for (const [x0, y0, x1, y1, delay] of cuts) {
+            const open = Math.min(1, Math.max(0, (k - delay) / 0.2));
+            if (open <= 0) continue;
+            const ex = px + x0 + Math.round((x1 - x0) * open);
+            const ey = py + y0 + Math.round((y1 - y0) * open);
+            for (const [style, w] of [['#1a0408', 4], [fx.css, 2], [k < 0.25 ? '#ffffff' : fx.css2, 1]] as const) {
+              ctx.strokeStyle = style;
+              ctx.lineWidth = w;
+              ctx.beginPath();
+              ctx.moveTo(px + x0, py + y0);
+              ctx.lineTo(ex, ey);
+              ctx.stroke();
+            }
+          }
+          ctx.globalAlpha = 1;
+          break;
+        }
         case 'cracks': {
           const reach = fx.r0 * Math.min(1, k * 3);
           ctx.globalAlpha = 1 - k * k;
@@ -433,7 +461,7 @@ function drawCracks(ctx: CanvasRenderingContext2D, px: number, py: number, seed:
  */
 function drawSweep(ctx: CanvasRenderingContext2D, cam: IsoCamera, fx: Fx, k: number): void {
   const a0 = Math.atan2(fx.dirZ, fx.dirX) - fx.arc / 2;
-  const sweep = fx.arc * Math.min(1, k * 1.5);
+  const sweep = fx.arc * Math.min(1, k * 2.2);
   const inner = fx.r0 * 0.45;
   const outer = fx.r0 * 1.1;
   const steps = Math.max(6, Math.round(fx.arc * 5));
@@ -488,8 +516,8 @@ function drawShield(ctx: CanvasRenderingContext2D, px: number, py: number, fx: F
   const grow = Math.min(1, k * 8);
   const scale = 0.4 + 0.6 * grow;
   const fade = k < 0.35 ? 1 : 1 - (k - 0.35) / 0.65;
-  const hw = Math.max(2, Math.round(11 * scale));
-  const hh = Math.max(3, Math.round(15 * scale));
+  const hw = Math.max(2, Math.round(8 * scale));
+  const hh = Math.max(3, Math.round(11 * scale));
   const top = py - hh;
   const shoulder = top + Math.round(hh * 0.55);
   const shape = (): void => {
@@ -506,7 +534,7 @@ function drawShield(ctx: CanvasRenderingContext2D, px: number, py: number, fx: F
   ctx.fillStyle = fx.css2;
   ctx.globalAlpha = fade * 0.35;
   ctx.beginPath();
-  ctx.ellipse(px, py, hw + 6, hh + 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(px, py, hw + 5, hh + 3, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = fade;
   // Dark outline, gold rim, pale face

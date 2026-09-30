@@ -179,9 +179,9 @@ export type SimEvent =
   | { type: 'player_died' }
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
-  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' }
+  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */
-  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield'; x: number; z: number; element: Element }
+  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody'; x: number; z: number; element: Element }
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }
   | { type: 'projectile_hit'; x: number; z: number; element: Element; shape: ProjectileShape; splash: number }
   | { type: 'zone_start'; zone: Zone }

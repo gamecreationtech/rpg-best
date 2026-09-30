@@ -40,14 +40,18 @@ What that means for each kind of asset:
   A melee skill can name its `visual`: `overhead` (Heavy Strike) drops a great
   maul onto the target from above with a flash, ground cracks and a camera
   kick; `holy_shield` (Shield Bash) raises a glowing heater shield with a cross
-  over the enemy; `cleave` (Cleave) paints a wide red sweep across the arc with
-  sparks along its rim. Single-target visuals arrive as `melee_impact` at the
+  over the enemy; `bloody` (Hemorrhage) tears two gashes across it with blood
+  flying and a pool left on the floor; `cleave` (Cleave) paints a wide red
+  sweep across the arc with sparks along its rim; `void` (Void Slash) a purple
+  one with a splash of void rings and motes bursting out all round the hero. Single-target visuals arrive as `melee_impact` at the
   target, arc ones ride the `melee_swing` event. Ground Stomp's aoe has
   `jump`: the sim leaps in place for that long and lands the blow on touchdown,
   drawn as cracks, a hard bright ring and two slower dust waves. Prayer draws
   small crosses of light climbing round the hero with a green glow while the
-  buff runs. Sanctuary is a still double rim of gold and white, a breathing
-  glow, a cross of light and eight candles round the edge. Holy Smite (the
+  buff runs. Rite of Blood turns the hero into a daemon while it runs: horns,
+  burning eyes, a dark red skin and outline, black smoke and a red light.
+  Sanctuary is a still double rim of gold and white, a breathing glow, gold
+  glitter blinking all over the floor and eight candles round the edge. Holy Smite (the
   thrown one, formerly Hammer of Gods) and Holy Smite (spin) share the star
   sprite. A leap arcs higher the further it goes and trails dust. Boulder
   Toss draws its rock falling from high above onto the target ring, with a
