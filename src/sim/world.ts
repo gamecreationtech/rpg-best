@@ -1052,6 +1052,12 @@ export class World {
   private tickRegen(dt: number): void {
     if (this.playerDead) return;
     const d = this.derived;
+    // Town is sanctuary: life and mana stay full the whole time you are there
+    if (this.area === 'town') {
+      this.player.hp = d.maxHp;
+      this.player.mana = d.maxMana;
+      return;
+    }
     if (d.hpRegen > 0) this.healPlayer(d.hpRegen * dt, true);
     if (d.manaRegen > 0) this.player.mana = Math.min(d.maxMana, this.player.mana + d.manaRegen * dt);
     if (this.bandage) {

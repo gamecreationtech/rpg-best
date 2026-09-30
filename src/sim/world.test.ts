@@ -253,6 +253,22 @@ describe('bulk selling', () => {
   });
 });
 
+describe('town', () => {
+  it('keeps life and mana full while the hero is in town', () => {
+    const w = new World(createPlayer('sorcerer', null), 161);
+    w.travel('arena');
+    w.player.hp = 5;
+    w.player.mana = 3;
+    w.travel('town');
+    run(w, 0.1);
+    expect(w.player.hp).toBe(w.derived.maxHp);
+    expect(w.player.mana).toBe(w.derived.maxMana);
+    w.player.mana -= 40; // a cast in town
+    run(w, 0.1);
+    expect(w.player.mana).toBe(w.derived.maxMana);
+  });
+});
+
 describe('ranged monsters stay answerable', () => {
   it('a sorcerer holding the attack button can shoot back at an archer that has settled to shoot', () => {
     const w = new World(createPlayer('sorcerer', null), 151);
@@ -596,6 +612,7 @@ describe('pet', () => {
 describe('messages', () => {
   it('drops a repeated line within half a second so a held button cannot flood the log', () => {
     const w = new World(createPlayer('sorcerer', null), 51);
+    w.travel('arena'); // town would refill the mana at once
     w.player.mana = 0;
     const id = skillsFor(w.player.classId, null)[0]!.id;
     w.player.skillRanks[id] = 1;
