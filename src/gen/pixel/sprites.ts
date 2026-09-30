@@ -365,98 +365,250 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s) };
 }
 
+/** Head and horns of the daemon, placed pixel by pixel, 52 wide. See `DAEMON_INK` for what each mark means. */
+const DAEMON_HEAD = [
+  '......bb....................................bb......',
+  '.....#bb#..................................#bb#.....',
+  '.....#bBb#................................#bBb#.....',
+  '......#bBB#..............................#BBb#......',
+  '.......#bBB#............................#BBb#.......',
+  '........#bBB#..........................#BBb#........',
+  '.........#BBB#........................#BBB#.........',
+  '..........#BBB#......................#BBB#..........',
+  '...........#BBB#....................#BBB#...........',
+  '............#BB##..................##BB#............',
+  '.............#BB####################BB#.............',
+  '..............#BB#33333333333333333#BB#.............',
+  '.............#B##3444333333333334443##B#............',
+  '................#3311111111111111133#...............',
+  '................#31#eee#22222#eee#13#...............',
+  '................#31#eEe#22222#eEe#13#...............',
+  '................#31#####22222#####13#...............',
+  '................#33222221#2#12222233#...............',
+  '................#3322221111111222233#...............',
+  '.................#11222222222222211#................',
+  '..................#111111111111111#.................',
+  '...................###############..................',
+];
+
+/** The marks in `DAEMON_HEAD`: outline, four skin tones, bone, eye and eye core. */
+const DAEMON_INK: Record<string, Rgb> = {
+  '#': [10, 8, 12],
+  '1': [46, 10, 24],
+  '2': [90, 26, 46],
+  '3': [126, 42, 66],
+  '4': [162, 64, 90],
+  b: [232, 224, 200],
+  B: [176, 164, 136],
+  e: [140, 255, 90],
+  E: [244, 255, 232],
+};
+
 /**
- * The daemon of the beyond, 46 wide and 58 tall: a hunched horned brute of
- * dark crimson with burning green eyes and a great black bow in its left
- * hand. Frame 0 has the string drawn back with the arrow nocked, frame 1 has
- * just loosed it, arm forward and string straight.
+ * The daemon of the beyond, 56 wide and 60 tall, facing right. Horns and
+ * face are placed by hand; the hunched body, arms, loincloth and hooves are
+ * built from row bounds and lit from the upper left, with muscle lines laid
+ * in as shadow. The great recurve bow stands in its right fist. Frame 0 has
+ * the string drawn to the jaw with the arrow nocked, frame 1 has just loosed
+ * it: string straight, draw arm swung back.
  */
 function daemonFrames(s: number): HTMLCanvasElement[] {
-  const W = 46;
-  const H = 58;
-  const skin = ramp(0x4a1626, 1.25);
-  const bone: Rgb = [232, 224, 200];
-  const eye: Rgb = [140, 255, 90];
-  const eyeCore: Rgb = [240, 255, 220];
-  const wood = ramp(0x2a1a14, 1.1);
-  const outline: Rgb = [10, 8, 12];
+  const W = 56;
+  const H = 60;
+  const OX = 2; // the head strip is 52 wide, centred on the 56 canvas
+  const skin: Rgb[] = [DAEMON_INK['1']!, DAEMON_INK['2']!, DAEMON_INK['3']!, DAEMON_INK['4']!];
+  const outline = DAEMON_INK['#']!;
+  const bone = DAEMON_INK.b!;
+  const boneDark = DAEMON_INK.B!;
+  const clothDark: Rgb = [30, 26, 36];
+  const cloth: Rgb = [58, 50, 68];
+  const belt: Rgb = [106, 74, 42];
+  const beltLight: Rgb = [150, 108, 62];
+  const woodDark: Rgb = [42, 28, 20];
+  const wood: Rgb = [90, 60, 40];
+  const woodLight: Rgb = [134, 92, 60];
+  const string: Rgb = [216, 208, 184];
+  const shaft: Rgb = [20, 16, 24];
+  const shaftLight: Rgb = [58, 50, 70];
+  const steel: Rgb = [106, 122, 128];
+  const steelLight: Rgb = [170, 184, 190];
+  const rune = DAEMON_INK.e!;
+  // Torso silhouette: [y, left, right], neck to waist
+  const torso: [number, number, number][] = [
+    [22, 21, 35], [23, 16, 40], [24, 13, 43], [25, 12, 44], [26, 11, 45], [27, 11, 45], [28, 11, 45], [29, 12, 44],
+    [30, 12, 44], [31, 13, 43], [32, 14, 42], [33, 14, 42], [34, 15, 41], [35, 16, 40], [36, 16, 40], [37, 17, 39],
+    [38, 17, 39], [39, 18, 38], [40, 18, 38], [41, 19, 37], [42, 19, 37],
+  ];
   const frames: HTMLCanvasElement[] = [];
   for (let f = 0; f < 2; f++) {
-    const b = new PixelBuffer(W * s, H * s);
-    const R = (x: number, y: number, w: number, h: number, c: Rgb): void => b.rect(x * s, y * s, w * s, h * s, c);
-    const E = (x: number, y: number, rx: number, ry: number, c: Rgb): void => b.ellipse(x * s, y * s, rx * s, ry * s, c);
-    // Legs and cloven hooves
-    R(13, 40, 8, 15, outline);
-    R(14, 41, 6, 13, skin[1]);
-    R(24, 40, 8, 15, outline);
-    R(25, 41, 6, 13, skin[1]);
-    R(12, 53, 10, 5, outline);
-    R(13, 54, 3, 3, skin[0]);
-    R(18, 54, 3, 3, skin[0]);
-    R(23, 53, 10, 5, outline);
-    R(24, 54, 3, 3, skin[0]);
-    R(29, 54, 3, 3, skin[0]);
-    // Hunched torso, broad at the shoulders
-    E(22, 29, 15, 14, outline);
-    E(22, 29, 14, 13, skin[1]);
-    E(19, 27, 6, 8, skin[2]);
-    R(9, 18, 27, 6, outline);
-    R(10, 19, 25, 5, skin[1]);
-    // Head, low between the shoulders, with a heavy jaw
-    E(24, 13, 8, 8, outline);
-    E(24, 13, 7, 7, skin[2]);
-    R(19, 16, 11, 4, skin[1]);
-    // Horns sweeping up and out
-    for (let i = 0; i < 9; i++) {
-      const y = 9 - i;
-      const lx = 18 - Math.round(i * 0.9);
-      const rx = 30 + Math.round(i * 0.9);
-      R(lx - 1, y - 1, 3, 3, outline);
-      R(rx - 1, y - 1, 3, 3, outline);
+    const grid: (Rgb | null)[][] = [];
+    for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
+    const put = (x: number, y: number, c: Rgb): void => {
+      if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
+    };
+    const get = (x: number, y: number): Rgb | null => (x >= 0 && x < W && y >= 0 && y < H ? grid[y]![x]! : null);
+    const isSkin = (c: Rgb | null): boolean => !!c && skin.some((k) => k === c);
+    // A solid block of skin between two x bounds on one row, lit from the upper left
+    const skinRow = (y: number, l: number, r: number, topLit: boolean): void => {
+      for (let x = l; x <= r; x++) {
+        const fromLeft = x - l;
+        const fromRight = r - x;
+        let c = skin[1]!;
+        if (fromLeft <= 1 || (topLit && fromLeft <= 3)) c = skin[2]!;
+        if (topLit && fromLeft >= 2 && fromLeft <= 5) c = skin[3]!;
+        if (fromRight <= 1) c = skin[0]!;
+        put(x, y, c);
+      }
+    };
+    const thickLine = (x0: number, y0: number, x1: number, y1: number, half: number, c: Rgb): void => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let i = 0; i <= n; i++) {
+        const x = Math.round(x0 + ((x1 - x0) * i) / n);
+        const y = Math.round(y0 + ((y1 - y0) * i) / n);
+        for (let d = -half; d <= half; d++) put(x, y + d, c);
+      }
+    };
+    // ---- body
+    for (const [y, l, r] of torso) skinRow(y, l, r, y <= 27);
+    // Neck shadow under the jaw, collarbones, sternum, pectorals and abdomen laid in as shadow
+    for (let x = 22; x <= 34; x++) put(x, 22, skin[0]!);
+    for (let x = 16; x <= 24; x++) put(x, 25, skin[0]!);
+    for (let x = 32; x <= 40; x++) put(x, 25, skin[0]!);
+    for (let y = 26; y <= 34; y++) put(28, y, skin[0]!);
+    for (let x = 15; x <= 26; x++) put(x, 31 + Math.round(Math.abs(x - 20) / 6), skin[0]!);
+    for (let x = 30; x <= 41; x++) put(x, 31 + Math.round(Math.abs(x - 36) / 6), skin[0]!);
+    for (let x = 18; x <= 26; x++) put(x, 27, skin[3]!); // the light catching the top of the chest
+    for (let x = 30; x <= 38; x++) put(x, 27, skin[2]!);
+    for (const y of [35, 38, 41]) {
+      for (let x = 22; x <= 26; x++) put(x, y, skin[0]!);
+      for (let x = 30; x <= 34; x++) put(x, y, skin[0]!);
     }
-    for (let i = 0; i < 9; i++) {
-      const y = 9 - i;
-      const lx = 18 - Math.round(i * 0.9);
-      const rx = 30 + Math.round(i * 0.9);
-      R(lx, y, 1, 1, i > 6 ? bone : skin[3]);
-      R(rx, y, 1, 1, i > 6 ? bone : skin[3]);
+    for (let y = 35; y <= 41; y++) put(28, y, skin[0]!);
+    // ---- loincloth with a belt and a ragged hem
+    for (let x = 19; x <= 37; x++) {
+      put(x, 42, belt);
+      put(x, 43, x % 5 === 2 ? beltLight : belt);
     }
-    // Eyes: burning green with a white core
-    R(21, 12, 3, 2, eye);
-    R(26, 12, 3, 2, eye);
-    R(22, 12, 1, 1, eyeCore);
-    R(27, 12, 1, 1, eyeCore);
-    // The bow: a great arc out to the right, in dark wood with a pale string
-    const bx = 38;
-    for (let y = 6; y <= 50; y++) {
-      const t = (y - 28) / 22;
-      const x = bx + Math.round(6 * (1 - t * t));
-      R(x - 1, y, 3, 1, outline);
-      R(x, y, 1, 1, Math.abs(t) < 0.15 ? wood[3] : wood[2]);
+    put(28, 42, boneDark);
+    put(28, 43, bone);
+    for (let y = 44; y <= 50; y++) {
+      const l = 20 + (y > 47 ? y - 47 : 0);
+      const r = 36 - (y > 47 ? y - 47 : 0);
+      for (let x = l; x <= r; x++) put(x, y, x < 24 || (x > 30 && x < 33) ? cloth : clothDark);
     }
-    // String: drawn back to the daemon's cheek, or straight after the shot
-    const pull = f === 0 ? bx - 8 : bx + 1;
-    for (let y = 6; y <= 50; y++) {
-      const t = Math.abs(y - 28) / 22;
-      const x = Math.round(pull + (bx + 1 - pull) * t);
-      b.set(x * s, y * s, bone, 230);
+    for (const x of [21, 25, 29, 33]) put(x, 51, clothDark);
+    for (const x of [23, 31]) put(x, 52, clothDark);
+    // ---- legs: thick thighs, tapering shins, cloven hooves
+    const leg = (l: number, r: number): void => {
+      for (let y = 44; y <= 53; y++) {
+        const shrink = y > 49 ? y - 49 : 0;
+        skinRow(y, l + shrink, r - shrink, false);
+      }
+      // Hooves: dark horn with a lit rim at the top and a cleft down the middle
+      const hoof: Rgb = [44, 32, 38];
+      const hoofLight: Rgb = [92, 74, 80];
+      for (let y = 54; y <= 58; y++) {
+        for (let x = l - 1; x <= r + 1; x++) put(x, y, y === 54 ? skin[0]! : x === l + 3 || x === l + 4 ? [12, 6, 10] : y === 55 ? hoofLight : hoof);
+      }
+    };
+    leg(16, 23);
+    leg(33, 40);
+    // The loincloth hangs over the top of the thighs
+    for (let y = 44; y <= 50; y++) {
+      const l = 20 + (y > 47 ? y - 47 : 0);
+      const r = 36 - (y > 47 ? y - 47 : 0);
+      for (let x = l; x <= r; x++) put(x, y, x < 24 || (x > 30 && x < 33) ? cloth : clothDark);
     }
-    // Bow arm, straight out to the grip; string arm drawn back to the cheek or thrown forward
-    R(30, 24, 9, 4, outline);
-    R(31, 25, 8, 2, skin[1]);
+    // ---- head and horns from the strip
+    for (let y = 0; y < DAEMON_HEAD.length; y++) {
+      const row = DAEMON_HEAD[y]!;
+      for (let x = 0; x < row.length; x++) {
+        const ch = row[x]!;
+        if (ch === '.') continue;
+        put(x + OX, y, DAEMON_INK[ch]!);
+      }
+    }
+    // ---- bow arm: from the right shoulder out to the fist round the grip
+    thickLine(40, 27, 47, 30, 2, skin[1]!);
+    thickLine(40, 26, 47, 29, 0, skin[2]!);
+    for (let y = 27; y <= 33; y++) for (let x = 46; x <= 50; x++) put(x, y, x === 46 || y === 27 ? skin[2]! : skin[1]!);
+    put(48, 34, bone); // a claw
+    put(50, 34, bone);
+    // ---- the great recurve bow, its grip in the fist, limbs bowing toward the target and hooking back at the tips
+    const gripX = 49;
+    const bowY0 = 3;
+    const bowY1 = 57;
+    for (let y = bowY0; y <= bowY1; y++) {
+      const t = (y - 30) / 27;
+      const bend = Math.round(5 * Math.sin(Math.PI * Math.min(1, Math.abs(t))));
+      const x = gripX + bend;
+      put(x - 1, y, outline);
+      put(x + 2, y, outline);
+      put(x, y, Math.abs(t) > 0.92 ? boneDark : woodLight);
+      put(x + 1, y, Math.abs(t) > 0.92 ? bone : Math.abs(t) < 0.12 ? woodDark : wood);
+    }
+    put(gripX - 1, bowY0 - 1, outline);
+    put(gripX - 1, bowY1 + 1, outline);
+    // ---- string and draw arm
     if (f === 0) {
-      R(24, 22, 8, 4, outline);
-      R(25, 23, 7, 2, skin[2]);
-      // The nocked arrow: from the hand out past the bow, with a green rune glowing on it
-      R(29, 27, 16, 2, outline);
-      R(29, 28, 15, 1, [26, 20, 24]);
-      R(43, 27, 3, 2, bone);
-      R(36, 28, 1, 1, eye);
+      // Drawn: the string runs from each tip to the fist at the jaw; the forearm comes across the chest to it
+      thickLine(gripX, bowY0, 39, 19, 0, string);
+      thickLine(gripX, bowY1, 39, 21, 0, string);
+      thickLine(9, 26, 36, 20, 2, skin[1]!);
+      thickLine(9, 25, 36, 19, 0, skin[2]!);
+      for (let y = 17; y <= 22; y++) for (let x = 36; x <= 40; x++) put(x, y, x === 36 || y === 17 ? skin[2]! : skin[1]!);
+      put(37, 23, bone);
+      put(39, 23, bone);
+      // The nocked arrow from the fist out past the bow: black shaft, blinking runes, barbed steel head
+      for (let x = 40; x <= 55; x++) {
+        put(x, 19, x % 4 === 1 ? rune : shaft);
+        put(x, 20, shaft);
+        put(x, 18, x % 4 === 1 ? rune : shaftLight);
+      }
+      for (let x = 51; x <= 55; x++) {
+        put(x, 18, x < 54 ? steelLight : steel);
+        put(x, 19, steelLight);
+        put(x, 20, steel);
+      }
+      put(50, 17, steel);
+      put(50, 21, steel);
+      put(55, 19, bone);
     } else {
-      R(30, 28, 8, 4, outline);
-      R(31, 29, 7, 2, skin[2]);
+      // Loosed: string straight, draw hand thrown back past the shoulder
+      thickLine(gripX - 1, bowY0, gripX - 1, bowY1, 0, string);
+      thickLine(10, 27, 3, 20, 2, skin[1]!);
+      thickLine(10, 26, 3, 19, 0, skin[2]!);
+      for (let y = 15; y <= 20; y++) for (let x = 0; x <= 4; x++) put(x, y, x === 0 || y === 15 ? skin[2]! : skin[1]!);
+      put(1, 14, bone);
+      put(3, 14, bone);
     }
-    b.shadeRamp((c) => (c[0] === skin[1][0] && c[1] === skin[1][1] && c[2] === skin[1][2] ? skin : null));
+    // ---- outline everything that has no outline yet: any painted pixel next to an empty one
+    const painted = grid.map((row) => row.map((c) => c !== null));
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (painted[y]![x]) continue;
+        const near = (painted[y - 1]?.[x] ?? false) || (painted[y + 1]?.[x] ?? false) || (painted[y]![x - 1] ?? false) || (painted[y]![x + 1] ?? false);
+        if (near) grid[y]![x] = outline;
+      }
+    }
+    // Skin against skin from a different part (arm over chest) gets a one-pixel shadow seam so the parts read
+    for (let y = 1; y < H; y++) {
+      for (let x = 1; x < W; x++) {
+        const c = get(x, y);
+        if (!isSkin(c)) continue;
+        const above = get(x, y - 1);
+        if (above === null) grid[y]![x] = skin[3]!; // a lit top edge wherever skin meets the sky
+      }
+    }
+    // ---- paint
+    const b = new PixelBuffer(W * s, H * s);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const c = grid[y]![x];
+        if (!c) continue;
+        b.rect(x * s, y * s, s, s, c);
+      }
+    }
     frames.push(b.toCanvas());
   }
   return frames;
