@@ -792,6 +792,11 @@ export class PixelView {
 
   /** Prayer's healing: twelve small crosses rising round the hero in turn, brightest halfway up, plus a soft green light. */
   private drawPrayer(): void {
+    this.drawHealMotes('#8aff8a', 12, 0.55, 0.9, [0.55, 1, 0.55]);
+  }
+
+  /** Small crosses of light climbing round the hero, in a colour: Prayer's green, the bandage's cloth white. */
+  private drawHealMotes(color: string, count: number, speed: number, glow: number, rgbLight: [number, number, number]): void {
     const w = this.world;
     const cam = this.view;
     const ctx = this.ctx;
@@ -800,22 +805,37 @@ export class PixelView {
     this.items.push({
       depth: cam.depth(w.px, w.pz) + 0.02,
       draw: () => {
-        for (let i = 0; i < 12; i++) {
-          const phase = (this.time * 0.55 + i * 0.29) % 1;
-          const a = i * 2.4 + Math.floor(this.time * 0.55 + i * 0.29) * 1.7;
+        for (let i = 0; i < count; i++) {
+          const phase = (this.time * speed + i * 0.29) % 1;
+          const a = i * 2.4 + Math.floor(this.time * speed + i * 0.29) * 1.7;
           const r = 9 + (i % 3) * 3;
           const x = fx + Math.round(Math.cos(a) * r);
           const y = fy + 14 - Math.round(phase * 30);
           const bright = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
           ctx.globalAlpha = 0.35 + bright * 0.65;
-          ctx.fillStyle = bright > 0.7 ? '#ffffff' : '#8aff8a';
+          ctx.fillStyle = bright > 0.7 ? '#ffffff' : color;
           ctx.fillRect(x - 1, y, 3, 1);
           ctx.fillRect(x, y - 1, 1, 3);
         }
         ctx.globalAlpha = 1;
       },
     });
-    this.lights.push({ x: fx, y: fy, radius: 44, intensity: 0.9 + Math.sin(this.time * 4) * 0.2, r: 0.55, g: 1, b: 0.55 });
+    this.lights.push({ x: fx, y: fy, radius: 44, intensity: glow + Math.sin(this.time * 4) * 0.2, r: rgbLight[0], g: rgbLight[1], b: rgbLight[2] });
+  }
+
+  /** Incense burning: a thread of smoke rising off the hero and blue motes of mana drifting in, under a soft violet light. */
+  private drawIncense(): void {
+    const w = this.world;
+    const cam = this.view;
+    const heroY = this.heroHeight();
+    if (Math.random() < 0.9) this.particles.spawn(w.px + (Math.random() - 0.5) * 0.3, heroY + 1.4 + Math.random() * 0.3, w.pz + (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.3, 0.7, (Math.random() - 0.5) * 0.3, 1.6, Math.random() < 0.5 ? 0x9a9ab0 : 0xc4c4d8, { priority: 0.4, size: 2, alpha: 0.7, drag: 0.5 });
+    for (let i = 0; i < 2; i++) {
+      if (Math.random() > 0.8) continue;
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.9 + Math.random() * 0.5;
+      this.particles.spawn(w.px + Math.cos(a) * r, heroY + Math.random() * 1.2, w.pz + Math.sin(a) * r, -Math.cos(a) * 1.4, 0.2, -Math.sin(a) * 1.4, 0.7, Math.random() < 0.4 ? 0xffffff : 0x6a8aff, { priority: 0.4, size: 1, alpha: 0.9, drag: 0.8 });
+    }
+    this.lights.push({ x: Math.round(cam.frameX(w.px, w.pz)), y: Math.round(cam.frameY(w.px, heroY + 0.7, w.pz)), radius: 40, intensity: 0.7 + Math.sin(this.time * 3) * 0.1, r: 0.6, g: 0.55, b: 1 });
   }
 
   /** Cleave: a wide red sweep across the arc with sparks flung along its edge. */
@@ -1335,6 +1355,8 @@ export class PixelView {
 
     // Prayer: little crosses of light climbing all over the hero, and a green glow
     if (w.buffs.some((b) => b.id === 'prayer')) this.drawPrayer();
+    if (w.bandage && !w.playerDead) this.drawHealMotes('#f4ecd8', 8, 0.45, 0.6, [1, 0.95, 0.85]);
+    if (w.incense && !w.playerDead) this.drawIncense();
     this.drawRockSolid();
 
     // Fire Prison: bars of flame standing round the ring, each flickering on its own

@@ -367,36 +367,77 @@ function drawConsumable(id: ConsumableId, fill: number): HTMLCanvasElement {
     b.set(4, 7, white);
     b.set(4, 8, white);
   } else if (id === 'bandage') {
-    const cloth = ramp(0xe8dcc8, 1.1);
-    // A strip trailing off to the left of a fat roll on the right; the roll shrinks as the dose is used
-    const r = 2 + Math.round(fill * 2.5);
-    b.rect(1, 6, 10, 5, OUTLINE);
-    b.rect(2, 7, 9, 3, cloth[2]);
-    b.rect(2, 8, 9, 1, cloth[1]);
-    b.ellipse(9.5, 8.5, r + 1, r + 1, OUTLINE);
-    b.ellipse(9.5, 8.5, r, r, cloth[2]);
-    b.ellipse(9.5, 8.5, Math.max(0.6, r - 1.5), Math.max(0.6, r - 1.5), cloth[1]);
-    b.set(9, 8, cloth[0]);
-    b.set(3, 8, hex(0xc03030)); // a spot of blood on the loose end
+    const cloth = ramp(0xe8dcc8, 1.15);
+    const red = hex(0xc83030);
+    // A gauze strip unrolling to the left with a gentle wave, off a tight roll on the right.
+    // The roll shrinks as the dose is used; the strip keeps its length.
+    const r = 2 + Math.round(fill * 1.5);
+    const rollX = 9;
+    const rollY = 8;
+    const wave = [0, 0, -1, -1, 0, 0, 1, 1];
+    for (let x = 0; x < 8; x++) {
+      const dy = wave[x]!;
+      b.rect(x, 5 + dy, 1, 6, OUTLINE);
+      b.rect(x, 6 + dy, 1, 4, cloth[2]);
+      b.set(x, 6 + dy, cloth[3]);
+      b.set(x, 9 + dy, cloth[1]);
+      // Weave: a darker thread every other pixel
+      if (x % 2 === 0) b.set(x, 8 + dy, cloth[1]);
+    }
+    // The loose end frays into two threads
+    b.set(0, 6, cloth[3]);
+    b.set(0, 9, OUTLINE);
+    b.rect(0, 10, 1, 1, cloth[1]);
+    // The roll: outline, body, a spiral hinted by an inner ring and a dark core
+    b.ellipse(rollX, rollY, r + 1, r + 1, OUTLINE);
+    b.ellipse(rollX, rollY, r, r, cloth[2]);
+    if (r >= 3) b.ellipse(rollX, rollY, r - 1.6, r - 1.6, cloth[1]);
+    b.ellipse(rollX, rollY, Math.max(0.7, r - 2.6), Math.max(0.7, r - 2.6), cloth[3]);
+    b.set(Math.round(rollX), Math.round(rollY), cloth[0]);
+    // Highlight on the top left of the roll
+    b.set(Math.round(rollX - r * 0.6), Math.round(rollY - r * 0.6), hex(0xffffff));
+    // A small red cross stitched on the strip
+    b.rect(3, 7, 1, 3, red);
+    b.rect(2, 8, 3, 1, red);
   } else {
-    const wood = ramp(0x6a4020, 1.1);
-    const ember = hex(0xff6a20);
-    const smoke = hex(0x9a9ab0);
-    // A small clay holder at the bottom, the stick rising from it
-    b.rect(3, 11, 8, 3, OUTLINE);
-    b.rect(4, 12, 6, 1, hex(0x7a5a40));
+    const wood = ramp(0x6a4020, 1.15);
+    const clay = ramp(0x9a5a3a, 1.1);
+    const ember = hex(0xff7a20);
+    const emberHot = hex(0xffe070);
+    const smoke = hex(0xb0b0c4);
+    const smokeDark = hex(0x7a7a90);
+    // A shallow clay bowl with a lip and a bed of pale ash, the stick leaning up out of it
+    b.rect(2, 10, 10, 4, OUTLINE);
+    b.rect(3, 11, 8, 2, clay[2]);
+    b.rect(3, 11, 8, 1, clay[3]);
+    b.rect(3, 13, 8, 1, clay[1]);
+    b.rect(4, 11, 6, 1, hex(0xd8d0c0)); // ash
+    b.set(3, 11, hex(0xffffff)); // glint on the lip
+    // The stick, one pixel over per four up, shortening as it burns down
     const h = 3 + Math.round(fill * 7);
-    b.rect(6, 12 - h, 2, h, OUTLINE);
-    b.rect(6, 12 - h, 1, h, wood[2]);
-    b.rect(7, 12 - h, 1, h, wood[1]);
-    b.set(6, 11 - h, ember);
-    b.set(7, 11 - h, ember);
-    // A thread of smoke curling up and away
-    const sx = [7, 8, 8, 7, 6];
-    for (let i = 0; i < 5; i++) {
-      const y = 9 - h - i;
+    for (let i = 0; i < h; i++) {
+      const y = 10 - i;
+      const x = 6 + (i >> 2);
+      b.set(x - 1, y, OUTLINE);
+      b.set(x + 1, y, OUTLINE);
+      b.set(x, y, i % 3 === 0 ? wood[1] : wood[2]);
+      if (i === 0) b.set(x, y + 1, OUTLINE);
+    }
+    const tipX = 6 + ((h - 1) >> 2);
+    const tipY = 11 - h;
+    // Ember: hot at the very tip, a glow round it
+    b.set(tipX, tipY, emberHot);
+    b.set(tipX, tipY + 1, ember);
+    b.set(tipX - 1, tipY, ember, 160);
+    b.set(tipX + 1, tipY, ember, 160);
+    // Smoke: a thread that leans left, then right, thinning as it climbs
+    const curl = [[0, -1], [-1, -2], [-1, -3], [0, -4], [1, -5], [1, -6], [0, -7]];
+    for (let i = 0; i < curl.length; i++) {
+      const [dx, dy] = curl[i]!;
+      const y = tipY + dy!;
       if (y < 0) break;
-      b.set(sx[i]!, y, smoke, i < 3 ? 200 : 120);
+      b.set(tipX + dx!, y, i < 2 ? smokeDark : smoke, i < 4 ? 220 : 140 - i * 10);
+      if (i === 3 || i === 5) b.set(tipX + dx! + (i === 3 ? 1 : -1), y, smoke, 90);
     }
   }
   return b.toCanvas();
