@@ -31,10 +31,16 @@ const PICKUP_RADIUS = 0.9;
 /** The dev-menu pet fetches loot this far from the hero, in tiles (300 px). */
 const PET_REACH = 300 * PX;
 const PET_SPEED = 5.5;
-/** Skeleton archers: how many at most, how fast they walk, and how far from the hero they stand. */
-const MINION_POOL = 8;
+/** Summons: archer slots and one titan slot, how fast they walk, and how far from the hero they stand. */
+const ARCHER_SLOTS = 6;
+const TITAN_SLOT = ARCHER_SLOTS;
+const MINION_POOL = ARCHER_SLOTS + 1;
 const MINION_SPEED = 6;
 const MINION_HEEL = 1.7;
+const TITAN_SPEED = 4.2;
+const TITAN_RADIUS = 0.8;
+/** Seconds a taunted monster keeps fighting the titan after it last stood near the hero. */
+const TAUNT_HOLD = 3;
 
 export type Area = 'town' | 'arena';
 
@@ -421,14 +427,15 @@ export class World {
     this.buffs.push(buff);
     this.markDirty();
     if (mods.skeletons) this.raiseSkeletons(mods.skeletons.count, mods.skeletons.interval * MS);
+    if (mods.titan) this.raiseTitan(mods.titan.hpMult);
     this.emit({ type: 'buff_start', id, color });
     return buff;
   }
 
   /** Skeleton archers come up in a ring behind the hero, their shots staggered so they do not all fire at once. */
   private raiseSkeletons(count: number, interval: number): void {
-    const n = Math.min(count, MINION_POOL);
-    for (let i = 0; i < MINION_POOL; i++) {
+    const n = Math.min(count, ARCHER_SLOTS);
+    for (let i = 0; i < ARCHER_SLOTS; i++) {
       const m = this.minions[i]!;
       m.active = i < n;
       if (!m.active) continue;
@@ -442,15 +449,119 @@ export class World {
     }
   }
 
-  /** The skeletons heel behind the hero, close on whatever the hero last hit, and loose arrows at it. */
+  /** The titan comes up a pace ahead of the hero with life to spare. */
+  private raiseTitan(hpMult: number): void {
+    const t = this.minions[TITAN_SLOT]!;
+    t.active = true;
+    t.x = this.px + Math.sin(this.pyaw) * 1.8;
+    t.z = this.pz + Math.cos(this.pyaw) * 1.8;
+    t.yaw = this.pyaw;
+    t.moving = false;
+    t.timer = 0;
+    t.shoot = 0;
+    t.maxHp = Math.round(this.derived.maxHp * hpMult);
+    t.hp = t.maxHp;
+  }
+
+  /** A blow on the titan. When its life is gone the buff ends and it crumbles. */
+  damageTitan(amount: number, element: Element): void {
+    const t = this.titan;
+    if (!t) return;
+    const dealt = Math.max(1, Math.round(amount));
+    t.hp -= dealt;
+    this.emit({ type: 'damage', x: t.x, y: 2.6, z: t.z, amount: dealt, crit: false, element, target: 'enemy' });
+    if (t.hp <= 0) {
+      t.hp = 0;
+      const i = this.buffs.findIndex((b) => b.mods.titan);
+      if (i >= 0) this.endBuff(i);
+      this.message('The titan falls', 0xff8080);
+    }
+  }
+
   private tickMinions(dt: number): void {
+    this.tickArchers(dt);
+    this.tickTitan(dt);
+  }
+
+  /**
+   * The titan stands a pace ahead of the hero. Every monster within the taunt
+   * radius of the hero turns on it for a while. It walks to the nearest such
+   * monster and, once in reach, brings its fists down on everything there.
+   */
+  private tickTitan(dt: number): void {
+    const t = this.minions[TITAN_SLOT]!;
+    const buff = this.buffs.find((b) => b.mods.titan);
+    if (!buff) {
+      t.active = false;
+      return;
+    }
+    const cfg = buff.mods.titan!;
+    t.moving = false;
+    t.timer += dt;
+    t.shoot = Math.max(0, t.shoot - dt);
+    if (this.dist(t.x, t.z) > 14) {
+      t.x = this.px + Math.sin(this.pyaw) * 1.8;
+      t.z = this.pz + Math.cos(this.pyaw) * 1.8;
+    }
+    // Taunt: whatever stands near the hero fights the titan instead
+    const taunt = cfg.tauntRadius * PX;
+    let nearest: Enemy | null = null;
+    let bestD = Infinity;
+    for (const e of this.enemies) {
+      if (!e.alive || e.dead || e.dummy) continue;
+      const dh = this.dist(e.x, e.z);
+      if (dh <= taunt) {
+        e.taunt = TAUNT_HOLD;
+        e.aggro = true;
+      }
+      if (e.taunt > 0 || dh <= taunt) {
+        const dtn = Math.hypot(e.x - t.x, e.z - t.z);
+        if (dtn < bestD) {
+          bestD = dtn;
+          nearest = e;
+        }
+      }
+    }
+    const reach = cfg.reach * PX + TITAN_RADIUS;
+    let gx = this.px + Math.sin(this.pyaw) * 1.8;
+    let gz = this.pz + Math.cos(this.pyaw) * 1.8;
+    let stop = 0.5;
+    if (nearest && this.dist(t.x, t.z) < 9) {
+      gx = nearest.x;
+      gz = nearest.z;
+      stop = reach + nearest.radius - 0.2;
+      t.yaw = Math.atan2(nearest.x - t.x, nearest.z - t.z);
+      if (bestD <= reach + nearest.radius + 0.3 && t.timer >= cfg.interval * MS) {
+        // The blow: everything in reach takes it, with the ground breaking under the fists
+        t.timer = 0;
+        t.shoot = 0.6;
+        const dmg = skillDamage(this, buff.id, cfg.damageMult);
+        for (const e of this.enemiesWithin(t.x, t.z, reach + 0.6)) hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: false, skillId: buff.id, weaponHit: false, fromMinion: true, stun: 0.4 });
+        this.emit({ type: 'aoe', visual: 'stomp', x: t.x + Math.sin(t.yaw) * 0.6, z: t.z + Math.cos(t.yaw) * 0.6, radius: reach, element: 'physical' });
+      }
+    }
+    const dx = gx - t.x;
+    const dz = gz - t.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > stop && t.shoot <= 0) {
+      const step = Math.min(dist, TITAN_SPEED * dt);
+      this.map.slide(t.x, t.z, t.x + (dx / dist) * step, t.z + (dz / dist) * step, 0.4, this.slid);
+      t.x = this.slid.x;
+      t.z = this.slid.z;
+      t.yaw = Math.atan2(dx, dz);
+      t.moving = true;
+    }
+  }
+
+  /** The skeletons heel behind the hero, close on whatever the hero last hit, and loose arrows at it. */
+  private tickArchers(dt: number): void {
     const buff = this.buffs.find((b) => b.mods.skeletons);
     if (!buff) {
-      for (const m of this.minions) m.active = false;
+      for (let i = 0; i < ARCHER_SLOTS; i++) this.minions[i]!.active = false;
       return;
     }
     const sk = buff.mods.skeletons!;
-    const n = Math.min(sk.count, MINION_POOL);
+    const n = Math.min(sk.count, ARCHER_SLOTS);
     const target = this.enemies[this.lastHitId];
     const live = target && target.alive && !target.dead ? target : null;
     if (!live) this.lastHitId = -1;
@@ -517,7 +628,8 @@ export class World {
     this.buffs.splice(index, 1);
     this.markDirty();
     this.emit({ type: 'buff_end', id: b.id });
-    if (b.mods.skeletons) for (const m of this.minions) m.active = false;
+    if (b.mods.skeletons) for (let i = 0; i < ARCHER_SLOTS; i++) this.minions[i]!.active = false;
+    if (b.mods.titan) this.minions[TITAN_SLOT]!.active = false;
     if (b.mods.endSmoke) {
       this.addZone({ type: 'smoke', x: this.px, z: this.pz, radius: b.mods.endSmoke.radius * PX, duration: b.mods.endSmoke.slowDuration * MS, tickInterval: 0.2, slow: 0.4, damage: 0, element: 'physical', skillId: b.id });
     }
@@ -955,7 +1067,13 @@ export class World {
   /** The development menu's crab: trots behind the hero and fetches loot within PET_REACH. Never saved. */
   readonly pet = { active: false, x: 0, z: 0, yaw: 0, moving: false, targetDrop: -1 };
   /** Summoned skeleton archers; `active` ones follow the hero. */
-  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, () => ({ active: false, x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0 }));
+  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, (_, i) => ({ active: false, kind: i === TITAN_SLOT ? 'titan' : 'archer', x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0, hp: 0, maxHp: 0, radius: i === TITAN_SLOT ? TITAN_RADIUS : 0.3 }));
+
+  /** The titan, if one stands. */
+  get titan(): Minion | null {
+    const t = this.minions[TITAN_SLOT]!;
+    return t.active ? t : null;
+  }
   /** The enemy the hero last hit, which the skeletons shoot at; -1 for none. */
   lastHitId = -1;
   private readonly petIgnore = new Set<number>();
@@ -1495,7 +1613,7 @@ export class World {
   private blankEnemy(id: number): Enemy {
     return {
       id, alive: false, def: null, dummy: null, name: '', recipeId: 'ghoul', x: 0, z: 0, yaw: 0, radius: 0.4, hp: 1, maxHp: 1, damage: 0, speed: 0, xp: 0,
-      attackRange: 1, attackCooldown: 1, attackTimer: 0, thinkTimer: 0, moving: false, dead: false, deadTimer: 0, status: emptyStatus(), sinceHit: 0, scale: 1, moveX: 0, moveZ: 0, aggro: false,
+      attackRange: 1, attackCooldown: 1, attackTimer: 0, thinkTimer: 0, moving: false, dead: false, deadTimer: 0, status: emptyStatus(), sinceHit: 0, scale: 1, moveX: 0, moveZ: 0, aggro: false, taunt: 0,
     };
   }
 
@@ -1516,7 +1634,7 @@ export class World {
       def, dummy: null, name: def.name, recipeId: def.look, x, z, yaw: this.rng.range(0, 6.28), radius: def.radius * PX,
       maxHp: Math.round(def.hp * scale.hp), damage: Math.round(def.damage * scale.dmg),
       speed: def.speed * PX, xp: Math.round(def.xp * (1 + MONSTER_RULES.xpPerLevel * lv)), attackRange: def.attackRange * PX,
-      attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0, aggro: false,
+      attackCooldown: def.attackCooldown * MS, attackTimer: this.rng.range(0.3, 1.0), thinkTimer: this.rng.range(0, 0.3), moving: false, deadTimer: 0, sinceHit: 0, aggro: false, taunt: 0,
       scale: def.scale * this.rng.range(0.92, 1.08),
     });
     e.hp = e.maxHp;
@@ -1577,6 +1695,7 @@ export class World {
       tickStatuses(this, e, dt);
       if (e.dead) continue;
       e.attackTimer = Math.max(0, e.attackTimer - dt);
+      e.taunt = Math.max(0, e.taunt - dt);
       e.moving = false;
       if (e.dummy) {
         this.tickDummy(e, dt);
@@ -1664,38 +1783,55 @@ export class World {
     }
   }
 
-  private think(e: Enemy, dist: number, hidden: boolean): void {
+  private think(e: Enemy, heroDist: number, hidden: boolean): void {
     e.moveX = 0;
     e.moveZ = 0;
-    if (hidden) return;
+    // A taunted monster fights the titan; everything else fights the hero
+    const titan = e.taunt > 0 ? this.titan : null;
+    if (hidden && !titan) return;
     // Monsters stand where they are until the hero comes close or hits them
     if (!e.aggro) {
-      if (dist > MONSTER_RULES.aggroRange * PX) return;
+      if (heroDist > MONSTER_RULES.aggroRange * PX) return;
       e.aggro = true;
     }
     const def = e.def!;
-    const reach = e.attackRange + e.radius + PLAYER_RADIUS;
+    const tx = titan ? titan.x : this.px;
+    const tz = titan ? titan.z : this.pz;
+    const dist = titan ? Math.hypot(tx - e.x, tz - e.z) : heroDist;
+    const reach = e.attackRange + e.radius + (titan ? TITAN_RADIUS : PLAYER_RADIUS);
+    // Toward the threat: the flow field leads to the hero, the titan is close enough to walk straight at
+    const approach = (dir: { x: number; z: number }): void => {
+      if (titan) {
+        const safe = Math.max(dist, 0.001);
+        dir.x = (tx - e.x) / safe;
+        dir.z = (tz - e.z) / safe;
+      } else this.flow.direction(e.x, e.z, dir);
+    };
+    const strike = (): void => {
+      if (titan) this.damageTitan(e.damage, def.element);
+      else damagePlayer(this, e.damage, def.element, e, true);
+    };
     if (def.ai === 'ranged') {
       const pref = (def.preferredRange ?? 195) * PX;
-      const los = !this.map.lineBlocked(e.x, e.z, this.px, this.pz);
+      const los = !this.map.lineBlocked(e.x, e.z, tx, tz);
       if (dist < pref * 0.75) {
         const safe = Math.max(dist, 0.001);
-        e.moveX = (e.x - this.px) / safe;
-        e.moveZ = (e.z - this.pz) / safe;
+        e.moveX = (e.x - tx) / safe;
+        e.moveZ = (e.z - tz) / safe;
       } else if (dist > pref || !los) {
         // Close in until it is truly at its preferred range: a hero with a 200 px weapon must be able to answer
         const dir = { x: 0, z: 0 };
-        this.flow.direction(e.x, e.z, dir);
+        approach(dir);
         e.moveX = dir.x * 0.6;
         e.moveZ = dir.z * 0.6;
       } else {
-        e.yaw = Math.atan2(this.px - e.x, this.pz - e.z);
+        e.yaw = Math.atan2(tx - e.x, tz - e.z);
         if (e.attackTimer <= 0 && e.status.shock <= 0) {
           e.attackTimer = e.attackCooldown;
           this.emit({ type: 'enemy_attack', id: e.id });
           const safe = Math.max(dist, 0.001);
-          const dx = (this.px - e.x) / safe;
-          const dz = (this.pz - e.z) / safe;
+          const dx = (tx - e.x) / safe;
+          const dz = (tz - e.z) / safe;
           this.spawnProjectile({
             owner: 'enemy', shape: 'enemy_bolt', element: def.element, x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
             speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: def.element, canCrit: false, skillId: null, weaponHit: false },
@@ -1705,22 +1841,22 @@ export class World {
       return;
     }
     // Melee needs to be in reach and in sight; through a wall it keeps walking round
-    if (dist > reach || this.map.lineBlocked(e.x, e.z, this.px, this.pz)) {
+    if (dist > reach || this.map.lineBlocked(e.x, e.z, tx, tz)) {
       const dir = { x: 0, z: 0 };
-      this.flow.direction(e.x, e.z, dir);
+      approach(dir);
       if (!dir.x && !dir.z && dist < 6) {
         const safe = Math.max(dist, 0.001);
-        dir.x = (this.px - e.x) / safe;
-        dir.z = (this.pz - e.z) / safe;
+        dir.x = (tx - e.x) / safe;
+        dir.z = (tz - e.z) / safe;
       }
       e.moveX = dir.x;
       e.moveZ = dir.z;
     } else {
-      e.yaw = Math.atan2(this.px - e.x, this.pz - e.z);
+      e.yaw = Math.atan2(tx - e.x, tz - e.z);
       if (e.attackTimer <= 0 && e.status.shock <= 0) {
         e.attackTimer = e.attackCooldown;
         this.emit({ type: 'enemy_attack', id: e.id });
-        damagePlayer(this, e.damage, def.element, e, true);
+        strike();
       }
     }
   }
@@ -1836,6 +1972,16 @@ export class World {
         });
         if (!p.alive) continue;
       } else if (!this.playerDead) {
+        const titan = this.titan;
+        if (titan) {
+          const rt = p.radius + TITAN_RADIUS;
+          if ((p.x - titan.x) ** 2 + (p.z - titan.z) ** 2 <= rt * rt) {
+            this.damageTitan(p.packet.amount, p.packet.element);
+            this.emit({ type: 'projectile_hit', x: p.x, z: p.z, element: p.element, shape: p.shape, splash: 0 });
+            p.alive = false;
+            continue;
+          }
+        }
         const r = p.radius + PLAYER_RADIUS;
         if ((p.x - this.px) ** 2 + (p.z - this.pz) ** 2 <= r * r) {
           damagePlayer(this, p.packet.amount, p.packet.element, null, false);

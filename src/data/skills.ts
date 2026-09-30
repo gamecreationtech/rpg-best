@@ -34,6 +34,8 @@ export interface BuffMods {
   endSmoke?: { radius: number; slowDuration: number };
   /** Skeleton archers raised for the buff's duration: they follow the hero and shoot whatever the hero last hit. `interval` ms between shots, `range` px. */
   skeletons?: { count: number; damageMult: number; interval: number; range: number };
+  /** A colossal titan raised for the buff's duration: `hpMult` times the hero's life, taunts monsters within `tauntRadius` px of the hero, smashes everything within `reach` px every `interval` ms. */
+  titan?: { hpMult: number; damageMult: number; interval: number; reach: number; tauntRadius: number };
 }
 
 export type SkillEffect =
@@ -216,6 +218,7 @@ export const SKILLS: Record<string, SkillDef> = {
   death: { id: 'death', name: 'Death', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Curse enemies to lose 1% of their life per second. Below 5% they die instantly.', manaCost: 60, cooldown: 20000, rank5Cooldown: 12000, reqLevel: 15, element: 'poison', effect: { kind: 'curse', maxRange: 250, radius: 50, duration: 10000, pctPerSec: 1, executeBelowPct: 5 } },
   poison_nova: { id: 'poison_nova', name: 'Poison Nova', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'A burst of plague that poisons everything nearby.', manaCost: 45, cooldown: 14000, rank5Cooldown: 8000, rankBonus: 0.25, reqLevel: 5, element: 'poison', effect: { kind: 'aoe', damageMult: 0.5, radius: 250, at: 'self', poison: { ticks: 15, tickMult: 0.55, interval: 1000 }, visual: 'nova_poison' } },
   skeleton_army: { id: 'skeleton_army', name: 'Summon Skeleton Army', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Raise five skeleton archers from the ground. For thirty seconds they follow you and shoot whatever you attack.', manaCost: 70, cooldown: 40000, rank5Cooldown: 25000, rankBonus: 0.25, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 30000, mods: { skeletons: { count: 5, damageMult: 0.6, interval: 1200, range: 260 } } } },
+  meat_shield: { id: 'meat_shield', name: 'Meat Shield', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Raise a colossal titan of stitched flesh for twenty-five seconds. Monsters that come near you turn on it instead, and it crushes everything in reach with slow, terrible blows.', manaCost: 90, cooldown: 45000, rank5Cooldown: 30000, rankBonus: 0.25, reqLevel: 25, element: 'physical', effect: { kind: 'buff', duration: 25000, mods: { titan: { hpMult: 3, damageMult: 4, interval: 3000, reach: 60, tauntRadius: 200 } } } },
   life_touch: { id: 'life_touch', name: 'Life Touch', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'A beam that drains life from an enemy into you for five seconds.', manaCost: 55, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.2, reqLevel: 10, element: 'poison', effect: { kind: 'beam', drainMult: 1.2, interval: 500, duration: 5000, maxRange: 200, extendedRange: 350, farEffectiveness: 0.5 } },
 
   // ---------------- ROGUE ----------------

@@ -7,14 +7,20 @@ import type { Item } from './items/item';
 /** A skeleton archer raised by Summon Skeleton Army. Runtime only, never saved. */
 export interface Minion {
   active: boolean;
+  /** A skeleton archer, or the titan of Meat Shield. */
+  kind: 'archer' | 'titan';
   x: number;
   z: number;
   yaw: number;
   moving: boolean;
-  /** Seconds since its last shot. */
+  /** Seconds since its last shot or blow. */
   timer: number;
-  /** Seconds left of the loosing pose, for the renderer. */
+  /** Seconds left of the loosing or smashing pose, for the renderer. */
   shoot: number;
+  /** Life, for the titan; archers take no damage. */
+  hp: number;
+  maxHp: number;
+  radius: number;
 }
 
 export interface DotState {
@@ -71,6 +77,8 @@ export interface Enemy {
   moveZ: number;
   /** Has noticed the hero: idle until the hero comes within MONSTER_RULES.aggroRange or hits it. */
   aggro: boolean;
+  /** Seconds left fighting the titan instead of the hero. */
+  taunt: number;
 }
 
 export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';

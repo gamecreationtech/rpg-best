@@ -10,7 +10,7 @@ import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalPr
 import { zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
-import type { Drop, Enemy, ProjectileShape, SimEvent, Zone } from '../sim/types';
+import type { Drop, Enemy, Minion, ProjectileShape, SimEvent, Zone } from '../sim/types';
 
 /** Which shield drawing each shield base gets on the hero. */
 const SHIELD_LOOKS: Record<string, OffhandLook> = { wooden_shield: 'wooden', wooden_shield_base: 'wooden', iron_shield: 'iron', tower_shield: 'tower', energy_shield: 'energy' };
@@ -537,6 +537,17 @@ export class PixelView {
         break;
       }
       case 'buff_start': {
+        if (ev.id === 'meat_shield' && w.titan) {
+          // The titan heaves itself out of the earth: the ground splits, dirt flies, the screen shakes
+          const t = w.titan;
+          this.effects.cracks(t.x, t.z, 40, 0x9a8a70, 1.2, 10);
+          this.effects.ring(t.x, t.z, 0.3, 2.4, 0xc8b8a0, 0.5, 3, 1);
+          pt.burst(t.x, 0.1, t.z, 40, 3, 0x6a5a48, 0.8, { up: 3, gravity: 6, priority: 0.8, size: 2 });
+          pt.burst(t.x, 0.2, t.z, 16, 2, 0x9a8a70, 0.9, { up: 3.5, gravity: 6, priority: 0.7, size: 3 });
+          this.effects.flash(t.x, 1.5, t.z, 0xff4030, 1.6, 60, 0.4);
+          this.view.kick(0.3);
+          break;
+        }
         if (ev.id === 'skeleton_army') {
           // The dead claw their way up: cracks and a spray of grave dirt under each one, a sickly green flash
           for (const m of w.minions) {
@@ -612,6 +623,14 @@ export class PixelView {
         break;
       }
       case 'buff_end':
+        if (ev.id === 'meat_shield') {
+          // It comes apart: a heap of flesh and bone dust where it stood
+          const t = w.minions[w.minions.length - 1]!;
+          pt.burst(t.x, 1.2, t.z, 40, 2, 0x82705e, 1.0, { gravity: 6, drag: 1, priority: 0.7, size: 3 });
+          pt.burst(t.x, 1.5, t.z, 20, 1.5, 0xd6ceb6, 1.0, { gravity: 5, drag: 1, priority: 0.6, size: 2 });
+          this.effects.disc(t.x, t.z, 1.2, 0x3a2a30, 2.5, 0.5);
+          this.view.kick(0.15);
+        }
         if (ev.id === 'skeleton_army') {
           // They crumble to bone dust where they stand
           for (const m of w.minions) {
@@ -1070,7 +1089,7 @@ export class PixelView {
     }
     for (let i = 0; i < w.minions.length; i++) {
       const m = w.minions[i]!;
-      if (!m.active) continue;
+      if (!m.active || m.kind !== 'archer') continue;
       let p = this.minionPuppets[i];
       if (!p) {
         p = { sheet: this.monsterSheet('bone_archer'), anim: 'idle', animT: Math.random(), facing: 'front', faceLeft: false, flash: 0, dying: -1 };
@@ -1290,10 +1309,11 @@ export class PixelView {
     }
     if (rite && !w.playerDead) this.drawRite();
     if (w.pet.active && this.pet) this.pushPuppet(this.pet, w.pet.x, 0, w.pet.z, 1, null);
+    if (w.titan) this.drawTitan(w.titan);
     for (let i = 0; i < w.minions.length; i++) {
       const m = w.minions[i]!;
       const p = this.minionPuppets[i];
-      if (!m.active || !p) continue;
+      if (!m.active || !p || m.kind !== 'archer') continue;
       this.pushPuppet(p, m.x, 0, m.z, 1, null);
       if (m.shoot > 0.25) this.lights.push({ x: Math.round(cam.frameX(m.x, m.z)), y: Math.round(cam.frameY(m.x, 1, m.z)), radius: 24, intensity: 0.8, r: 1, g: 0.3, b: 0.3 });
     }
@@ -1668,7 +1688,15 @@ export class PixelView {
     const put = (x: number, z: number) => ctx.drawImage(sh, Math.round(cam.frameX(x, z)) - (sh.width >> 1), Math.round(cam.frameY(x, 0, z)) - (sh.height >> 1));
     if (!w.playerDead) put(w.px, w.pz);
     for (const e of w.enemies) if (e.alive && !e.dead) put(e.x, e.z);
-    for (const m of w.minions) if (m.active) put(m.x, m.z);
+    for (const m of w.minions) if (m.active && m.kind === 'archer') put(m.x, m.z);
+    if (w.titan) {
+      // A big body throws a big shadow
+      const t = w.titan;
+      put(t.x - 0.3, t.z);
+      put(t.x + 0.3, t.z);
+      put(t.x, t.z - 0.3);
+      put(t.x, t.z + 0.3);
+    }
     this.effects.draw(ctx, cam, 'floor');
   }
 
@@ -1882,6 +1910,35 @@ export class PixelView {
       this.particles.spawn(z.x + Math.cos(a) * 0.5, 0.05, z.z + Math.sin(a) * 0.5, Math.cos(a) * 1.2, 1.5 + Math.random(), Math.sin(a) * 1.2, 0.5, Math.random() < 0.5 ? 0x6a5a48 : 0x9a8a70, { gravity: 6, priority: 0.5, size: 2 });
     }
     if (rise > 0.6) this.lights.push({ x: fx + (flip ? -2 : 2), y: fy - Math.round(46 * rise), radius: 50, intensity: 1.2 + (loosed ? 0.6 : 0), r: 0.5, g: 1, b: 0.35 });
+  }
+
+  /**
+   * Meat Shield's titan: standing, or winding up and bringing its fists down
+   * when it strikes, with a slow heavy bob as it walks. Faces the way it
+   * moves or fights, with its life bar over its head and a dim red eye light.
+   */
+  private drawTitan(t: Minion): void {
+    const cam = this.view;
+    const ctx = this.ctx;
+    const frames = this.fx.titan;
+    const frame = frames[t.shoot > 0.4 ? 1 : t.shoot > 0 ? 2 : 0]!;
+    const flip = Math.sin(t.yaw) - Math.cos(t.yaw) < 0;
+    const bob = t.moving ? Math.round(Math.abs(Math.sin(this.time * 5)) * 2) : 0;
+    const fx = Math.round(cam.frameX(t.x, t.z));
+    const fy = Math.round(cam.frameY(t.x, 0, t.z)) + 2 - bob;
+    this.items.push({
+      depth: cam.depth(t.x, t.z),
+      draw: () => {
+        ctx.save();
+        ctx.translate(fx, fy);
+        if (flip) ctx.scale(-1, 1);
+        ctx.drawImage(frame, -(frame.width >> 1), -frame.height);
+        ctx.restore();
+      },
+    });
+    this.bars.push(fx, fy - frame.height - 6, t.hp / t.maxHp, 0);
+    this.lights.push({ x: fx + (flip ? -5 : 5), y: fy - frame.height + 14, radius: 30, intensity: 0.5, r: 1, g: 0.3, b: 0.25 });
+    if (t.moving && Math.random() < 0.4) this.particles.spawn(t.x + (Math.random() - 0.5) * 1.2, 0.05, t.z + (Math.random() - 0.5) * 1.2, 0, 0.8, 0, 0.5, 0x8a7a68, { priority: 0.4, size: 2, alpha: 0.7 });
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

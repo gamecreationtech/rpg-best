@@ -159,7 +159,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(55);
+    expect(Object.keys(SKILLS).length).toBe(56);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -465,6 +465,35 @@ describe('skeleton army', () => {
     b.remaining = 0.01;
     run(w, 0.1);
     expect(w.minions.some((m) => m.active)).toBe(false);
+  });
+});
+
+describe('meat shield', () => {
+  it('raises a titan that draws monsters near the hero onto itself and smashes them', () => {
+    const w = new World(createPlayer('sorcerer', 'necromancer'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 500;
+    w.player.skillRanks.meat_shield = 1;
+    expect(castSkill(w, 'meat_shield', null).ok).toBe(true);
+    const t = w.titan!;
+    expect(t).not.toBeNull();
+    expect(t.maxHp).toBe(w.derived.maxHp * 3);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 1.2, w.pz);
+    e.hp = 100000;
+    e.maxHp = 100000;
+    const heroHp = w.player.hp;
+    run(w, 4);
+    expect(e.taunt).toBeGreaterThan(0);
+    // The ghoul hits the titan, not the hero
+    expect(w.player.hp).toBe(heroHp);
+    expect(t.hp).toBeLessThan(t.maxHp);
+    // The titan's blow has landed at least once in four seconds
+    expect(e.hp).toBeLessThan(100000);
+    // Beaten down, it falls and the buff ends
+    w.damageTitan(t.hp + 10, 'physical');
+    expect(w.titan).toBeNull();
+    expect(w.buffs.some((b) => b.id === 'meat_shield')).toBe(false);
   });
 });
 

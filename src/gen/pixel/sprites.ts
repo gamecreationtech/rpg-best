@@ -206,6 +206,8 @@ export interface EffectSprites {
   bigArrow: HTMLCanvasElement;
   /** The daemon Arrow of Beyond raises: bow drawn, then loosed. Faces right. */
   daemon: HTMLCanvasElement[];
+  /** Meat Shield's titan: standing, fists raised, fists down. Faces right. */
+  titan: HTMLCanvasElement[];
 }
 
 export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
@@ -362,7 +364,7 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
   arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
   arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s) };
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s) };
 }
 
 /** Head and horns of the daemon, placed pixel by pixel, 52 wide. See `DAEMON_INK` for what each mark means. */
@@ -680,6 +682,209 @@ function daemonFrames(s: number): HTMLCanvasElement[] {
         const c = grid[y]![x];
         if (!c) continue;
         b.rect(x * s, y * s, s, s, c);
+      }
+    }
+    frames.push(b.toCanvas());
+  }
+  return frames;
+}
+
+/**
+ * The titan of Meat Shield, 64 wide and 76 tall, facing right: a colossal
+ * stitched-together corpse. Dead grey-green flesh with bruised patches and
+ * stitch lines across them, bone plates riveted over the shoulders, a small
+ * head sunk between them with one burning red eye, and fists like boulders.
+ * Frame 0 stands, frame 1 raises both fists, frame 2 brings them down.
+ */
+function titanFrames(s: number): HTMLCanvasElement[] {
+  const W = 64;
+  const H = 76;
+  const flesh: Rgb[] = [[52, 60, 52], [82, 94, 78], [116, 130, 106], [150, 166, 136]];
+  const bruise: Rgb = [86, 66, 82];
+  const bruiseDark: Rgb = [62, 46, 60];
+  const stitch: Rgb = [24, 20, 26];
+  const thread: Rgb = [206, 196, 164];
+  const bone: Rgb = [214, 206, 182];
+  const boneDark: Rgb = [156, 146, 122];
+  const rivet: Rgb = [70, 74, 84];
+  const eye: Rgb = [255, 64, 48];
+  const eyeCore: Rgb = [255, 226, 200];
+  const outline: Rgb = [10, 8, 12];
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < 3; f++) {
+    const grid: (Rgb | null)[][] = [];
+    for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
+    const put = (x: number, y: number, c: Rgb): void => {
+      if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
+    };
+    const get = (x: number, y: number): Rgb | null => (x >= 0 && x < W && y >= 0 && y < H ? grid[y]![x]! : null);
+    const isFlesh = (c: Rgb | null): boolean => !!c && (flesh.includes(c) || c === bruise || c === bruiseDark);
+    const row = (y: number, l: number, r: number, lit: boolean): void => {
+      for (let x = l; x <= r; x++) {
+        const fl = x - l;
+        const fr = r - x;
+        let c = flesh[1]!;
+        if (fl <= 1 || (lit && fl <= 4)) c = flesh[2]!;
+        if (lit && fl >= 2 && fl <= 6) c = flesh[3]!;
+        if (fr <= 1) c = flesh[0]!;
+        put(x, y, c);
+      }
+    };
+    const blob = (cx: number, cy: number, rx: number, ry: number, lit: boolean): void => {
+      for (let y = Math.round(cy - ry); y <= Math.round(cy + ry); y++) {
+        const t = (y - cy) / ry;
+        const half = Math.sqrt(Math.max(0, 1 - t * t)) * rx;
+        if (half < 0.5) continue;
+        row(y, Math.round(cx - half), Math.round(cx + half), lit && y < cy);
+      }
+    };
+    const patch = (cx: number, cy: number, rx: number, ry: number): void => {
+      for (let y = Math.round(cy - ry); y <= Math.round(cy + ry); y++) {
+        for (let x = Math.round(cx - rx); x <= Math.round(cx + rx); x++) {
+          const d = Math.hypot((x - cx) / rx, (y - cy) / ry);
+          if (d <= 1 && isFlesh(get(x, y))) put(x, y, d > 0.75 ? bruiseDark : bruise);
+        }
+      }
+    };
+    const seam = (x0: number, y0: number, x1: number, y1: number): void => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      const across = Math.abs(x1 - x0) >= Math.abs(y1 - y0);
+      for (let i = 0; i <= n; i++) {
+        const x = Math.round(x0 + ((x1 - x0) * i) / n);
+        const y = Math.round(y0 + ((y1 - y0) * i) / n);
+        if (!isFlesh(get(x, y))) continue;
+        put(x, y, stitch);
+        if (i % 3 === 1) {
+          if (across) {
+            put(x, y - 1, thread);
+            put(x, y + 1, thread);
+          } else {
+            put(x - 1, y, thread);
+            put(x + 1, y, thread);
+          }
+        }
+      }
+    };
+    const raised = f === 1;
+    const smash = f === 2;
+    const crouch = smash ? 3 : 0;
+    // ---- legs and feet, planted wide
+    for (const lx of [16, 34]) {
+      for (let y = 52 + crouch; y <= 68; y++) row(y, lx + (y > 62 ? 1 : 0), lx + 13 - (y > 62 ? 1 : 0), false);
+      for (let y = 68; y <= 74; y++) for (let x = lx - 2; x <= lx + 15; x++) put(x, y, y === 68 ? flesh[0]! : x < lx + 1 || x > lx + 12 ? flesh[0]! : flesh[1]!);
+      for (const tx of [lx, lx + 5, lx + 10]) put(tx, 74, bone); // toe claws
+    }
+    // ---- torso: a great slab, shoulders wider than the hips
+    const torso: [number, number, number][] = [];
+    for (let y = 18 + crouch; y <= 54 + crouch; y++) {
+      const t = (y - 18 - crouch) / 36;
+      const half = Math.round(26 - 8 * t * t);
+      torso.push([y, 32 - half, 32 + half]);
+    }
+    for (const [y, l, r] of torso) row(y, l, r, y < 30 + crouch);
+    // Belly rolls and a spine of shadow
+    for (let x = 22; x <= 42; x++) {
+      put(x, 40 + crouch + Math.round(Math.abs(x - 32) / 8), flesh[0]!);
+      put(x, 48 + crouch + Math.round(Math.abs(x - 32) / 8), flesh[0]!);
+    }
+    for (let x = 14; x <= 26; x++) put(x, 30 + crouch + Math.round(Math.abs(x - 20) / 5), flesh[0]!); // pectoral folds
+    for (let x = 38; x <= 50; x++) put(x, 30 + crouch + Math.round(Math.abs(x - 44) / 5), flesh[0]!);
+    // Bruised patches of other men's skin, stitched on
+    patch(20, 36 + crouch, 7, 5);
+    patch(44, 44 + crouch, 6, 6);
+    patch(30, 26 + crouch, 5, 4);
+    seam(13, 36 + crouch, 27, 36 + crouch);
+    seam(44, 38 + crouch, 44, 50 + crouch);
+    seam(32, 20 + crouch, 32, 54 + crouch);
+    seam(25, 26 + crouch, 35, 26 + crouch);
+    // ---- arms: from the shoulders to fists like boulders
+    const arm = (side: -1 | 1): void => {
+      const sx = 32 + side * 22;
+      const sy = 22 + crouch;
+      let ex: number;
+      let ey: number;
+      let hx: number;
+      let hy: number;
+      if (raised) {
+        ex = 32 + side * 27;
+        ey = 8;
+        hx = 32 + side * 16;
+        hy = 2;
+      } else if (smash) {
+        ex = 32 + side * 29;
+        ey = 40;
+        hx = 32 + side * 12;
+        hy = 62;
+      } else {
+        ex = 32 + side * 28;
+        ey = 38;
+        hx = 32 + side * 27;
+        hy = 56;
+      }
+      const seg = (x0: number, y0: number, x1: number, y1: number, half: number): void => {
+        const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+        for (let i = 0; i <= n; i++) {
+          const x = Math.round(x0 + ((x1 - x0) * i) / n);
+          const y = Math.round(y0 + ((y1 - y0) * i) / n);
+          row(y, x - half, x + half, true);
+        }
+      };
+      seg(sx, sy, ex, ey, 5);
+      seg(ex, ey, hx, hy, 4);
+      blob(hx, hy, 6, 5, true);
+      // Knuckles
+      for (let k = -1; k <= 1; k++) put(hx + k * 3, hy - 4, flesh[3]!);
+      seam(ex - 3, ey, ex + 3, ey);
+    };
+    arm(-1);
+    arm(1);
+    // ---- shoulder plates of bone, riveted on, over the arms
+    for (const side of [-1, 1] as const) {
+      const cx = 32 + side * 20;
+      for (let y = 12 + crouch; y <= 22 + crouch; y++) {
+        const t = (y - 12 - crouch) / 10;
+        const half = Math.round(10 * Math.sqrt(1 - (1 - t) * (1 - t)) + 2);
+        for (let x = cx - half; x <= cx + half; x++) put(x, y, y < 15 + crouch || x === cx - half ? bone : x > cx + half - 3 ? boneDark : bone);
+      }
+      put(cx - 5, 16 + crouch, rivet);
+      put(cx + 5, 16 + crouch, rivet);
+      put(cx, 19 + crouch, rivet);
+      put(cx - 8, 20 + crouch, rivet);
+      put(cx + 8, 20 + crouch, rivet);
+    }
+    // ---- head, sunk between the shoulders: a lopsided skull of flesh with one great eye
+    blob(34, 13 + crouch, 8, 7, true);
+    for (let x = 28; x <= 41; x++) put(x, 17 + crouch, flesh[0]!); // the jaw line
+    for (let x = 30; x <= 39; x++) put(x, 20 + crouch, flesh[0]!); // neck fold
+    seam(28, 10 + crouch, 38, 8 + crouch);
+    put(36, 12 + crouch, outline);
+    put(37, 12 + crouch, outline);
+    put(38, 12 + crouch, outline);
+    put(36, 13 + crouch, outline);
+    put(37, 13 + crouch, eye);
+    put(38, 13 + crouch, eye);
+    put(39, 13 + crouch, outline);
+    put(37, 14 + crouch, eye);
+    put(38, 14 + crouch, eyeCore);
+    put(36, 14 + crouch, outline);
+    put(39, 14 + crouch, outline);
+    put(30, 12 + crouch, stitch); // the other eye, sewn shut
+    put(31, 12 + crouch, thread);
+    put(32, 12 + crouch, stitch);
+    // Outline every painted edge
+    const painted = grid.map((r) => r.map((c) => c !== null));
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (painted[y]![x]) continue;
+        const near = (painted[y - 1]?.[x] ?? false) || (painted[y + 1]?.[x] ?? false) || (painted[y]![x - 1] ?? false) || (painted[y]![x + 1] ?? false);
+        if (near) grid[y]![x] = outline;
+      }
+    }
+    const b = new PixelBuffer(W * s, H * s);
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const c = grid[y]![x];
+        if (c) b.rect(x * s, y * s, s, s, c);
       }
     }
     frames.push(b.toCanvas());
