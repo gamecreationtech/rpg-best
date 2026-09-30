@@ -413,9 +413,11 @@ const DAEMON_INK: Record<string, Rgb> = {
  * it: string straight, draw arm swung back.
  */
 function daemonFrames(s: number): HTMLCanvasElement[] {
-  const W = 56;
+  // The body is laid out on a 56-wide plan; the wings need room either side, so the canvas is wider and everything shifts right by BX
+  const BX = 16;
+  const W = 56 + BX * 2;
   const H = 60;
-  const OX = 2; // the head strip is 52 wide, centred on the 56 canvas
+  const OX = 2; // the head strip is 52 wide, centred on the 56-wide plan
   const skin: Rgb[] = [DAEMON_INK['1']!, DAEMON_INK['2']!, DAEMON_INK['3']!, DAEMON_INK['4']!];
   const outline = DAEMON_INK['#']!;
   const bone = DAEMON_INK.b!;
@@ -443,10 +445,14 @@ function daemonFrames(s: number): HTMLCanvasElement[] {
   for (let f = 0; f < 2; f++) {
     const grid: (Rgb | null)[][] = [];
     for (let y = 0; y < H; y++) grid.push(new Array<Rgb | null>(W).fill(null));
-    const put = (x: number, y: number, c: Rgb): void => {
+    const put = (px: number, y: number, c: Rgb): void => {
+      const x = px + BX;
       if (x >= 0 && x < W && y >= 0 && y < H) grid[y]![x] = c;
     };
-    const get = (x: number, y: number): Rgb | null => (x >= 0 && x < W && y >= 0 && y < H ? grid[y]![x]! : null);
+    const get = (px: number, y: number): Rgb | null => {
+      const x = px + BX;
+      return x >= 0 && x < W && y >= 0 && y < H ? grid[y]![x]! : null;
+    };
     const isSkin = (c: Rgb | null): boolean => !!c && skin.some((k) => k === c);
     // A solid block of skin between two x bounds on one row, lit from the upper left
     const skinRow = (y: number, l: number, r: number, topLit: boolean): void => {
@@ -468,6 +474,73 @@ function daemonFrames(s: number): HTMLCanvasElement[] {
         for (let d = -half; d <= half; d++) put(x, y + d, c);
       }
     };
+    // ---- wings, behind everything: an arm bone from the shoulder blade up to a wrist high and wide, four finger
+    // bones fanning out from it with claws at the tips, and a dark membrane stretched between them, scalloped
+    // along the trailing edge. They flare up a little on the loosed frame.
+    const membrane: Rgb = [46, 14, 40];
+    const membraneLight: Rgb = [72, 26, 62];
+    const membraneDark: Rgb = [30, 8, 26];
+    const lift = f === 1 ? 3 : 0;
+    const fillTri = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number, c: Rgb): void => {
+      const minX = Math.min(ax, bx, cx);
+      const maxX = Math.max(ax, bx, cx);
+      const minY = Math.min(ay, by, cy);
+      const maxY = Math.max(ay, by, cy);
+      const area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+      for (let y = minY; y <= maxY; y++) {
+        for (let x = minX; x <= maxX; x++) {
+          const w0 = ((bx - x) * (cy - y) - (cx - x) * (by - y)) / area;
+          const w1 = ((cx - x) * (ay - y) - (ax - x) * (cy - y)) / area;
+          const w2 = 1 - w0 - w1;
+          if (w0 >= -0.02 && w1 >= -0.02 && w2 >= -0.02) put(x, y, c);
+        }
+      }
+    };
+    const wing = (sign: 1 | -1): void => {
+      const cx = 28;
+      const sx = cx + sign * 12;
+      const sy = 26;
+      const ex = cx + sign * 24;
+      const ey = 13 - lift;
+      const wx = cx + sign * 27;
+      const wy = 4 - lift;
+      const tips: [number, number][] = [
+        [cx + sign * 41, 7 - lift],
+        [cx + sign * 43, 21 - lift],
+        [cx + sign * 37, 34 - lift],
+        [cx + sign * 26, 42],
+      ];
+      // Membrane panels between the fingers, then the panel back to the elbow and the one down to the body
+      for (let i = 0; i < tips.length - 1; i++) fillTri(wx, wy, tips[i]![0], tips[i]![1], tips[i + 1]![0], tips[i + 1]![1], i % 2 ? membrane : membraneLight);
+      fillTri(ex, ey, wx, wy, tips[0]![0], tips[0]![1], membraneLight);
+      fillTri(sx, sy, ex, ey, tips[3]![0], tips[3]![1], membraneDark);
+      fillTri(sx, sy, wx, wy, tips[3]![0], tips[3]![1], membraneDark);
+      // Scallops: a bite out of the trailing edge between each pair of finger tips
+      for (let i = 0; i < tips.length - 1; i++) {
+        const mx = (tips[i]![0] + tips[i + 1]![0]) / 2;
+        const my = (tips[i]![1] + tips[i + 1]![1]) / 2;
+        for (let y = Math.floor(my - 6); y <= Math.ceil(my + 6); y++) {
+          for (let x = Math.floor(mx - 6); x <= Math.ceil(mx + 6); x++) {
+            if (Math.hypot(x - mx, y - my) <= 5.5 && get(x, y) !== null) grid[y]![x + BX] = null;
+          }
+        }
+      }
+      // Bones: arm to elbow to wrist, then the fingers, each with a lit edge and a claw
+      thickLine(sx, sy, ex, ey, 1, skin[0]!);
+      thickLine(ex, ey, wx, wy, 1, skin[0]!);
+      thickLine(sx, sy - 1, ex, ey - 1, 0, skin[2]!);
+      thickLine(ex - sign, ey, wx - sign, wy, 0, skin[2]!);
+      for (const [tx, ty] of tips) {
+        thickLine(wx, wy, tx, ty, 0, skin[0]!);
+        put(tx, ty, bone);
+        put(tx + sign, ty + (ty < wy + 10 ? -1 : 1), bone);
+      }
+      put(wx, wy - 1, bone);
+      put(wx + sign, wy - 2, bone);
+    };
+    wing(-1);
+    wing(1);
+
     // ---- body
     for (const [y, l, r] of torso) skinRow(y, l, r, y <= 27);
     // Neck shadow under the jaw, collarbones, sternum, pectorals and abdomen laid in as shadow
