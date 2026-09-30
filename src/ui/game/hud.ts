@@ -40,6 +40,8 @@ const SLOT_LEVELS = [1, 1, 5, 10, 15, 20];
 export class Hud {
   readonly root: HTMLDivElement;
   private readonly hpBar: HTMLDivElement;
+  /** Grey band over the life bar: the damage shield, as a share of max life. */
+  private readonly shieldBar: HTMLDivElement;
   private readonly mpBar: HTMLDivElement;
   private readonly xpBar: HTMLDivElement;
   private readonly hpText: HTMLDivElement;
@@ -69,12 +71,13 @@ export class Hud {
     const status = h('div', { class: 'status' });
     this.levelText = h('div', { class: 'status-title' });
     this.hpBar = h('div', { class: 'bar-fill hp' });
+    this.shieldBar = h('div', { class: 'bar-shield' });
     this.mpBar = h('div', { class: 'bar-fill mp' });
     this.xpBar = h('div', { class: 'bar-fill xp' });
     this.hpText = h('div', { class: 'bar-text' });
     this.mpText = h('div', { class: 'bar-text' });
     this.goldText = h('div', { class: 'gold' });
-    status.append(this.levelText, h('div', { class: 'bar' }, this.hpBar, this.hpText), h('div', { class: 'bar' }, this.mpBar, this.mpText), h('div', { class: 'bar thin' }, this.xpBar), this.goldText);
+    status.append(this.levelText, h('div', { class: 'bar' }, this.hpBar, this.shieldBar, this.hpText), h('div', { class: 'bar' }, this.mpBar, this.mpText), h('div', { class: 'bar thin' }, this.xpBar), this.goldText);
     this.buffBar = h('div', { class: 'buff-bar' });
     this.areaBanner = h('div', { class: 'area-banner' });
     this.aimMarker = h('div', { class: 'aim-marker' });
@@ -231,6 +234,9 @@ export class Hud {
     this.mpBar.style.width = `${Math.max(0, (p.mana / d.maxMana) * 100)}%`;
     this.xpBar.style.width = `${Math.max(0, (p.xp / p.xpToNext) * 100)}%`;
     this.hpText.textContent = `${Math.ceil(p.hp)} / ${d.maxHp}`;
+    let shield = 0;
+    for (const b of w.buffs) shield += b.shield;
+    this.shieldBar.style.width = `${Math.min(100, (shield / d.maxHp) * 100)}%`;
     this.mpText.textContent = `${Math.floor(p.mana)} / ${d.maxMana}`;
     this.goldText.textContent = `${p.gold} gold`;
 
@@ -241,6 +247,7 @@ export class Hud {
       (chip.lastChild as HTMLDivElement).style.width = `${(b.remaining / b.duration) * 100}%`;
       this.buffBar.appendChild(chip);
     }
+    if (shield > 0) this.buffBar.appendChild(h('div', { class: 'buff', style: 'border-color:#b0b0b8;color:#d0d0d8' }, `Shield ${Math.ceil(shield)}`));
     for (const z of w.zones) {
       if (z.type === 'sanctuary' && w.dist(z.x, z.z) <= z.radius) this.buffBar.appendChild(h('div', { class: 'buff', style: 'border-color:#ffe87a' }, 'Sanctuary'));
     }

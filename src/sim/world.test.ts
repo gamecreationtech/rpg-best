@@ -439,6 +439,22 @@ describe('ground stomp', () => {
   });
 });
 
+describe('rock solid', () => {
+  it('soaks up damage of any element before life is touched', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.skillRanks.rock_solid = 1;
+    expect(castSkill(w, 'rock_solid', null).ok).toBe(true);
+    const buff = w.buffs.find((b) => b.id === 'rock_solid')!;
+    expect(buff.shield).toBe(w.derived.maxHp);
+    const hp = w.player.hp;
+    damagePlayer(w, 30, 'poison', null, false);
+    damagePlayer(w, 30, 'physical', null, false);
+    expect(w.player.hp).toBe(hp);
+    expect(buff.shield).toBeLessThan(w.derived.maxHp);
+  });
+});
+
 describe('shield bash', () => {
   it('raises a holy shield over the target', () => {
     const w = new World(createPlayer('knight', 'titan'), 7);

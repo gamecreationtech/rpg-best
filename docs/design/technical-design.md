@@ -54,8 +54,9 @@ What that means for each kind of asset:
   glitter blinking all over the floor and eight candles round the edge. Holy Smite (the
   thrown one, formerly Hammer of Gods) and Holy Smite (spin) share the star
   sprite. A leap arcs higher the further it goes and trails dust. Boulder
-  Toss draws its rock falling from high above onto the target ring, with a
-  shadow that grows as it nears; on landing the rock lies there a moment
+  Toss keeps its rock out of sight for the first third of the delay, then drops
+  it in a true accelerating fall onto the target ring, with a shadow that
+  grows as it nears; on landing the rock lies there a moment
   while the ground cracks and shards fly. Rock Solid circles the hero with six
   rocks torn from the ground and drops one for every sixth of its shield
   that breaks.

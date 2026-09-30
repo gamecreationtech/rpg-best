@@ -1107,8 +1107,10 @@ export class PixelView {
     // Boulder Toss: the rock on its way down, from high above to the marked ground
     for (const z of w.zones) {
       if (z.type !== 'boulder') continue;
-      const k = 1 - z.remaining / z.duration;
-      const h = 7 * (1 - k) * (1 - k);
+      // Out of sight for the first third, then a true fall: speeding up all the way down
+      const k = Math.max(0, 1 - z.remaining / z.duration - 0.35) / 0.65;
+      const h = 9 * (1 - k * k);
+      if (h > 8.5) continue;
       const rock = this.fx.boulder;
       const fx = Math.round(cam.frameX(z.x, z.z));
       const fy = Math.round(cam.frameY(z.x, h, z.z));
@@ -1266,9 +1268,9 @@ export class PixelView {
           break;
         case 'boulder': {
           // The target ring, and the rock's shadow growing as it comes down
-          const k = 1 - z.remaining / z.duration;
+          const k = Math.max(0, 1 - z.remaining / z.duration - 0.35) / 0.65;
           ellipse(z.x, z.z, z.radius, '#ff9a40', false, 0.7);
-          ellipse(z.x, z.z, 0.35 + 0.5 * k, '#000000', true, 0.2 + 0.3 * k);
+          ellipse(z.x, z.z, 0.3 + 0.55 * k * k, '#000000', true, 0.15 + 0.35 * k);
           break;
         }
         default:
