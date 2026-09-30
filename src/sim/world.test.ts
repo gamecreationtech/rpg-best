@@ -409,10 +409,47 @@ describe('heavy strike', () => {
     const hp = e.hp;
     w.events.length = 0;
     expect(castSkill(w, 'heavy_strike', null).ok).toBe(true);
-    const smash = w.events.find((ev) => ev.type === 'melee_smash');
-    expect(smash && smash.type === 'melee_smash' ? [smash.x, smash.z] : null).toEqual([e.x, e.z]);
+    const smash = w.events.find((ev) => ev.type === 'melee_impact');
+    expect(smash && smash.type === 'melee_impact' ? [smash.visual, smash.x, smash.z] : null).toEqual(['overhead', e.x, e.z]);
     expect(w.events.some((ev) => ev.type === 'melee_swing')).toBe(false);
     expect(e.hp).toBeLessThan(hp);
+  });
+});
+
+describe('ground stomp', () => {
+  it('jumps in place and lands the blow on touchdown', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 2, w.pz);
+    e.speed = 0;
+    const hp = e.hp;
+    const [px, pz] = [w.px, w.pz];
+    w.player.skillRanks.ground_stomp = 1;
+    expect(castSkill(w, 'ground_stomp', null).ok).toBe(true);
+    expect(w.leap).not.toBeNull();
+    expect(e.hp).toBe(hp);
+    run(w, 0.2);
+    expect(e.hp).toBe(hp);
+    run(w, 0.3);
+    expect(w.leap).toBeNull();
+    expect(e.hp).toBeLessThan(hp);
+    expect(e.status.slow).toBeGreaterThan(0);
+    expect(w.px).toBeCloseTo(px, 3);
+    expect(w.pz).toBeCloseTo(pz, 3);
+  });
+});
+
+describe('shield bash', () => {
+  it('raises a holy shield over the target', () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 1, w.pz);
+    e.speed = 0;
+    w.events.length = 0;
+    w.player.skillRanks.shield_bash = 1;
+    expect(castSkill(w, 'shield_bash', null).ok).toBe(true);
+    expect(w.events.some((ev) => ev.type === 'melee_impact' && ev.visual === 'holy_shield')).toBe(true);
+    expect(e.status.stun).toBeGreaterThan(0);
   });
 });
 

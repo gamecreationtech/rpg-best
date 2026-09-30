@@ -153,11 +153,11 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
 
   const strike = () => {
     if (eff.arc) {
-      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element });
+      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element, visual: eff.visual === 'cleave' ? 'cleave' : undefined });
       const hits = w.enemiesInArc(w.px, w.pz, dir.x, dir.z, range, eff.arc);
       for (const e of hits) hitEnemy(w, e, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct }, eff.scalesWithInt));
     } else if (target && target.alive && !target.dead) {
-      if (eff.visual === 'overhead') w.emit({ type: 'melee_smash', x: target.x, z: target.z, element: def.element });
+      if (eff.visual === 'overhead' || eff.visual === 'holy_shield') w.emit({ type: 'melee_impact', visual: eff.visual, x: target.x, z: target.z, element: def.element });
       else w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: 60, element: def.element });
       if (eff.noInitialDamage && eff.bleed) {
         const total = (target.maxHp * eff.bleed.pctOfMaxHp * mult) / 100;
@@ -269,6 +269,9 @@ function castAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
   };
   if (eff.delay) {
     w.addZone({ type: 'boulder', x: cx, z: cz, radius, duration: eff.delay * MS, damage: 0, element: def.element, skillId: def.id, onEnd: apply });
+  } else if (eff.jump && eff.at === 'self') {
+    // Up, then the blow lands with the hero
+    w.startLeap(w.px, w.pz, eff.jump * MS, true, apply);
   } else {
     apply();
   }

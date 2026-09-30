@@ -39,8 +39,12 @@ export type SkillEffect =
       maxRange: number;
       /** Degrees of arc hit around the facing direction. Omit for a single target. */
       arc?: number;
-      /** How the hit is drawn: `overhead` drops a big weapon onto the target from above instead of a swing arc. */
-      visual?: 'overhead';
+      /**
+       * How the hit is drawn. Single target: `overhead` drops a big weapon onto
+       * the target from above, `holy_shield` raises a holy shield over it.
+       * Arc: `cleave` is a wide red sweep instead of the thin swing line.
+       */
+      visual?: 'overhead' | 'holy_shield' | 'cleave';
       radius?: number;
       stun?: number;
       slow?: number;
@@ -80,7 +84,7 @@ export type SkillEffect =
       /** No cooldown; limited by cast rate or attack speed instead. */
       rateLimited?: 'cast' | 'attack';
       /** Which projectile visual to use. */
-      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'boulder';
+      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'hammer' | 'star' | 'boulder';
     }
   | {
       kind: 'aoe';
@@ -89,6 +93,8 @@ export type SkillEffect =
       at: 'self' | 'target';
       maxRange?: number;
       delay?: number;
+      /** Self-centred only: jump in place for this many ms and land the blow on touchdown (Ground Stomp). */
+      jump?: number;
       stun?: number;
       slow?: number;
       freeze?: number;
@@ -167,15 +173,15 @@ export const SKILLS: Record<string, SkillDef> = {
   // ---------------- KNIGHT ----------------
   heavy_strike: { id: 'heavy_strike', name: 'Heavy Strike', classId: K, tier: 'base', description: 'A crushing blow against one enemy.', manaCost: 10, cooldown: 1500, rank5Cooldown: 1000, rankBonus: 0.3, element: 'physical', upgradesTo: 'heavy_strike_ult', effect: { kind: 'melee', damageMult: 1.5, maxRange: 80, visual: 'overhead' } },
   heavy_strike_ult: { id: 'heavy_strike_ult', name: 'Heavy Strike', classId: K, tier: 'ultimate', description: 'Devastating blow that heals 5% of your life on cast and 10% on kill.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.2, maxRange: 80, healOnCastPct: 5, healOnKillPct: 10, visual: 'overhead' } },
-  cleave: { id: 'cleave', name: 'Cleave', classId: K, tier: 'base', description: 'Sweep your weapon in a half circle.', manaCost: 20, cooldown: 3500, reqLevel: 5, element: 'physical', upgradesTo: 'cleave_ult', effect: { kind: 'melee', damageMult: 1.8, maxRange: 100, arc: 180 } },
-  cleave_ult: { id: 'cleave_ult', name: 'Cleave', classId: K, tier: 'ultimate', description: 'A full spin that hits everything around you.', manaCost: 35, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.0, maxRange: 120, arc: 360 } },
-  shield_bash: { id: 'shield_bash', name: 'Shield Bash', classId: K, tier: 'base', description: 'Slam an enemy with your shield, stunning it for a second.', manaCost: 15, cooldown: 5000, reqLevel: 10, element: 'physical', upgradesTo: 'shield_bash_ult', effect: { kind: 'melee', damageMult: 0.5, maxRange: 90, stun: 1000 } },
-  shield_bash_ult: { id: 'shield_bash_ult', name: 'Shield Bash', classId: K, tier: 'ultimate', description: 'Charge at a distant enemy and stun it for two seconds.', manaCost: 30, cooldown: 12000, rank5Cooldown: 8000, reqLevel: 15, element: 'physical', effect: { kind: 'melee', damageMult: 1.5, maxRange: 150, stun: 2000, charge: true } },
-  ground_stomp: { id: 'ground_stomp', name: 'Ground Stomp', classId: K, tier: 'base', description: 'Stomp the ground, damaging and slowing nearby enemies.', manaCost: 30, cooldown: 7000, reqLevel: 15, element: 'physical', upgradesTo: 'ground_stomp_ult', effect: { kind: 'aoe', damageMult: 1.5, radius: 120, at: 'self', slow: 2000, visual: 'stomp' } },
-  ground_stomp_ult: { id: 'ground_stomp_ult', name: 'Ground Stomp', classId: K, tier: 'ultimate', description: 'A quake that stuns everything in a wide circle.', manaCost: 50, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.35, reqLevel: 20, element: 'physical', effect: { kind: 'aoe', damageMult: 2.0, radius: 300, at: 'self', stun: 2000, visual: 'stomp' } },
+  cleave: { id: 'cleave', name: 'Cleave', classId: K, tier: 'base', description: 'Sweep your weapon in a half circle.', manaCost: 20, cooldown: 3500, reqLevel: 5, element: 'physical', upgradesTo: 'cleave_ult', effect: { kind: 'melee', damageMult: 1.8, maxRange: 100, arc: 180, visual: 'cleave' } },
+  cleave_ult: { id: 'cleave_ult', name: 'Cleave', classId: K, tier: 'ultimate', description: 'A full spin that hits everything around you.', manaCost: 35, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.3, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 2.0, maxRange: 120, arc: 360, visual: 'cleave' } },
+  shield_bash: { id: 'shield_bash', name: 'Shield Bash', classId: K, tier: 'base', description: 'Slam an enemy with your shield, stunning it for a second.', manaCost: 15, cooldown: 5000, reqLevel: 10, element: 'physical', upgradesTo: 'shield_bash_ult', effect: { kind: 'melee', damageMult: 0.5, maxRange: 90, stun: 1000, visual: 'holy_shield' } },
+  shield_bash_ult: { id: 'shield_bash_ult', name: 'Shield Bash', classId: K, tier: 'ultimate', description: 'Charge at a distant enemy and stun it for two seconds.', manaCost: 30, cooldown: 12000, rank5Cooldown: 8000, reqLevel: 15, element: 'physical', effect: { kind: 'melee', damageMult: 1.5, maxRange: 150, stun: 2000, charge: true, visual: 'holy_shield' } },
+  ground_stomp: { id: 'ground_stomp', name: 'Ground Stomp', classId: K, tier: 'base', description: 'Leap and stomp the ground, damaging and slowing nearby enemies.', manaCost: 30, cooldown: 7000, reqLevel: 15, element: 'physical', upgradesTo: 'ground_stomp_ult', effect: { kind: 'aoe', damageMult: 1.5, radius: 120, at: 'self', slow: 2000, visual: 'stomp', jump: 350 } },
+  ground_stomp_ult: { id: 'ground_stomp_ult', name: 'Ground Stomp', classId: K, tier: 'ultimate', description: 'A quake that stuns everything in a wide circle.', manaCost: 50, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.35, reqLevel: 20, element: 'physical', effect: { kind: 'aoe', damageMult: 2.0, radius: 300, at: 'self', stun: 2000, visual: 'stomp', jump: 350 } },
   prayer: { id: 'prayer', name: 'Prayer', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Regenerate 5% of your life every second for ten seconds.', manaCost: 40, cooldown: 25000, rank5Cooldown: 16000, reqLevel: 10, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { regenPct: 5 } } },
-  holy_smite: { id: 'holy_smite', name: 'Holy Smite', classId: K, tier: 'pledge', pledgeId: 'paladin', hidden: true, description: 'A holy star circles you for three seconds, striking everything it passes. Cast again while it turns for a second and a third star further out.', manaCost: 35, cooldown: 12000, rank5Cooldown: 7000, rankBonus: 0.35, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 3000, mods: { orbitDaggers: { count: 1, radius: 60, damageMult: 2.5, hitCooldown: 500, shape: 'star', spin: 7, hitRadius: 16, stacks: 3, ringGap: 40 } } } },
-  hammer_of_gods: { id: 'hammer_of_gods', name: 'Hammer of Gods', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Hurl a holy hammer that passes through everything and returns to you.', manaCost: 35, cooldown: 12000, rank5Cooldown: 7000, rankBonus: 0.35, reqLevel: 5, element: 'physical', effect: { kind: 'projectile', damageMult: 2.5, projSpeed: 840, maxRange: 350, pierce: Infinity, returns: true, throughWalls: true, shape: 'hammer', projRadius: 18 } },
+  holy_smite: { id: 'holy_smite', name: 'Holy Smite (spin)', classId: K, tier: 'pledge', pledgeId: 'paladin', hidden: true, description: 'A holy star circles you for three seconds, striking everything it passes. Cast again while it turns for a second and a third star further out.', manaCost: 35, cooldown: 12000, rank5Cooldown: 7000, rankBonus: 0.35, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 3000, mods: { orbitDaggers: { count: 1, radius: 60, damageMult: 2.5, hitCooldown: 500, shape: 'star', spin: 7, hitRadius: 16, stacks: 3, ringGap: 40 } } } },
+  hammer_of_gods: { id: 'hammer_of_gods', name: 'Holy Smite', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Hurl a holy star that passes through everything and returns to you.', manaCost: 35, cooldown: 12000, rank5Cooldown: 7000, rankBonus: 0.35, reqLevel: 5, element: 'physical', effect: { kind: 'projectile', damageMult: 2.5, projSpeed: 840, maxRange: 350, pierce: Infinity, returns: true, throughWalls: true, shape: 'star', projRadius: 16 } },
   sanctuary: { id: 'sanctuary', name: 'Sanctuary', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Consecrate the ground: +200 armor and +50% resistances while you stand in it.', manaCost: 50, cooldown: 40000, rank5Cooldown: 28000, reqLevel: 15, element: 'physical', effect: { kind: 'zone', zone: 'sanctuary', duration: 20000, radius: 300, mods: { armor: 200, allResists: 50 } } },
   rock_solid: { id: 'rock_solid', name: 'Rock Solid', classId: K, tier: 'pledge', pledgeId: 'titan', description: '+200 armor and a physical shield equal to your max life for ten seconds.', manaCost: 55, cooldown: 35000, rank5Cooldown: 22000, reqLevel: 15, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { armor: 200, shieldPct: 100, shieldPhysicalOnly: true } } },
   boulder_toss: { id: 'boulder_toss', name: 'Boulder Toss', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Throw a boulder that lands after a short delay and crushes a wide area.', manaCost: 45, cooldown: 14000, rank5Cooldown: 9000, rankBonus: 0.35, reqLevel: 10, element: 'physical', effect: { kind: 'aoe', damageMult: 3.5, radius: 200, at: 'target', maxRange: 320, delay: 900, visual: 'boulder' } },

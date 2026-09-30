@@ -37,10 +37,19 @@ What that means for each kind of asset:
 - **Effects.** A pooled square-particle system plus drawn effects (rings, discs,
   arcs, jagged bolts, sprite bursts). Each spell event maps to a few of them.
   Rings and particles can start after a delay so an impact can follow a fall.
-  A single-target melee skill can ask for the `overhead` visual: the sim then
-  emits `melee_smash` at the target instead of a swing arc, and the renderer
-  drops a great maul onto it from above, flashes, cracks the ground and shakes
-  the camera. Heavy Strike and its ultimate use it.
+  A melee skill can name its `visual`: `overhead` (Heavy Strike) drops a great
+  maul onto the target from above with a flash, ground cracks and a camera
+  kick; `holy_shield` (Shield Bash) raises a glowing heater shield with a cross
+  over the enemy; `cleave` (Cleave) paints a wide red sweep across the arc with
+  sparks along its rim. Single-target visuals arrive as `melee_impact` at the
+  target, arc ones ride the `melee_swing` event. Ground Stomp's aoe has
+  `jump`: the sim leaps in place for that long and lands the blow on touchdown,
+  drawn as cracks, a hard bright ring and two slower dust waves. Prayer draws
+  small crosses of light climbing round the hero with a green glow while the
+  buff runs. Sanctuary is a still double rim of gold and white, a breathing
+  glow, a cross of light and eight candles round the edge. Holy Smite (the
+  thrown one, formerly Hammer of Gods) and Holy Smite (spin) share the star
+  sprite.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

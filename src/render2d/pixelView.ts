@@ -469,10 +469,12 @@ export class PixelView {
         break;
       }
       case 'melee_swing':
-        this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
+        if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
+        else this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
-      case 'melee_smash':
-        this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
+      case 'melee_impact':
+        if (ev.visual === 'overhead') this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
+        else this.holyShield(ev.x, ev.z);
         break;
       case 'aoe':
         this.aoeVisual(ev.visual, ev.x, ev.z, ev.radius, ev.element);
@@ -498,6 +500,11 @@ export class PixelView {
         this.iceImpact(ev.x, ev.z);
         break;
       case 'buff_start': {
+        if (ev.id === 'prayer') {
+          pt.burst(w.px, 0.2, w.pz, 30, 1.2, 0x8aff8a, 1.2, { up: 2.5, drag: 1, priority: 0.8, size: 2 });
+          this.effects.ring(w.px, w.pz, 0.2, 1.6, 0x8aff8a, 0.6, 2, 1.5);
+          break;
+        }
         pt.burst(w.px, 0.3, w.pz, 24, 1.5, ev.color, 0.8, { up: 2, drag: 1.5, priority: 0.8 });
         this.effects.ring(w.px, w.pz, 0.2, 1.4, ev.color, 0.4, 1, 0.8);
         break;
@@ -551,6 +558,66 @@ export class PixelView {
     this.particles.burst(x, 0.3, z, 6, 1.5, 0x9fe0ff, 0.5, { drag: 2, up: 1.5, priority: 0.3 });
   }
 
+  /** Prayer's healing: twelve small crosses rising round the hero in turn, brightest halfway up, plus a soft green light. */
+  private drawPrayer(): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, 0.7, w.pz));
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.02,
+      draw: () => {
+        for (let i = 0; i < 12; i++) {
+          const phase = (this.time * 0.55 + i * 0.29) % 1;
+          const a = i * 2.4 + Math.floor(this.time * 0.55 + i * 0.29) * 1.7;
+          const r = 9 + (i % 3) * 3;
+          const x = fx + Math.round(Math.cos(a) * r);
+          const y = fy + 14 - Math.round(phase * 30);
+          const bright = phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+          ctx.globalAlpha = 0.35 + bright * 0.65;
+          ctx.fillStyle = bright > 0.7 ? '#ffffff' : '#8aff8a';
+          ctx.fillRect(x - 1, y, 3, 1);
+          ctx.fillRect(x, y - 1, 1, 3);
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+    this.lights.push({ x: fx, y: fy, radius: 44, intensity: 0.9 + Math.sin(this.time * 4) * 0.2, r: 0.55, g: 1, b: 0.55 });
+  }
+
+  /** Cleave: a wide red sweep across the arc with sparks flung along its edge. */
+  private cleave(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
+    this.effects.sweep(x, z, dirX, dirZ, range, arc, 0xe03a2a);
+    const a0 = Math.atan2(dirZ, dirX) - (arc * Math.PI) / 360;
+    const n = Math.max(6, Math.round(arc / 20));
+    for (let i = 0; i < n; i++) {
+      const a = a0 + ((arc * Math.PI) / 180) * ((i + 0.5) / n);
+      this.particles.spawn(x + Math.cos(a) * range * 0.9, 0.4, z + Math.sin(a) * range * 0.9, Math.cos(a) * 2.5, 1.5, Math.sin(a) * 2.5, 0.35, i % 2 ? 0xff6a4a : 0xffd0a0, { gravity: 6, priority: 0.6, delay: (i / n) * 0.12 });
+    }
+    this.view.kick(0.08);
+  }
+
+  /** Shield Bash: a holy shield springs up over the enemy, with gold motes rising off it. */
+  private holyShield(x: number, z: number): void {
+    this.effects.shield(x, z, 0xffd860);
+    this.particles.burst(x, 0.8, z, 12, 0.8, 0xfff0a0, 0.6, { up: 1.5, drag: 1, priority: 0.6, delay: 0.1 });
+    this.view.kick(0.06);
+  }
+
+  /** Ground Stomp: the landing. Cracks under the hero, a hard bright ring then two slower waves out to the reach, dirt thrown up. */
+  private shockwave(x: number, z: number, radius: number): void {
+    const dust = 0xc8b8a0;
+    this.effects.cracks(x, z, 26, 0x9a8a70, 0.6, 8);
+    this.effects.ring(x, z, 0.1, radius * 0.5, 0xfff0d0, 0.18, 3, 1.5);
+    this.effects.ring(x, z, 0.2, radius, dust, 0.4, 3, 1);
+    this.effects.ring(x, z, 0.2, radius, 0x9a8a70, 0.5, 2, 0, 0.08);
+    this.effects.ring(x, z, 0.2, radius * 1.15, dust, 0.55, 1, 0, 0.16);
+    this.particles.burst(x, 0.1, z, 24, 3 * radius, dust, 0.5, { up: 1.5, gravity: 6, priority: 0.6, size: 2 });
+    this.particles.burst(x, 0.1, z, 16, 1.5, 0x7a6a58, 0.7, { up: 2.5, gravity: 5, priority: 0.5, size: 2, delay: 0.05 });
+    this.view.kick(0.22);
+  }
+
   /** Heavy Strike: a big weapon dropped from above; dust and a ring when it lands. */
   private smash(x: number, z: number, color: number): void {
     this.effects.smash(x, z, color);
@@ -580,7 +647,7 @@ export class PixelView {
     const color = ELEMENT_COLORS[element];
     switch (visual) {
       case 'stomp':
-        this.stomp(x, z, radius, 0xc8b8a0);
+        this.shockwave(x, z, radius);
         break;
       case 'nova_cold': {
         const frames = this.fx.frostRing;
@@ -671,10 +738,12 @@ export class PixelView {
         const a = Math.random() * Math.PI * 2;
         pt.spawn(z.x + Math.cos(a) * z.radius * 0.9, 0.4 + Math.random(), z.z + Math.sin(a) * z.radius * 0.9, -Math.sin(a) * 4, 0, Math.cos(a) * 4, 0.5, 0x9fd8ff, { alpha: 0.6, priority: 0.4 });
       }
-      if (z.type === 'sanctuary' && Math.random() < dt * 5) {
+      if (z.type === 'sanctuary' && Math.random() < dt * 14) {
+        // Motes drifting up everywhere inside, and sparks off the candles at the rim
         const a = Math.random() * Math.PI * 2;
-        const r = Math.random() * z.radius;
-        pt.spawn(z.x + Math.cos(a) * r, 0.1, z.z + Math.sin(a) * r, 0, 1, 0, 1.2, 0xffe87a, { priority: 0.4 });
+        const rim = Math.random() < 0.35;
+        const r = rim ? z.radius : Math.sqrt(Math.random()) * z.radius * 0.9;
+        pt.spawn(z.x + Math.cos(a) * r, rim ? 0.5 : 0.1, z.z + Math.sin(a) * r, 0, rim ? 1.6 : 0.8, 0, rim ? 0.5 : 1.6, Math.random() < 0.5 ? 0xfff4c0 : 0xffe87a, { priority: 0.4, alpha: 0.9 });
       }
       if (z.type === 'storm' && Math.random() < dt * 3) pt.spawn(z.x + (Math.random() - 0.5) * 4, 4, z.z + (Math.random() - 0.5) * 4, 0, -6, 0, 0.5, 0xa8c8ff, { alpha: 0.6, priority: 0.4 });
       if (z.type === 'blizzard' && Math.random() < dt * 40) pt.spawn(z.x + (Math.random() - 0.5) * z.radius * 2, 3.5, z.z + (Math.random() - 0.5) * z.radius * 2, 0.5, -3, 0.5, 1, 0xd0f0ff, { alpha: 0.8, priority: 0.4 });
@@ -813,13 +882,14 @@ export class PixelView {
     // Projectiles
     for (const pr of w.projectiles) {
       if (!pr.alive) continue;
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'hammer' ? 0xffd860 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const holy = pr.shape === 'hammer' || pr.shape === 'star';
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
       const prop = this.projectileProp(pr.shape, color);
       const fx = Math.round(cam.frameX(pr.x, pr.z));
       const fy = Math.round(cam.frameY(pr.x, pr.y, pr.z));
       const sdx = pr.vx - pr.vz;
       const sdy = (pr.vx + pr.vz) / 2;
-      const angle = pr.shape === 'boulder' ? this.time * 6 : pr.shape === 'hammer' ? 0 : Math.atan2(sdy, sdx);
+      const angle = pr.shape === 'boulder' ? this.time * 6 : holy ? 0 : Math.atan2(sdy, sdx);
       const frame = prop.frames[Math.floor(this.time / prop.frameTime + pr.id) % prop.frames.length]!;
       this.items.push({
         depth: cam.depth(pr.x, pr.z) + 0.01,
@@ -834,8 +904,8 @@ export class PixelView {
       if (pr.shape === 'bolt' || pr.shape === 'ball' || pr.shape === 'enemy_bolt') {
         const [lr, lg, lb] = rgb(color);
         this.lights.push({ x: fx, y: fy, radius: pr.shape === 'ball' ? 50 : 30, intensity: 1, r: lr, g: lg, b: lb });
-      } else if (pr.shape === 'hammer') {
-        // The holy hammer throws a warm, pulsing light as it spins
+      } else if (holy) {
+        // The holy star throws a warm, pulsing light as it spins
         const [lr, lg, lb] = rgb(color);
         this.lights.push({ x: fx, y: fy, radius: 50, intensity: 0.85 + Math.sin(this.time * 12) * 0.15, r: lr, g: lg, b: lb });
       }
@@ -880,6 +950,9 @@ export class PixelView {
       }
       }
     }
+
+    // Prayer: little crosses of light climbing all over the hero, and a green glow
+    if (w.buffs.some((b) => b.id === 'prayer')) this.drawPrayer();
 
     // Drops
     for (const d of w.drops) {
@@ -1025,8 +1098,7 @@ export class PixelView {
           break;
         }
         case 'sanctuary':
-          ellipse(z.x, z.z, z.radius * pulse, '#ffe87a', false, 0.7, 2);
-          ellipse(z.x, z.z, z.radius, '#ffe87a', true, 0.08);
+          this.drawSanctuary(ctx, z, ellipse);
           break;
         case 'wind':
           ellipse(z.x, z.z, z.radius * pulse, '#8fd0ff', false, 0.4);
@@ -1060,13 +1132,56 @@ export class PixelView {
     this.effects.draw(ctx, cam, 'floor');
   }
 
+  /**
+   * Consecrated ground: a still double rim of gold and white, a warm glowing
+   * floor that breathes slowly, a cross of light through the middle and eight
+   * candles standing round the edge with flickering flames.
+   */
+  private drawSanctuary(ctx: CanvasRenderingContext2D, z: Zone, ellipse: (x: number, z: number, r: number, style: string, fill: boolean, alpha: number, width?: number) => void): void {
+    const cam = this.view;
+    const breathe = 0.16 + Math.sin(this.time * 1.5 + z.id) * 0.04;
+    ellipse(z.x, z.z, z.radius, '#ffe87a', true, breathe);
+    ellipse(z.x, z.z, z.radius * 0.55, '#fff4c0', true, breathe * 0.6);
+    // The cross of light
+    const cx = Math.round(cam.frameX(z.x, z.z));
+    const cy = Math.round(cam.frameY(z.x, 0, z.z));
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#fff4c0';
+    const rx = Math.round(z.radius * RING_RX * 0.8);
+    const ry = Math.round(z.radius * RING_RY * 0.8);
+    ctx.fillRect(cx - rx, cy - 1, rx * 2, 2);
+    ctx.fillRect(cx - 1, cy - ry, 2, ry * 2);
+    ctx.globalAlpha = 1;
+    // The rim: does not move
+    ellipse(z.x, z.z, z.radius, '#ffe87a', false, 0.9, 2);
+    ellipse(z.x, z.z, z.radius * 0.93, '#fff8e0', false, 0.6, 1);
+    // Candles at the rim, flames flickering
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+      const wx = z.x + Math.cos(a) * z.radius;
+      const wz = z.z + Math.sin(a) * z.radius;
+      const sx = Math.round(cam.frameX(wx, wz));
+      const sy = Math.round(cam.frameY(wx, 0, wz));
+      ctx.fillStyle = '#1a1410';
+      ctx.fillRect(sx - 2, sy - 9, 5, 10);
+      ctx.fillStyle = '#f4ecd0';
+      ctx.fillRect(sx - 1, sy - 8, 3, 8);
+      const flick = Math.sin(this.time * 17 + i * 2.1) > 0.2 ? 1 : 0;
+      ctx.fillStyle = '#ffb040';
+      ctx.fillRect(sx - 1, sy - 11 - flick, 3, 3);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(sx, sy - 10 - flick, 1, 1);
+    }
+  }
+
   private zoneLight(z: Zone): void {
     const cam = this.view;
     const colors: Partial<Record<Zone['type'], number>> = { fire_prison: 0xff7a2a, sanctuary: 0xffe87a, void_trail: 0x9a40ff, boulder: 0xff9a40, poison: 0x66e070, wind: 0x8fd0ff };
     const color = colors[z.type];
     if (color === undefined) return;
     const [r, g, b] = rgb(color);
-    this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W, intensity: 0.8, r, g, b });
+    const glow = z.type === 'sanctuary' ? 1.6 + Math.sin(this.time * 1.5 + z.id) * 0.25 : 0.8;
+    this.lights.push({ x: cam.frameX(z.x, z.z), y: cam.frameY(z.x, 0.3, z.z), radius: (z.radius + 1) * TILE_W, intensity: glow, r, g, b });
   }
 
   private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null): void {

@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'slash' | 'smash' | 'strike' | 'link' | 'arrows' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'slash' | 'sweep' | 'smash' | 'shield' | 'cracks' | 'strike' | 'link' | 'arrows' | 'light';
   layer: Layer;
   x: number;
   y: number;
@@ -93,6 +93,23 @@ export class Effects2D {
   /** The arc of a melee swing. */
   slash(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number): void {
     this.push({ kind: 'slash', layer: 'floor', x, z, life: 0.18, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)), width: 2 });
+  }
+
+  /** A wide filled sweep for a heavy arc attack: a red band from half the reach to the full reach, drawn ahead of a thin edge. */
+  sweep(x: number, z: number, dirX: number, dirZ: number, range: number, arcDeg: number, color: number): void {
+    const fx = this.push({ kind: 'sweep', layer: 'floor', x, z, life: 0.3, r0: range, dirX, dirZ, arc: (arcDeg * Math.PI) / 180, css: css(color), css2: css(lighten(color)) });
+    this.withLight(fx, color, 1.6, range * RING_RX * 1.3);
+  }
+
+  /** A holy shield raised over the point for a moment, growing in, shining, fading out. */
+  shield(x: number, z: number, color: number): void {
+    const fx = this.push({ kind: 'shield', layer: 'air', x, y: 0.55, z, life: 0.7, css: css(color), css2: css(lighten(color)) });
+    this.withLight(fx, color, 2.2, 60);
+  }
+
+  /** Cracks radiating from a point out to `reach` frame pixels, growing fast then fading. */
+  cracks(x: number, z: number, reach: number, color: number, life: number, count = 8, delay = 0): void {
+    this.push({ kind: 'cracks', layer: 'floor', x, z, life, r0: reach, css: css(color), css2: css(lighten(color)), t: -delay, width: count });
   }
 
   /**
@@ -222,9 +239,22 @@ export class Effects2D {
           ctx.globalAlpha = 1;
           break;
         }
+        case 'sweep':
+          drawSweep(ctx, cam, fx, k);
+          break;
         case 'smash':
           drawSmash(ctx, px, py, fx);
           break;
+        case 'shield':
+          drawShield(ctx, px, py, fx, k);
+          break;
+        case 'cracks': {
+          const reach = fx.r0 * Math.min(1, k * 3);
+          ctx.globalAlpha = 1 - k * k;
+          drawCracks(ctx, px, py, fx.seed, reach, fx.css2, fx.width);
+          ctx.globalAlpha = 1;
+          break;
+        }
         case 'strike': {
           const top = py - 140;
           jagged(ctx, px + Math.round(Math.sin(fx.seed) * 30), top, px, py, fx.css, fx.css2, Math.floor(fx.t * 40) + fx.seed, 8);
@@ -342,29 +372,143 @@ function drawSmash(ctx: CanvasRenderingContext2D, px: number, py: number, fx: Fx
   piece(HEAD_LEN + HAFT_LEN, total, 2, 2, '#8e98a4');
   if (landed > 0) {
     // Ground cracks radiating from the impact, growing then fading
-    const reach = 4 + 14 * Math.min(1, landed * 3);
-    for (let i = 0; i < SMASH_CRACKS; i++) {
-      const a = fx.seed + (i / SMASH_CRACKS) * Math.PI * 2;
-      const cx = Math.cos(a);
-      const cy = Math.sin(a) * 0.5;
-      const mx = Math.round(px + cx * reach * 0.55 + Math.sin(fx.seed + i * 3.1) * 2);
-      const my = Math.round(py + cy * reach * 0.55 + Math.cos(fx.seed + i * 2.3) * 1);
-      for (const [style, w2] of [['#1a1410', 3], [fx.css2, 1]] as const) {
-        ctx.strokeStyle = style;
-        ctx.lineWidth = w2;
-        ctx.beginPath();
-        ctx.moveTo(px, py);
-        ctx.lineTo(mx, my);
-        ctx.lineTo(Math.round(px + cx * reach), Math.round(py + cy * reach));
-        ctx.stroke();
-      }
-    }
+    drawCracks(ctx, px, py, fx.seed, 4 + 14 * Math.min(1, landed * 3), fx.css2, SMASH_CRACKS);
     // Impact flash: a bright cross at the landing point for the first frames
     if (flash) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(px - 8, py - 1, 17, 2);
       ctx.fillRect(px - 1, py - 5, 2, 10);
     }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** Jagged cracks in the ground: `count` broken lines from a point out to `reach` frame pixels, squashed to the floor. */
+function drawCracks(ctx: CanvasRenderingContext2D, px: number, py: number, seed: number, reach: number, bright: string, count: number): void {
+  for (let i = 0; i < count; i++) {
+    const a = seed + (i / count) * Math.PI * 2;
+    const cx = Math.cos(a);
+    const cy = Math.sin(a) * 0.5;
+    const mx = Math.round(px + cx * reach * 0.55 + Math.sin(seed + i * 3.1) * 2);
+    const my = Math.round(py + cy * reach * 0.55 + Math.cos(seed + i * 2.3) * 1);
+    for (const [style, w2] of [['#1a1410', 3], [bright, 1]] as const) {
+      ctx.strokeStyle = style;
+      ctx.lineWidth = w2;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(mx, my);
+      ctx.lineTo(Math.round(px + cx * reach), Math.round(py + cy * reach));
+      ctx.stroke();
+    }
+  }
+}
+
+/**
+ * The cleave sweep: a filled band on the floor between half and full reach
+ * that sweeps across the arc, brightest at its leading edge, with a thin
+ * bright rim on the outside. Fades as it finishes.
+ */
+function drawSweep(ctx: CanvasRenderingContext2D, cam: IsoCamera, fx: Fx, k: number): void {
+  const a0 = Math.atan2(fx.dirZ, fx.dirX) - fx.arc / 2;
+  const sweep = fx.arc * Math.min(1, k * 1.5);
+  const inner = fx.r0 * 0.45;
+  const outer = fx.r0 * 1.1;
+  const steps = Math.max(6, Math.round(fx.arc * 5));
+  const point = (r: number, a: number): [number, number] => {
+    const wx = fx.x + Math.cos(a) * r;
+    const wz = fx.z + Math.sin(a) * r;
+    return [Math.round(cam.frameX(wx, wz)), Math.round(cam.frameY(wx, 0.3, wz))];
+  };
+  // The band, drawn as a wedge from the trailing edge to the leading edge
+  const fade = k < 0.5 ? 1 : 1 - (k - 0.5) * 2;
+  ctx.globalAlpha = 0.55 * fade;
+  ctx.fillStyle = fx.css;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const [x, y] = point(outer, a0 + (sweep * i) / steps);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  for (let i = steps; i >= 0; i--) {
+    const [x, y] = point(inner, a0 + (sweep * i) / steps);
+    ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  // Bright rim on the outside and a hot leading edge
+  ctx.globalAlpha = fade;
+  ctx.strokeStyle = fx.css2;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i++) {
+    const [x, y] = point(outer, a0 + (sweep * i) / steps);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  if (k < 0.7) {
+    const lead = a0 + sweep;
+    const [x0, y0] = point(inner, lead);
+    const [x1, y1] = point(outer, lead);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** The holy shield: a heater shield with a cross, gold rim, white shine; grows in over the first tenth, then fades. */
+function drawShield(ctx: CanvasRenderingContext2D, px: number, py: number, fx: Fx, k: number): void {
+  const grow = Math.min(1, k * 8);
+  const scale = 0.4 + 0.6 * grow;
+  const fade = k < 0.35 ? 1 : 1 - (k - 0.35) / 0.65;
+  const hw = Math.max(2, Math.round(11 * scale));
+  const hh = Math.max(3, Math.round(15 * scale));
+  const top = py - hh;
+  const shoulder = top + Math.round(hh * 0.55);
+  const shape = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(px - hw, top);
+    ctx.lineTo(px + hw, top);
+    ctx.lineTo(px + hw, shoulder);
+    ctx.quadraticCurveTo(px + hw, py + hh - 2, px, py + hh);
+    ctx.quadraticCurveTo(px - hw, py + hh - 2, px - hw, shoulder);
+    ctx.closePath();
+  };
+  ctx.globalAlpha = fade;
+  // Halo behind the shield
+  ctx.fillStyle = fx.css2;
+  ctx.globalAlpha = fade * 0.35;
+  ctx.beginPath();
+  ctx.ellipse(px, py, hw + 6, hh + 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = fade;
+  // Dark outline, gold rim, pale face
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#1a1410';
+  shape();
+  ctx.stroke();
+  ctx.fillStyle = k < 0.15 ? '#ffffff' : '#f4ecd0';
+  shape();
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = fx.css;
+  shape();
+  ctx.stroke();
+  // The cross
+  if (grow >= 1) {
+    ctx.fillStyle = fx.css;
+    const t = Math.max(1, Math.round(hw * 0.28));
+    ctx.fillRect(px - (t >> 1), top + 3, t, hh * 2 - 7);
+    ctx.fillRect(px - hw + 3, top + Math.round(hh * 0.55) - (t >> 1), hw * 2 - 6, t);
+    // A shine slipping across the face
+    const sx = px - hw + Math.round((k * 3) % 1 * hw * 2);
+    ctx.globalAlpha = fade * 0.7;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(sx, top + 2, 2, hh * 2 - 5);
   }
   ctx.globalAlpha = 1;
 }
