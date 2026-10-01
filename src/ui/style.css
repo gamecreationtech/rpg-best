@@ -510,6 +510,10 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .doll-slot.belt { width: calc(72px * var(--du, 1)); height: calc(48px * var(--du, 1)); }
 .doll-slot.on { border-image-source: var(--px-slotOn); }
 .doll-slot.empty { cursor: default; }
+/* A worn piece of a complete set: a soft green glow breathing round the slot and off the icon */
+.doll-slot.set-glow { animation: set-glow 1.8s ease-in-out infinite alternate; }
+.doll-slot.set-glow .px-icon { filter: drop-shadow(0 0 3px rgba(0, 238, 102, 0.9)); }
+@keyframes set-glow { from { box-shadow: 0 0 5px 1px rgba(0, 238, 102, 0.35); } to { box-shadow: 0 0 14px 4px rgba(0, 238, 102, 0.85); } }
 /* Smaller on touch so the whole doll fits a phone held sideways */
 .px-window.touch .doll { grid-template-columns: repeat(6, 28px); grid-template-rows: 56px 80px 40px 56px 6px 56px; gap: 4px 2px; padding: 8px 10px; }
 .px-window.touch .doll-slot.big { width: 56px; height: 80px; }

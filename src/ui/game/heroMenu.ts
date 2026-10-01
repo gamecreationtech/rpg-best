@@ -257,7 +257,9 @@ export class HeroMenu {
   private dollSlot(w: World, key: EquipKey, size: SlotSize, rerender: () => void, unit = 1): HTMLElement {
     const item = w.player.equipment.get(key);
     const on = !!item && item === this.selected;
-    const el = h('button', { class: `doll-slot ${size}` + (on ? ' on' : '') + (item ? '' : ' empty') });
+    // A piece of a complete set glows green (producer's call, 2026-10-01)
+    const complete = !!item?.setId && setPiecesWorn(w.player, item.setId) >= (SETS[item.setId]?.pieces.length ?? Infinity);
+    const el = h('button', { class: `doll-slot ${size}` + (on ? ' on' : '') + (item ? '' : ' empty') + (complete ? ' set-glow' : '') });
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
       const [sw, sh] = (this.mouse ? SLOT_PX : TOUCH_SLOT_PX)[size];
