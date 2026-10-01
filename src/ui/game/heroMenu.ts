@@ -112,6 +112,8 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
 type SlotSize = 'big' | 'mid' | 'small' | 'belt';
 const SLOT_PX: Record<SlotSize, [number, number]> = { big: [72, 104], mid: [72, 72], small: [48, 48], belt: [72, 48] };
 const TOUCH_SLOT_PX: Record<SlotSize, [number, number]> = { big: [56, 80], mid: [56, 56], small: [40, 40], belt: [56, 40] };
+/** Worn items drawn with only this share of their slot's room, by base id. */
+const WORN_ROOM: Record<string, number> = { pilgrim_cap: 0.7 };
 
 /**
  * The gear layout follows the body on a six-column grid: the helmet on top
@@ -263,9 +265,9 @@ export class HeroMenu {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
       const [sw, sh] = (this.mouse ? SLOT_PX : TOUCH_SLOT_PX)[size];
-      // A worn ring is drawn at half the room its slot has (producer's call, 2026-10-01)
-      const shrink = key.startsWith('ring') ? 2 : 1;
-      el.appendChild(fitItemIcon(item, Math.round((Math.round(sw * unit) - 16) / shrink), Math.round((Math.round(sh * unit) - 16) / shrink)));
+      // Some worn things get less room than their slot: rings half, the leather cap seven tenths (producer's calls, 2026-10-01)
+      const room = key.startsWith('ring') ? 0.5 : WORN_ROOM[item.baseId] ?? 1;
+      el.appendChild(fitItemIcon(item, Math.round((Math.round(sw * unit) - 16) * room), Math.round((Math.round(sh * unit) - 16) * room)));
       el.onclick = () => {
         if (this.mouse) {
           const r = w.unequipItem(key);
