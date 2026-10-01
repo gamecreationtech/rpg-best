@@ -134,7 +134,8 @@ const DOLL: [EquipKey, SlotSize, string, number][] = [
 ];
 /** The trinkets sit in a row over the bag. */
 const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
-/** The doll's height in px at unit scale: its rows, gaps, padding and the label above it. */
+/** The doll's size in px at unit scale: six columns with their gaps and padding; the rows, gaps, padding and the label above. */
+const DOLL_WIDTH = 6 * 36 + 5 * 3 + 24;
 const DOLL_HEIGHT = 72 + 104 + 48 + 72 + 18 + 20 + 26;
 
 /**
@@ -209,8 +210,8 @@ export class HeroMenu {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     // The worn gear on the left as a paper doll; the trinkets in a row over the bag on the right,
     // which gets everything else. On touch the selected item's panel sits under the doll.
-    // With a mouse the doll scales so it stands half the window tall; icons grow in whole pixels with it
-    const unit = this.mouse ? Math.max(1, Math.min(2.4, (content.clientHeight * 0.5) / DOLL_HEIGHT)) : 1;
+    // With a mouse the gear takes the left half of the window and the doll scales to fill it, as far as the height allows; icons grow in whole pixels with it
+    const unit = this.mouse ? Math.max(1, Math.min(3, (content.clientWidth * 0.5 - 40) / DOLL_WIDTH, (content.clientHeight - 60) / DOLL_HEIGHT)) : 1;
     const doll = h('div', { class: 'px-inset doll' });
     doll.style.setProperty('--du', unit.toFixed(3));
     for (const [key, size, cols, row] of DOLL) {

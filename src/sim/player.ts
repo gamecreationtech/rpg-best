@@ -337,7 +337,7 @@ export function canUseShields(p: PlayerState): boolean {
   return !!(p.pledgeId && PLEDGES[p.pledgeId]?.shields);
 }
 
-/** Class rules: a knight only ever holds a sword, mace or bardiche; a rogue carries no shield until sworn an Impaler. */
+/** Class rules: a knight only ever holds a sword, mace, bardiche, axe or warfork; a rogue carries no shield until sworn an Impaler. */
 export function canEquipItem(p: PlayerState, item: Item): { ok: boolean; reason?: string } {
   const allowed = CLASSES[p.classId].allowedWeapons;
   if (item.weapon && allowed && !allowed.includes(item.weapon.type)) {

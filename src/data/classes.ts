@@ -49,7 +49,7 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     startingGear: ['wooden_sword', 'wooden_shield'],
     pledges: ['paladin', 'titan', 'nightlord'],
     preferredWeapons: ['sword', 'mace', 'bardiche'],
-    allowedWeapons: ['sword', 'mace', 'bardiche'],
+    allowedWeapons: ['sword', 'mace', 'bardiche', 'axe', 'warfork'],
   },
   sorcerer: {
     id: 'sorcerer',
