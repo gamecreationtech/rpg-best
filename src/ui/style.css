@@ -500,7 +500,8 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-window.touch .px-itembox .pxb .mt { font-size: 11px; }
 .stats-col .px-stats { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #44444f #0c0c13; }
 .gear-left { flex: 0 0 auto; min-width: 0; min-height: 0; }
-.px-window:not(.touch) .gear-left { flex: 0 0 calc(50% - 7px); align-items: center; }
+.px-window:not(.touch) .gear-left { flex: 0 0 auto; align-items: center; }
+.px-window:not(.touch) .stats-col { flex: 0 0 320px; }
 .px-window:not(.touch) .gear-left > .mt { align-self: flex-start; }
 .gear-right { flex: 1 1 0; min-width: 0; min-height: 0; justify-content: flex-start; }
 .bag-block { flex: 1; min-height: 0; align-items: flex-start; }

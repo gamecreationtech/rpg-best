@@ -144,6 +144,8 @@ const DOLL: [EquipKey, SlotSize, string, number][] = [
 ];
 /** The doll's size in px at unit scale: six columns with their gaps and padding; the rows, the rule, gaps, padding and the label above. */
 const DOLL_WIDTH = 6 * 36 + 5 * 3 + 24;
+/** The stat sheet's column on the inventory tab, with a mouse. */
+const STATS_WIDTH = 320;
 const DOLL_HEIGHT = 72 + 104 + 48 + 72 + 8 + 72 + 30 + 20 + 26;
 
 /**
@@ -190,7 +192,7 @@ export class HeroMenu {
     const tabs = h(
       'div',
       { class: 'px-tabs' },
-      ...(['inventory', 'stats', 'skills', 'passives'] as HeroTab[]).map((t) => {
+      ...((this.mouse ? ['inventory', 'skills', 'passives'] : ['inventory', 'stats', 'skills', 'passives']) as HeroTab[]).map((t) => {
         const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'stats' ? 'Stats' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
         b.addEventListener('pointerdown', (e) => e.stopPropagation());
         return b;
@@ -218,8 +220,10 @@ export class HeroMenu {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     // The worn gear on the left as a paper doll with the trinkets under a rule at its foot; the bag
     // gets the whole right side. On touch the selected item's panel sits under the doll.
-    // With a mouse the gear takes the left half of the window and the doll scales to fill it, as far as the height allows; icons grow in whole pixels with it
-    const unit = this.mouse ? Math.max(1, Math.min(3, (content.clientWidth * 0.5 - 40) / DOLL_WIDTH, (content.clientHeight - 60) / DOLL_HEIGHT)) : 1;
+    // With a mouse the stat sheet takes a column on the left, the gear the middle and the bag the rest; the doll scales to
+    // just under half of what is left beside the stats, as far as the height allows, and icons grow in whole pixels with it
+    const stats = this.mouse ? h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender)) : null;
+    const unit = this.mouse ? Math.max(1, Math.min(3, ((content.clientWidth - STATS_WIDTH - 28) * 0.45 - 40) / DOLL_WIDTH, (content.clientHeight - 60) / DOLL_HEIGHT)) : 1;
     const doll = h('div', { class: 'px-inset doll' });
     doll.style.setProperty('--du', unit.toFixed(3));
     for (const [key, size, cols, row] of DOLL) {
@@ -241,7 +245,7 @@ export class HeroMenu {
     };
     const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), label('Sort'), sortBtn('By Rarity', 'rarity'), sortBtn('By Type', 'type'), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
     const right = h('div', { class: 'px-col gear-right' }, bagBlock);
-    content.append(h('div', { class: 'px-inventory' }, left, right));
+    content.append(h('div', { class: 'px-inventory' }, stats, left, right));
     // Now that the column has its size, the bag fills whatever is left
     const inv = p.inventory;
     const width = right.clientWidth || 800;
@@ -250,7 +254,7 @@ export class HeroMenu {
     bagBlock.append(this.bagGrid(w, rerender));
   }
 
-  /** The stat sheet on its own tab: two columns when there is room, one scrolling column on a phone. */
+  /** Touch devices: the stat sheet on its own tab, one scrolling column. */
   private renderStats(w: World, content: HTMLElement): void {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     content.append(h('div', { class: 'px-inventory' }, h('div', { class: 'px-col stats-col full' }, this.statSheet(w, rerender))));
