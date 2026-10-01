@@ -7,9 +7,9 @@
  */
 
 /** Item base ids that may have an icon at `art/items/<id>.png` (any size, transparent background; see `public/art/README.md`). */
-export const ITEM_ART_IDS = ['sword', 'bow', 'dagger', 'mace', 'crossbow', 'skull', 'quiver', 'lantern', 'energy_shield'];
+export const ITEM_ART_IDS = ['sword', 'bow', 'dagger', 'mace', 'crossbow', 'skull', 'quiver', 'lantern', 'energy_shield', 'belt', 'wooden_shield_base', 'iron_shield', 'tower_shield', 'leather_armor'];
 /** Bases that share another base's drawing: the starters look like the plain weapon they are. */
-const ITEM_ART_ALIASES: Record<string, string> = { wooden_sword: 'sword', wooden_bow: 'bow', starter_dagger: 'dagger' };
+const ITEM_ART_ALIASES: Record<string, string> = { wooden_sword: 'sword', wooden_bow: 'bow', starter_dagger: 'dagger', wooden_shield: 'wooden_shield_base' };
 
 
 const itemImages = new Map<string, HTMLCanvasElement>();
