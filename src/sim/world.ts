@@ -11,12 +11,12 @@ import { MS, PX } from '../data/units';
 import { Rng } from '../gen/rng';
 import { applyFreeze, damagePlayer, hitEnemy, tickStatuses, skillDamage } from './combat';
 import type { EquipKey } from './items/equipment';
-import type { Inventory } from './items/inventory';
+import { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
 import { buyPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
-import type { Rarity } from '../data/items';
+import { ITEM_RULES, type Rarity } from '../data/items';
 import { setsForZone } from '../data/sets';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
 import { castSkill, dropSkillAt, type Aim } from './skills/cast';
@@ -136,6 +136,8 @@ export class World {
   readonly zones: Zone[] = [];
   readonly drops: Drop[] = [];
   vendorStock: Item[] = [];
+  /** The stock laid out on a grid, so the merchant's wares read like a bag. */
+  vendorShelf = new Inventory(ITEM_RULES.vendorCols, ITEM_RULES.vendorRows);
   time = 0;
   private nextZoneId = 1;
   private nextDropId = 1;
@@ -215,6 +217,8 @@ export class World {
       this.emit({ type: 'enemy_spawn', id: e.id });
     });
     this.vendorStock = generateStock(this.rng, this.player.level);
+    this.vendorShelf = new Inventory(ITEM_RULES.vendorCols, ITEM_RULES.vendorRows);
+    for (const item of this.vendorStock) this.vendorShelf.add(item);
     if (!first) {
       this.player.hp = this.derived.maxHp;
       this.player.mana = this.derived.maxMana;
@@ -1103,6 +1107,7 @@ export class World {
     this.player.gold -= price;
     const i = this.vendorStock.indexOf(item);
     if (i >= 0) this.vendorStock.splice(i, 1);
+    this.vendorShelf.remove(item);
     this.emit({ type: 'sound', id: 'coin' });
     return { ok: true };
   }

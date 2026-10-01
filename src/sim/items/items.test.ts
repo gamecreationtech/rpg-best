@@ -97,20 +97,36 @@ describe('item generation', () => {
 });
 
 describe('inventory sort', () => {
-  it('packs items from the top left, biggest first', () => {
+  const filled = () => {
     const inv = new Inventory(18, 14);
     const ring = makeItem(baseItem('ring'), 'common', 1, null);
     const chest = makeItem(baseItem('chest_armor'), 'rare', 5, null);
     const sword = makeItem(baseItem('sword'), 'magic', 3, null);
+    const mace = makeItem(baseItem('mace'), 'common', 3, null);
     inv.place(ring, 10, 10);
     inv.place(sword, 3, 7);
     inv.place(chest, 15, 2);
-    inv.sort();
-    expect([chest.col, chest.row]).toEqual([0, 0]);
-    expect(sword.row).toBe(0);
-    expect(sword.col).toBe(2);
-    expect(ring.row).toBe(0);
-    expect(inv.items.length).toBe(3);
+    inv.place(mace, 0, 10);
+    return { inv, ring, chest, sword, mace };
+  };
+  it('by rarity packs from the top left, common first up to divine', () => {
+    const { inv, ring, chest, sword, mace } = filled();
+    inv.sort('rarity');
+    // Common: the mace (a weapon) before the ring; then the magic sword, then the rare chest
+    expect([mace.col, mace.row]).toEqual([0, 0]);
+    expect([ring.col, ring.row]).toEqual([1, 0]);
+    expect([sword.col, sword.row]).toEqual([2, 0]);
+    expect([chest.col, chest.row]).toEqual([3, 0]);
+    expect(inv.items.length).toBe(4);
+  });
+  it('by type keeps each kind together, best rarity first', () => {
+    const { inv, ring, chest, sword, mace } = filled();
+    inv.sort('type');
+    // Weapons first, each weapon type together (maces before swords); then the chest, then the ring
+    expect([mace.col, mace.row]).toEqual([0, 0]);
+    expect([sword.col, sword.row]).toEqual([1, 0]);
+    expect([chest.col, chest.row]).toEqual([2, 0]);
+    expect([ring.col, ring.row]).toEqual([4, 0]);
   });
 });
 

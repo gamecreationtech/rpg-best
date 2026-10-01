@@ -209,4 +209,7 @@ export const ITEM_RULES = {
   vendorLevelWeights: [65, 20, 10, 5],
   vendorMaxRarity: 'magic' as Rarity,
   vendorStockSize: 18,
+  /** The merchant's shelf: a grid like the bag that the stock is laid out on. */
+  vendorCols: 12,
+  vendorRows: 12,
 };

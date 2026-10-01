@@ -1,6 +1,12 @@
 import type { Item } from './item';
 
 /** A grid of cells; items occupy rectangles. Used for the inventory and every stash page. */
+export type SortMode = 'rarity' | 'type';
+/** Rarities from the humblest up, the order Sort by Rarity lays the bag out in. */
+const RARITY_ORDER = ['common', 'magic', 'rare', 'mythic', 'set', 'divine'];
+/** Kinds in the order Sort by Type lays them out: weapons, shields and offhands, armour head to foot, then jewellery and trinkets. */
+const SLOT_ORDER = ['weapon', 'shield', 'helmet', 'chest', 'gloves', 'boots', 'belt', 'ring', 'amulet', 'totem', 'charm', 'relic'];
+
 export class Inventory {
   readonly items: Item[] = [];
   private readonly cells: Int32Array;
@@ -79,10 +85,19 @@ export class Inventory {
   }
 
   /** Repacks every item from the top left: tallest and widest first, then by rarity and name, so the bag reads tidily. */
-  sort(): void {
-    const order = ['divine', 'set', 'mythic', 'rare', 'magic', 'common'];
+  /**
+   * Repacks the bag from the top left. By rarity: common first up to divine,
+   * each rarity grouped by kind. By type: weapons first (each weapon type
+   * together), then shields, armour from head to feet, belts, rings, amulets
+   * and the trinkets, each kind best rarity first.
+   */
+  sort(mode: SortMode = 'rarity'): void {
+    const byKind = (a: Item, b: Item) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || (a.weapon?.type ?? '').localeCompare(b.weapon?.type ?? '') || (a.offhand ?? '').localeCompare(b.offhand ?? '');
+    const bySize = (a: Item, b: Item) => b.size[1] - a.size[1] || b.size[0] - a.size[0];
     const items = [...this.items].sort((a, b) =>
-      b.size[1] - a.size[1] || b.size[0] - a.size[0] || order.indexOf(a.rarity) - order.indexOf(b.rarity) || a.slot.localeCompare(b.slot) || a.name.localeCompare(b.name));
+      mode === 'rarity'
+        ? RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity) || byKind(a, b) || bySize(a, b) || a.name.localeCompare(b.name)
+        : byKind(a, b) || RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || bySize(a, b) || a.name.localeCompare(b.name));
     this.clear();
     for (const it of items) this.add(it);
   }

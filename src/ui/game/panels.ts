@@ -210,17 +210,17 @@ export class Panels {
   // ---------------------------------------------------------------- vendor
 
   private renderVendor(w: World): void {
-    const stock = h('div', { class: 'stock' }, h('div', { class: 'section-label' }, 'For sale'), ...w.vendorStock.map((item) =>
-      h('div', { class: 'stock-row' + (item === this.selected ? ' selected' : '') + (canEquipItem(w.player, item).ok ? '' : ' unusable') },
-        button('', () => this.select(item, 'vendor'), 'stock-name'),
-        h('span', { class: 'price' }, `${buyPrice(item)}g`),
-        button('Buy', () => { const r = w.buyItem(item); if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080); this.selected = null; this.render(); }, 'btn small' + (w.player.gold >= buyPrice(item) ? ' primary' : ' disabled')),
-      ),
-    ));
-    for (const row of stock.querySelectorAll<HTMLButtonElement>('.stock-name')) {
-      const item = w.vendorStock[Array.from(stock.querySelectorAll('.stock-row')).indexOf(row.parentElement!)]!;
-      row.append(itemIcon(item, 18), h('span', { style: `color:${hex(RARITIES[item.rarity].color)}` }, item.name));
-    }
+    // The wares on a shelf grid like the bag, each with its price in the corner; what the class cannot use is faded
+    const shelf = new ItemGrid(w.vendorShelf, {
+      onItemTap: (item) => this.select(item, 'vendor'),
+      onCellTap: () => {},
+      label: (item) => `${buyPrice(item)}g`,
+      dim: (item) => !canEquipItem(w.player, item).ok,
+    });
+    shelf.selected = this.selected;
+    shelf.setCellSize(Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.vendorCols))));
+    shelf.render();
+    const stock = h('div', { class: 'grid-wrap' }, h('div', { class: 'section-label' }, 'For sale'), shelf.root);
     const actions: HTMLElement[] = [];
     if (this.selected && this.selectedFrom === 'bag') {
       const sel = this.selected;
@@ -242,7 +242,7 @@ export class Panels {
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value.`),
       h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic')),
-      this.selectedCard(w, actions, 'Tap something for sale or in your bag to see its stats, then buy or sell it here.')!,
+      this.selectedCard(w, actions, 'Tap something on the shelf or in your bag to see its stats, then buy or sell it here.')!,
       ...this.halves('For sale', stock, this.bagGrid(w, (item) => this.select(item, 'bag'))),
     );
   }

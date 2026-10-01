@@ -10,6 +10,10 @@ import { clear, h, hex } from '../dom';
 export interface GridCallbacks {
   onItemTap: (item: Item, grid: Inventory) => void;
   onCellTap: (col: number, row: number, grid: Inventory) => void;
+  /** A small tag in the corner of each block (the merchant's price). */
+  label?: (item: Item) => string;
+  /** Blocks drawn faded (wares the hero's class cannot use). */
+  dim?: (item: Item) => boolean;
 }
 
 /** Renders an item grid (the 18x14 bag or a 12x12 stash page) with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
@@ -48,7 +52,10 @@ export class ItemGrid {
       el.style.width = `${item.size[0] * this.cell - 2}px`;
       el.style.height = `${item.size[1] * this.cell - 2}px`;
       el.style.borderColor = hex(RARITIES[item.rarity].color);
+      if (this.cb.dim?.(item)) el.classList.add('dim-item');
       el.appendChild(fitItemIcon(item, item.size[0] * this.cell - 10, item.size[1] * this.cell - 10));
+      const tag = this.cb.label?.(item);
+      if (tag) el.appendChild(h('span', { class: 'price-tag' }, tag));
       this.root.appendChild(el);
     }
   }

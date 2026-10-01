@@ -227,9 +227,12 @@ export class HeroMenu {
     doll.append(rule);
     const left = h('div', { class: 'px-col gear-left' }, label('Equipped'), doll);
     if (!this.mouse) left.append(label('Item'), this.itemPanel(w, rerender));
-    const sortBtn = pbtn('Sort All', () => { p.inventory.sort(); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
-    sortBtn.classList.add('tiny-wide');
-    const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), sortBtn, h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
+    const sortBtn = (text: string, mode: 'rarity' | 'type') => {
+      const b = pbtn(text, () => { p.inventory.sort(mode); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
+      b.classList.add('tiny-wide');
+      return b;
+    };
+    const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), label('Sort'), sortBtn('By Rarity', 'rarity'), sortBtn('By Type', 'type'), h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
     const right = h('div', { class: 'px-col gear-right' }, bagBlock);
     content.append(h('div', { class: 'px-inventory' }, left, right));
     // Now that the column has its size, the bag fills whatever is left
