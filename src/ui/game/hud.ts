@@ -30,7 +30,7 @@ interface Message {
   until: number;
 }
 
-const KEYS = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
+const KEYS = ['LMB', 'Q', 'E', 'R', 'T', 'RMB'];
 const SLOT_LEVELS = [1, 1, 5, 10, 15, 20];
 
 /**

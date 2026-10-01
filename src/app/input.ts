@@ -155,7 +155,7 @@ export class Input {
       if (k === 'i') this.host.openPanel('inventory');
       return;
     }
-    const slotKeys: Record<string, number> = { q: 1, e: 2, r: 3, y: 4 };
+    const slotKeys: Record<string, number> = { q: 1, e: 2, r: 3, t: 4 };
     if (k in slotKeys) this.host.castSlot(slotKeys[k]!, this.mouseX, this.mouseY);
     else if (k === ' ') this.host.castSlot(0, null, null);
     else if (k === '1') this.host.usePotion('hp_potion');

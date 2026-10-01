@@ -152,7 +152,7 @@ describe('player', () => {
 
   it('unlocks slots and ultimates at the right levels', () => {
     const p = createPlayer('rogue', 'quiverbound');
-    expect(unlockedSlots(1)).toBe(2);
+    expect(unlockedSlots(1)).toBe(6);
     expect(unlockedSlots(20)).toBe(6);
     while (p.level < 20) addXp(p, 100000);
     expect(p.level).toBeGreaterThanOrEqual(20);

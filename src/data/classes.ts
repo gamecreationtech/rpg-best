@@ -110,7 +110,8 @@ export const LEVELING = {
   /** The level at which a hero swears a pledge; play is held until they do. */
   pledgeLevel: 20,
   /** Player level at which each skill slot (after the basic attack) unlocks. */
-  slotUnlockLevels: [1, 5, 10, 15, 20],
+  /** No longer used: every slot is open from the start (producer's call, 2026-10-01). */
+  slotUnlockLevels: [1, 1, 1, 1, 1],
   maxLevel: 100,
   /**
    * The power curve (producer's call, 2026-10-01: a steeper monster curve).

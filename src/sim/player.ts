@@ -191,8 +191,9 @@ export function gearStats(p: PlayerState): StatMap {
   return total;
 }
 
-export function unlockedSlots(level: number): number {
-  return 1 + LEVELING.slotUnlockLevels.filter((l) => level >= l).length;
+/** Every slot is open from the start (producer's call, 2026-10-01); the level is kept for the signature's sake. */
+export function unlockedSlots(_level: number): number {
+  return 6;
 }
 
 /**

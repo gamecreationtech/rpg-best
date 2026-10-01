@@ -603,7 +603,7 @@ export class HeroMenu {
     head(`Level ${p.level}`);
     row('Experience', `${p.xp} / ${p.xpToNext}`);
     row('Kills', String(p.kills));
-    head('Attributes');
+    sheet.append(h('div', { class: 'px-stat-head px-row between' }, pxText('Attributes', { color: GOLD }), this.mouse ? pxText('(CTRL +5   SHIFT +10)', { color: MUTED, scale: 1 }) : null));
     if (p.statPoints > 0) row('Points to spend', pendingTotal ? `${left} (${pendingTotal} pending)` : String(left));
     attr('Strength', 'str', d.str);
     attr('Dexterity', 'dex', d.dex);
@@ -622,7 +622,6 @@ export class HeroMenu {
         }, pendingTotal ? 'gold' : 'dim'),
         pbtn('Cancel', () => { this.clearPending(); rerender(); }, pendingTotal ? 'btn' : 'dim'),
       ));
-      if (this.mouse) sheet.append(h('div', { class: 'px-stat' }, pxText('Ctrl-click for 5, Shift-click for 10', { color: MUTED })));
     }
     head('Offense');
     const [dmgLo, dmgHi] = attackDamageRange(d);
@@ -665,7 +664,7 @@ export class HeroMenu {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     const list = skillsFor(p.classId, p.pledgeId).filter((s) => s.tier !== 'ultimate').sort((a, b) => (a.reqLevel ?? 1) - (b.reqLevel ?? 1));
     const slotsUnlocked = unlockedSlots(p.level);
-    const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
+    const keys = ['LMB', 'Q', 'E', 'R', 'T', 'RMB'];
     const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
     // One page: the skills on the left, the passives on the right, one pool of points for both
     const book = h('div', { class: 'px-skillbook' });
