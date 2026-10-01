@@ -115,7 +115,7 @@ const TOUCH_SLOT_PX: Record<SlotSize, [number, number]> = { big: [56, 80], mid: 
 /** Worn items drawn with this share of their slot's room, by base id: under one for less, over one to spill past the frame. */
 const WORN_ROOM: Record<string, number> = {
   pilgrim_cap: 0.7, pilgrim_boots: 0.8, pilgrim_gloves: 0.8, pilgrim_coat: 0.9,
-  bardiche: 1.5, sword: 0.8, wooden_sword: 0.8,
+  bardiche: 1.5, sword: 0.8, wooden_sword: 0.8, axe: 0.5, warfork: 0.7,
   belt: 1.5, war_belt: 1.5, chest_armor: 0.9, boots: 0.9, gauntlets: 1.2,
   skull: 0.5, energy_shield: 0.8,
 };
