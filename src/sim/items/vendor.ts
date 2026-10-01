@@ -29,3 +29,8 @@ export function generateStock(rng: Rng, playerLevel: number): Item[] {
   }
   return stock;
 }
+
+/** What the merchant asks to give something back: twice what was paid for it. */
+export function buybackPrice(item: Item): number {
+  return sellPrice(item) * 2;
+}

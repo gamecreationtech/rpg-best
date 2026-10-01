@@ -6,7 +6,7 @@ import { LEVELING } from '../../data/classes';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
 import type { Item } from '../../sim/items/item';
-import { buyPrice, sellPrice } from '../../sim/items/vendor';
+import { buyPrice, buybackPrice, sellPrice } from '../../sim/items/vendor';
 import { canEquipItem, professionXpToNext, setPiecesWorn } from '../../sim/player';
 import type { World } from '../../sim/world';
 import type { Settings } from '../../app/storage';
@@ -55,6 +55,8 @@ export class Panels {
   private readonly hero: HeroMenu;
   private selected: Item | null = null;
   private selectedFrom: 'bag' | 'equip' | 'stash' | 'vendor' | null = null;
+  /** The merchant's two shelves: the wares, or what the hero sold. */
+  private vendorPage: 'sale' | 'buyback' = 'sale';
   private stashPage = 0;
   /** Waypoint: the normal zone list, or the difficulty page that replays zones at Normal, Nightmare, Hell or Inferno. */
   private wpPage: 'zones' | 'beyond' = 'zones';
@@ -211,66 +213,77 @@ export class Panels {
   // ---------------------------------------------------------------- vendor
 
   private renderVendor(w: World): void {
-    // Buying and selling both ask first; the card hovered over an item is the bag's own, with the price as its last line
-    const buy = (item: Item) => this.confirm(`Buy ${item.name} for ${buyPrice(item)} gold?`, 'Buy', () => {
-      const r = w.buyItem(item);
+    // Buying and selling both ask first, with the item's card in the box; the card hovered over an item is the bag's
+    // own, with the price as its last line. The buyback shelf gives back what was sold, at twice what was paid.
+    const onBuyback = this.vendorPage === 'buyback';
+    const priceOf = (item: Item) => (onBuyback ? buybackPrice(item) : buyPrice(item));
+    const buy = (item: Item) => this.confirm(`${onBuyback ? 'Buy back' : 'Buy'} ${item.name} for ${priceOf(item)} gold?`, onBuyback ? 'Buy back' : 'Buy', () => {
+      const r = onBuyback ? w.buyBack(item) : w.buyItem(item);
       if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080);
       this.selected = null;
       this.render();
-    });
+    }, item);
     const sell = (item: Item) => this.confirm(`Sell ${item.name} for ${sellPrice(item)} gold?`, 'Sell', () => {
       w.sellItem(item);
       this.selected = null;
       this.render();
-    });
+    }, item);
     const hover = (from: 'bag' | 'vendor') => (item: Item | null, x: number, y: number) => {
       if (!item) this.hero.hideTip();
-      else this.hero.showTip(w, item, 'bag', x, y, from === 'vendor' ? { text: `Buy for ${buyPrice(item)} gold`, color: w.player.gold >= buyPrice(item) ? GOLD : '#ff8080' } : { text: `Sells for ${sellPrice(item)} gold`, color: GOLD });
+      else this.hero.showTip(w, item, 'bag', x, y, from === 'vendor' ? { text: `${onBuyback ? 'Buy back' : 'Buy'} for ${priceOf(item)} gold`, color: w.player.gold >= priceOf(item) ? GOLD : '#ff8080' } : { text: `Sells for ${sellPrice(item)} gold`, color: GOLD });
     };
     // The wares on a shelf grid like the bag, each with its price in the corner; what the class cannot use is faded
-    const shelf = new ItemGrid(w.vendorShelf, {
+    const shelf = new ItemGrid(onBuyback ? w.buyback : w.vendorShelf, {
       onItemTap: (item) => (this.touch ? this.select(item, 'vendor') : buy(item)),
       onCellTap: () => {},
-      label: (item) => `${buyPrice(item)}g`,
+      label: (item) => `${priceOf(item)}g`,
       dim: (item) => !canEquipItem(w.player, item).ok,
       onItemHover: hover('vendor'),
     });
     shelf.selected = this.selected;
     shelf.setCellSize(Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.vendorCols))));
     shelf.render();
-    const stock = h('div', { class: 'grid-wrap' }, h('div', { class: 'section-label' }, 'For sale'), shelf.root);
+    const pages = h('div', { class: 'tabs' },
+      button('For sale', () => { this.vendorPage = 'sale'; this.selected = null; this.render(); }, 'btn small' + (onBuyback ? '' : ' on')),
+      button(`Buyback (${w.buyback.items.length})`, () => { this.vendorPage = 'buyback'; this.selected = null; this.render(); }, 'btn small' + (onBuyback ? ' on' : '')),
+    );
+    const stock = h('div', { class: 'grid-wrap' }, pages, h('div', { class: 'section-label' }, onBuyback ? 'Buyback: twice what the merchant paid' : 'For sale'), shelf.root);
     const actions: HTMLElement[] = [];
     if (this.selected && this.selectedFrom === 'bag') {
       const sel = this.selected;
       actions.push(button(`Sell for ${sellPrice(sel)} gold`, () => sell(sel), 'btn primary'));
     } else if (this.selected && this.selectedFrom === 'vendor') {
       const sel = this.selected;
-      actions.push(button(`Buy for ${buyPrice(sel)} gold`, () => buy(sel), 'btn primary' + (w.player.gold >= buyPrice(sel) ? '' : ' disabled')));
+      actions.push(button(`${onBuyback ? 'Buy back' : 'Buy'} for ${priceOf(sel)} gold`, () => buy(sel), 'btn primary' + (w.player.gold >= priceOf(sel) ? '' : ' disabled')));
     }
-    const bulk = (rarity: 'common' | 'magic', label: string) => {
-      const items = w.player.inventory.items.filter((i) => i.rarity === rarity);
+    const bulk = (rarity: 'common' | 'magic' | 'rare' | 'mythic' | 'all', label: string) => {
+      const items = w.player.inventory.items.filter((i) => rarity === 'all' || i.rarity === rarity);
       const gold = items.reduce((sum, i) => sum + sellPrice(i), 0);
-      return button(items.length ? `Sell all ${label} (${items.length} for ${gold}g)` : `Sell all ${label}`, () => {
+      const what = rarity === 'all' ? 'everything' : `all ${label}`;
+      return button(items.length ? `Sell ${what} (${items.length} for ${gold}g)` : `Sell ${what}`, () => this.confirm(`Sell ${rarity === 'all' ? 'everything in the bag' : `all ${items.length} ${label.toLowerCase()} items`} for ${gold} gold?`, 'Sell', () => {
         const r = w.sellAll(rarity);
-        this.host.message(r.count ? `Sold ${r.count} ${label.toLowerCase()} items for ${r.gold} gold` : `No ${label.toLowerCase()} items to sell`, r.count ? 0xffd060 : 0xff8080);
+        this.host.message(r.count ? `Sold ${r.count} items for ${r.gold} gold` : 'Nothing to sell', r.count ? 0xffd060 : 0xff8080);
         this.selected = null;
         this.render();
-      }, 'btn small' + (items.length ? '' : ' disabled'));
+      }), 'btn small' + (items.length ? '' : ' disabled'));
     };
     this.body.append(
-      h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value.`),
-      h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic')),
+      h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value; the buyback shelf gives them back for twice that.`),
+      h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic'), bulk('rare', 'Rare'), bulk('mythic', 'Mythic'), bulk('all', 'All')),
       this.touch ? this.selectedCard(w, actions, 'Tap something on the shelf or in your bag to see its stats, then buy or sell it here.')! : h('div', { class: 'dim pad' }, 'Hover an item for its stats and price. Click it to buy or sell.'),
       ...this.halves('For sale', stock, this.bagGrid(w, (item) => (this.touch ? this.select(item, 'bag') : sell(item)), undefined, hover('bag'))),
     );
   }
 
-  /** A small box over the panel asking before gold changes hands. */
-  private confirm(text: string, yes: string, onYes: () => void): void {
+  /** A small box over the panel asking before gold changes hands, with the item's card on top when one thing is at stake. */
+  private confirm(text: string, yes: string, onYes: () => void, item: Item | null = null): void {
     this.hero.hideTip();
+    const w = this.host.world;
     const overlay = h('div', { class: 'confirm-overlay' });
     const close = () => overlay.remove();
+    const card = item ? itemCard(item, w.player.equipment.get(w.player.equipment.targetKey(item)) ?? null, item.setId ? setPiecesWorn(w.player, item.setId) : 0, w.player.level) : null;
     overlay.append(h('div', { class: 'px-frame confirm-box' },
+      card,
       h('div', { class: 'confirm-text' }, text),
       h('div', { class: 'actions' }, pbtn(yes, () => { close(); onYes(); }, 'gold'), pbtn('Cancel', close, 'btn')),
     ));

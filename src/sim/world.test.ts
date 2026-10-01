@@ -30,6 +30,22 @@ describe('world', () => {
     expect(w.player.inventory.itemAt(bought.col, bought.row)).toBe(bought);
     expect(w.vendorShelf.has(bought)).toBe(false);
     expect(w.vendorStock.length).toBe(17);
+    // Selling puts it on the buyback shelf at twice the price paid; buying back takes it off again
+    const gold = w.player.gold;
+    expect(w.sellItem(bought)).toBe(true);
+    expect(w.buyback.has(bought)).toBe(true);
+    expect(w.buyback.itemAt(bought.col, bought.row)).toBe(bought);
+    const paid = w.player.gold - gold;
+    expect(w.buyBack(bought).ok).toBe(true);
+    expect(w.player.gold).toBe(gold + paid - paid * 2);
+    expect(w.player.inventory.itemAt(bought.col, bought.row)).toBe(bought);
+    expect(w.buyback.items.length).toBe(0);
+    // Sell everything empties the bag onto the shelf
+    const n = w.player.inventory.items.length;
+    const r = w.sellAll('all');
+    expect(r.count).toBe(n);
+    expect(w.player.inventory.items.length).toBe(0);
+    expect(w.buyback.items.length).toBe(n);
     run(w, 1);
     expect(w.player.hp).toBe(w.derived.maxHp);
   });

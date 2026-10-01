@@ -13,7 +13,7 @@ import { applyFreeze, damagePlayer, hitEnemy, tickStatuses, skillDamage } from '
 import type { EquipKey } from './items/equipment';
 import { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
-import { buyPrice, generateStock, sellPrice } from './items/vendor';
+import { buyPrice, buybackPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
 import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
 import { ITEM_RULES, type Rarity } from '../data/items';
@@ -138,6 +138,8 @@ export class World {
   vendorStock: Item[] = [];
   /** The stock laid out on a grid, so the merchant's wares read like a bag. */
   vendorShelf = new Inventory(ITEM_RULES.vendorCols, ITEM_RULES.vendorRows);
+  /** What the hero sold, kept on a second shelf for the session and sold back at twice the price paid. */
+  buyback = new Inventory(ITEM_RULES.vendorCols, ITEM_RULES.vendorRows);
   time = 0;
   private nextZoneId = 1;
   private nextDropId = 1;
@@ -1081,18 +1083,46 @@ export class World {
   sellItem(item: Item): boolean {
     if (!this.player.inventory.remove(item)) return false;
     this.player.gold += sellPrice(item);
+    this.toBuyback(item);
     this.emit({ type: 'sound', id: 'coin' });
     return true;
   }
 
-  /** Sells every bag item of the rarity. Returns how many went and the gold made. */
-  sellAll(rarity: Rarity): { count: number; gold: number } {
+  /** A sold item goes on the buyback shelf; when the shelf is full the oldest thing on it is gone for good. */
+  private toBuyback(item: Item): void {
+    while (!this.buyback.add(item)) {
+      const oldest = this.buyback.items[0];
+      if (!oldest) return;
+      this.buyback.remove(oldest);
+    }
+  }
+
+  /** Buys something back off the buyback shelf for twice what the merchant paid. */
+  buyBack(item: Item): { ok: boolean; reason?: string } {
+    const price = buybackPrice(item);
+    if (!this.buyback.has(item)) return { ok: false, reason: 'Not on the shelf' };
+    if (this.player.gold < price) return { ok: false, reason: 'Not enough gold' };
+    const col = item.col;
+    const row = item.row;
+    this.buyback.remove(item);
+    if (!this.player.inventory.add(item)) {
+      this.buyback.place(item, col, row);
+      return { ok: false, reason: 'Inventory is full' };
+    }
+    this.player.gold -= price;
+    this.emit({ type: 'sound', id: 'coin' });
+    return { ok: true };
+  }
+
+  /** Sells every bag item of the rarity, or the whole bag. Returns how many went and the gold made. */
+  sellAll(rarity: Rarity | 'all'): { count: number; gold: number } {
     let count = 0;
     let gold = 0;
     for (const item of [...this.player.inventory.items]) {
-      if (item.rarity !== rarity) continue;
+      if (rarity !== 'all' && item.rarity !== rarity) continue;
       this.player.inventory.remove(item);
       gold += sellPrice(item);
+      this.toBuyback(item);
       count++;
     }
     this.player.gold += gold;
