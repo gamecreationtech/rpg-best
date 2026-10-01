@@ -145,10 +145,11 @@ export class Panels {
 
   // ---------------------------------------------------------------- shared bits
 
-  private bagGrid(w: World, onItem: (item: Item) => void, onCell?: (col: number, row: number) => void): HTMLElement {
+  private bagGrid(w: World, onItem: (item: Item) => void, onCell?: (col: number, row: number) => void, onHover?: (item: Item | null, x: number, y: number) => void): HTMLElement {
     const grid = new ItemGrid(w.player.inventory, {
       onItemTap: (item) => onItem(item),
       onCellTap: (col, row) => onCell?.(col, row),
+      onItemHover: onHover,
     });
     grid.selected = this.selected;
     grid.setCellSize(this.cellSize);
@@ -210,12 +211,29 @@ export class Panels {
   // ---------------------------------------------------------------- vendor
 
   private renderVendor(w: World): void {
+    // Buying and selling both ask first; the card hovered over an item is the bag's own, with the price as its last line
+    const buy = (item: Item) => this.confirm(`Buy ${item.name} for ${buyPrice(item)} gold?`, 'Buy', () => {
+      const r = w.buyItem(item);
+      if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080);
+      this.selected = null;
+      this.render();
+    });
+    const sell = (item: Item) => this.confirm(`Sell ${item.name} for ${sellPrice(item)} gold?`, 'Sell', () => {
+      w.sellItem(item);
+      this.selected = null;
+      this.render();
+    });
+    const hover = (from: 'bag' | 'vendor') => (item: Item | null, x: number, y: number) => {
+      if (!item) this.hero.hideTip();
+      else this.hero.showTip(w, item, 'bag', x, y, from === 'vendor' ? { text: `Buy for ${buyPrice(item)} gold`, color: w.player.gold >= buyPrice(item) ? GOLD : '#ff8080' } : { text: `Sells for ${sellPrice(item)} gold`, color: GOLD });
+    };
     // The wares on a shelf grid like the bag, each with its price in the corner; what the class cannot use is faded
     const shelf = new ItemGrid(w.vendorShelf, {
-      onItemTap: (item) => this.select(item, 'vendor'),
+      onItemTap: (item) => (this.touch ? this.select(item, 'vendor') : buy(item)),
       onCellTap: () => {},
       label: (item) => `${buyPrice(item)}g`,
       dim: (item) => !canEquipItem(w.player, item).ok,
+      onItemHover: hover('vendor'),
     });
     shelf.selected = this.selected;
     shelf.setCellSize(Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.vendorCols))));
@@ -224,10 +242,10 @@ export class Panels {
     const actions: HTMLElement[] = [];
     if (this.selected && this.selectedFrom === 'bag') {
       const sel = this.selected;
-      actions.push(button(`Sell for ${sellPrice(sel)} gold`, () => { w.sellItem(sel); this.selected = null; this.render(); }, 'btn primary'));
+      actions.push(button(`Sell for ${sellPrice(sel)} gold`, () => sell(sel), 'btn primary'));
     } else if (this.selected && this.selectedFrom === 'vendor') {
       const sel = this.selected;
-      actions.push(button(`Buy for ${buyPrice(sel)} gold`, () => { const r = w.buyItem(sel); if (!r.ok) this.host.message(r.reason ?? 'Cannot buy', 0xff8080); this.selected = null; this.render(); }, 'btn primary' + (w.player.gold >= buyPrice(sel) ? '' : ' disabled')));
+      actions.push(button(`Buy for ${buyPrice(sel)} gold`, () => buy(sel), 'btn primary' + (w.player.gold >= buyPrice(sel) ? '' : ' disabled')));
     }
     const bulk = (rarity: 'common' | 'magic', label: string) => {
       const items = w.player.inventory.items.filter((i) => i.rarity === rarity);
@@ -242,9 +260,22 @@ export class Panels {
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value.`),
       h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic')),
-      this.selectedCard(w, actions, 'Tap something on the shelf or in your bag to see its stats, then buy or sell it here.')!,
-      ...this.halves('For sale', stock, this.bagGrid(w, (item) => this.select(item, 'bag'))),
+      this.touch ? this.selectedCard(w, actions, 'Tap something on the shelf or in your bag to see its stats, then buy or sell it here.')! : h('div', { class: 'dim pad' }, 'Hover an item for its stats and price. Click it to buy or sell.'),
+      ...this.halves('For sale', stock, this.bagGrid(w, (item) => (this.touch ? this.select(item, 'bag') : sell(item)), undefined, hover('bag'))),
     );
+  }
+
+  /** A small box over the panel asking before gold changes hands. */
+  private confirm(text: string, yes: string, onYes: () => void): void {
+    this.hero.hideTip();
+    const overlay = h('div', { class: 'confirm-overlay' });
+    const close = () => overlay.remove();
+    overlay.append(h('div', { class: 'px-frame confirm-box' },
+      h('div', { class: 'confirm-text' }, text),
+      h('div', { class: 'actions' }, pbtn(yes, () => { close(); onYes(); }, 'gold'), pbtn('Cancel', close, 'btn')),
+    ));
+    overlay.addEventListener('pointerdown', (e) => { e.stopPropagation(); if (e.target === overlay) close(); });
+    this.root.append(overlay);
   }
 
   // ---------------------------------------------------------------- waypoint

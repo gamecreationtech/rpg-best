@@ -14,6 +14,8 @@ export interface GridCallbacks {
   label?: (item: Item) => string;
   /** Blocks drawn faded (wares the hero's class cannot use). */
   dim?: (item: Item) => boolean;
+  /** The pointer moved over an item, or off every item (null). */
+  onItemHover?: (item: Item | null, x: number, y: number) => void;
 }
 
 /** Renders an item grid (the 16x18 bag or a 12x12 stash page) with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
@@ -45,6 +47,15 @@ export class ItemGrid {
       if (item) this.cb.onItemTap(item, this.grid);
       else this.cb.onCellTap(col, row, this.grid);
     };
+    if (this.cb.onItemHover) {
+      const hover = this.cb.onItemHover;
+      this.root.onpointermove = (e) => {
+        if (e.pointerType !== 'mouse') return;
+        const rect = this.root.getBoundingClientRect();
+        hover(this.grid.itemAt(Math.floor((e.clientX - rect.left) / this.cell), Math.floor((e.clientY - rect.top) / this.cell)), e.clientX, e.clientY);
+      };
+      this.root.onpointerleave = () => hover(null, 0, 0);
+    }
     for (const item of this.grid.items) {
       const el = h('div', { class: 'grid-item' + (item === this.selected ? ' selected' : '') });
       el.style.left = `${item.col * this.cell}px`;

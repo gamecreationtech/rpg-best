@@ -490,7 +490,8 @@ export class HeroMenu {
   private tip: HTMLDivElement | null = null;
   private tipItem: Item | null = null;
 
-  private showTip(w: World, item: Item, from: 'bag' | 'equip', x: number, y: number): void {
+  /** The floating item card. `extra` adds a last line, the merchant's price. Public so the shop can show the same card. */
+  showTip(w: World, item: Item, from: 'bag' | 'equip', x: number, y: number, extra?: { text: string; color: string }): void {
     // Touch devices show the item in its own box; phones also fake mouse events after a tap, so never float a card there
     if (!this.mouse) return;
     if (this.tipItem === item && this.tip) {
@@ -498,14 +499,16 @@ export class HeroMenu {
       return;
     }
     this.hideTip();
-    const tip = h('div', { class: 'px-inset px-tip' }, ...this.itemLines(w, item, from));
+    const lines = this.itemLines(w, item, from);
+    if (extra) lines.push(h('div', { class: 'px-rule' }), h('div', { class: 'px-row tight' }, pxText(extra.text, { color: extra.color })));
+    const tip = h('div', { class: 'px-inset px-tip' }, ...lines);
     document.body.appendChild(tip);
     this.tip = tip;
     this.tipItem = item;
     this.moveTip(x, y);
   }
 
-  private moveTip(x: number, y: number): void {
+  moveTip(x: number, y: number): void {
     if (!this.tip) return;
     const r = this.tip.getBoundingClientRect();
     let left = x + 18;
