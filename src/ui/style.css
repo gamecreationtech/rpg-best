@@ -484,40 +484,46 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-content.fixed { overflow: hidden; display: flex; }
 .px-inventory { display: flex; gap: 14px; align-items: stretch; flex: 1; min-height: 0; }
 .stats-col { flex: 1 1 0; min-width: 0; min-height: 0; }
-.stats-col.full { max-width: 720px; margin: 0 auto; width: 100%; }
+.stats-col.full { max-width: 960px; margin: 0 auto; width: 100%; }
+@media (min-width: 900px) { .stats-col.full .px-stats { display: block; columns: 2; column-gap: 28px; } .stats-col.full .px-stat, .stats-col.full .px-stat-head, .stats-col.full .stat-confirm { break-inside: avoid; } .stats-col.full .px-stat-head { break-after: avoid; } }
 /* Narrow screens: the item panel drops under the gear instead of squeezing beside it */
-@media (max-width: 520px) { .px-row.gear-row { flex-wrap: wrap; } .px-row.gear-row > .px-col { flex: 1 1 100%; } .item-col .px-itembox { min-height: 0; } }
+@media (max-width: 640px) { .px-inventory { flex-direction: column; } .gear-left { align-items: center; } }
 /* Touch: a compact item card that fits a phone, smaller gear slots, and the inventory scrolls */
 .px-window.touch .px-content.fixed { overflow-y: auto; }
 .px-window.touch .px-itembox { gap: 3px; padding: 6px 8px; min-height: 0; }
-.px-window.touch .item-col .px-itembox { min-height: 0; }
 .px-window.touch .px-itembox .mt { font-size: 11px; line-height: 1.25; }
 .px-window.touch .px-itembox .px-row.tight { flex-wrap: nowrap; white-space: nowrap; gap: 4px; }
 .px-window.touch .px-itembox .px-rule { margin: 2px 0; }
 .px-window.touch .px-itembox .actions { margin-top: 4px; gap: 6px; }
 .px-window.touch .px-itembox .pxb { min-height: 24px; padding: 1px 8px; }
 .px-window.touch .px-itembox .pxb .mt { font-size: 11px; }
-.px-window.touch .doll-slot { width: 40px; height: 40px; }
-.px-window.touch .doll-slot .mt { font-size: 8px; }
 .stats-col .px-stats { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #44444f #0c0c13; }
-.gear-col { flex: 2 1 0; min-width: 0; min-height: 0; justify-content: flex-start; }
-.bag-block { flex: 1; min-height: 0; }
-.gear-row { align-items: flex-start; flex-wrap: nowrap; gap: 14px; }
-.item-col { flex: 1; min-width: 0; }
-.item-col .px-itembox { min-height: 200px; }
-.bag-block { align-items: flex-start; }
+.gear-left { flex: 0 0 auto; min-width: 0; min-height: 0; }
+.gear-right { flex: 1 1 0; min-width: 0; min-height: 0; justify-content: flex-start; }
+.gear-right .doll-rule { margin: 6px 0 2px; }
+.trinket-row { gap: 8px; }
+.bag-block { flex: 1; min-height: 0; align-items: flex-start; }
 
-/* Paper doll */
-.doll { display: flex; flex-direction: column; gap: 3px; padding: 5px 8px; align-items: center; }
-.doll-row { display: flex; gap: 3px; }
+/* Paper doll: a six-column grid following the body */
+.doll { display: grid; grid-template-columns: repeat(6, 36px); grid-template-rows: 72px 104px 48px 72px; gap: 6px 3px; padding: 10px 12px; justify-items: center; align-items: center; }
 .doll-rule { width: 100%; height: 2px; background: var(--line); margin: 2px 0; }
-.doll-slot { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
+.doll-slot { display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
+.doll-slot.big { width: 72px; height: 104px; }
+.doll-slot.mid { width: 72px; height: 72px; }
+.doll-slot.small { width: 48px; height: 48px; }
+.doll-slot.belt { width: 72px; height: 48px; }
+.doll-slot.trinket { width: 60px; height: 60px; }
 .doll-slot.on { border-image-source: var(--px-slotOn); }
 .doll-slot.empty { cursor: default; }
-.doll-slot.empty-space { border: 0; visibility: hidden; }
-.doll-slot .px-icon { width: 32px; height: 32px; }
+/* Smaller on touch so the whole doll fits a phone held sideways */
+.px-window.touch .doll { grid-template-columns: repeat(6, 28px); grid-template-rows: 56px 80px 40px 56px; gap: 4px 2px; padding: 8px 10px; }
+.px-window.touch .doll-slot.big { width: 56px; height: 80px; }
+.px-window.touch .doll-slot.mid { width: 56px; height: 56px; }
+.px-window.touch .doll-slot.small { width: 40px; height: 40px; }
+.px-window.touch .doll-slot.belt { width: 56px; height: 40px; }
+.px-window.touch .doll-slot.trinket { width: 48px; height: 48px; }
+.px-window.touch .doll-slot .mt { font-size: 8px; }
 .px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 300px; max-width: 460px; }
-.px-itembox.howto { min-height: 0; }
 .px-grid-inner.dragging { cursor: grabbing; }
 
 /* Stat sheet */

@@ -16,7 +16,7 @@ import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
 
-/** On touch devices the stats get their own tab; with a mouse they sit beside the bag. */
+/** The hero window's tabs: the bag and worn gear, the stat sheet, the skills and the passive trees. */
 export type HeroTab = 'inventory' | 'stats' | 'skills' | 'passives';
 
 export interface HeroMenuHost {
@@ -108,23 +108,38 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
   return { cooldown, damage: 'none', formula: null };
 }
 
+/** How big a worn slot is drawn, and how large the icon in it. */
+type SlotSize = 'big' | 'mid' | 'small' | 'belt' | 'trinket';
+const ICON_SCALE: Record<SlotSize, number> = { big: 3, mid: 3, small: 2, belt: 2, trinket: 2 };
+/** On touch the slots are smaller, and so are the icons. */
+const TOUCH_ICON_SCALE: Record<SlotSize, number> = { big: 2, mid: 2, small: 1, belt: 1, trinket: 2 };
+
 /**
- * The gear layout follows the body in three columns: helmet and amulet on
- * top, the chest between the weapon and shield, rings either side of the
- * belt, gloves and boots below. The trinkets sit under a rule.
+ * The gear layout follows the body on a six-column grid: the helmet on top
+ * with the amulet at its side, the chest between the weapon and shield, rings
+ * either side of the belt, gloves and boots below. Each entry is the slot, its
+ * size and its grid columns and row.
  */
-const DOLL: (EquipKey | null)[][] = [
-  [null, 'helmet', 'amulet'],
-  ['weapon', 'chest', 'shield'],
-  ['ring1', 'belt', 'ring2'],
-  ['gloves', 'boots'],
+const DOLL: [EquipKey, SlotSize, string, number][] = [
+  ['helmet', 'mid', '3 / 5', 1],
+  ['amulet', 'small', '5 / 7', 1],
+  ['weapon', 'big', '1 / 3', 2],
+  ['chest', 'big', '3 / 5', 2],
+  ['shield', 'big', '5 / 7', 2],
+  ['ring1', 'small', '1 / 3', 3],
+  ['belt', 'belt', '3 / 5', 3],
+  ['ring2', 'small', '5 / 7', 3],
+  ['gloves', 'mid', '2 / 4', 4],
+  ['boots', 'mid', '4 / 6', 4],
 ];
+/** The trinkets sit in a row over the bag. */
 const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
 
 /**
- * The hero menu: one pixel-art window with Inventory and Skills tabs. Inventory
- * shows the worn gear as a paper doll, the whole stat sheet under it and the bag
- * beside it. Skills holds the skill list, the slot bar and the passive trees.
+ * The hero menu: one pixel-art window with Inventory, Stats, Skills and
+ * Passives tabs. Inventory shows the worn gear as a paper doll on the left and
+ * the trinkets over the bag on the right; Stats is the whole stat sheet; Skills
+ * holds the skill list and the slot bar; Passives the passive trees.
  */
 export class HeroMenu {
   tab: HeroTab = 'inventory';
@@ -164,7 +179,7 @@ export class HeroMenu {
     const tabs = h(
       'div',
       { class: 'px-tabs' },
-      ...((this.mouse ? ['inventory', 'skills', 'passives'] : ['inventory', 'stats', 'skills', 'passives']) as HeroTab[]).map((t) => {
+      ...(['inventory', 'stats', 'skills', 'passives'] as HeroTab[]).map((t) => {
         const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'stats' ? 'Stats' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
         b.addEventListener('pointerdown', (e) => e.stopPropagation());
         return b;
@@ -190,30 +205,32 @@ export class HeroMenu {
   private renderInventory(w: World, content: HTMLElement): void {
     const p = w.player;
     const rerender = () => this.render(content.parentElement!.parentElement!);
-    // With a mouse the stats take the left third at full height with their own
-    // scrollbar and the right two thirds hold the worn gear on top and the bag
-    // underneath; on touch the stats have their own tab and the gear and bag get it all
-    const stats = this.mouse ? h('div', { class: 'px-col stats-col' }, this.statSheet(w, rerender)) : null;
-    const dollRow = (row: (EquipKey | null)[]) => h('div', { class: 'doll-row' }, ...row.map((key) => this.dollSlot(w, key, rerender)));
-    const doll = h('div', { class: 'px-inset doll' }, ...DOLL.map(dollRow), h('div', { class: 'doll-rule' }), dollRow(TRINKETS));
-    const side = this.mouse
-      ? h('div', { class: 'px-inset px-itembox howto' }, pxText('Hover an item for its stats.\nClick to equip or take off.\nRight-click to drop.\nDrag to move it in the bag.', { color: MUTED }))
-      : this.itemPanel(w, rerender);
-    const top = h('div', { class: 'px-row gear-row' }, h('div', { class: 'px-col' }, label('Equipped'), doll), h('div', { class: 'px-col item-col' }, label(this.mouse ? 'How to' : 'Item'), side));
+    // The worn gear on the left as a paper doll; the trinkets in a row over the bag on the right,
+    // which gets everything else. On touch the selected item's panel sits under the doll.
+    const doll = h('div', { class: 'px-inset doll' });
+    for (const [key, size, cols, row] of DOLL) {
+      const slot = this.dollSlot(w, key, size, rerender);
+      slot.style.gridColumn = cols;
+      slot.style.gridRow = String(row);
+      doll.append(slot);
+    }
+    const left = h('div', { class: 'px-col gear-left' }, label('Equipped'), doll);
+    if (!this.mouse) left.append(label('Item'), this.itemPanel(w, rerender));
+    const trinkets = h('div', { class: 'px-row trinket-row' }, ...TRINKETS.map((key) => this.dollSlot(w, key, 'trinket', rerender)));
     const sortBtn = pbtn('Sort All', () => { p.inventory.sort(); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
     sortBtn.classList.add('tiny-wide');
     const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), sortBtn, h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
-    const gearCol = h('div', { class: 'px-col gear-col' }, top, bagBlock);
-    content.append(h('div', { class: 'px-inventory' }, stats, gearCol));
+    const right = h('div', { class: 'px-col gear-right' }, h('div', { class: 'px-row' }, label('Trinkets'), h('span', { class: 'grow' })), trinkets, h('div', { class: 'doll-rule' }), bagBlock);
+    content.append(h('div', { class: 'px-inventory' }, left, right));
     // Now that the column has its size, the bag fills whatever is left
     const inv = p.inventory;
-    const width = gearCol.clientWidth || 700;
+    const width = right.clientWidth || 800;
     const height = Math.max(120, bagBlock.clientHeight - 30);
-    this.cell = Math.max(18, Math.min(40, Math.floor((width - 16) / inv.cols), Math.floor((height - 16) / inv.rows)));
+    this.cell = Math.max(18, Math.min(44, Math.floor((width - 16) / inv.cols), Math.floor((height - 16) / inv.rows)));
     bagBlock.append(this.bagGrid(w, rerender));
   }
 
-  /** Touch devices: the stat sheet on its own tab, full width. */
+  /** The stat sheet on its own tab: two columns when there is room, one scrolling column on a phone. */
   private renderStats(w: World, content: HTMLElement): void {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     content.append(h('div', { class: 'px-inventory' }, h('div', { class: 'px-col stats-col full' }, this.statSheet(w, rerender))));
@@ -224,14 +241,13 @@ export class HeroMenu {
     return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   }
 
-  private dollSlot(w: World, key: EquipKey | null, rerender: () => void): HTMLElement {
-    if (!key) return h('div', { class: 'doll-slot empty-space' });
+  private dollSlot(w: World, key: EquipKey, size: SlotSize, rerender: () => void): HTMLElement {
     const item = w.player.equipment.get(key);
     const on = !!item && item === this.selected;
-    const el = h('button', { class: 'doll-slot' + (on ? ' on' : '') + (item ? '' : ' empty') });
+    const el = h('button', { class: `doll-slot ${size}` + (on ? ' on' : '') + (item ? '' : ' empty') });
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
-      el.appendChild(this.icon(item, 2));
+      el.appendChild(this.icon(item, (this.mouse ? ICON_SCALE : TOUCH_ICON_SCALE)[size]));
       el.onclick = () => {
         if (this.mouse) {
           const r = w.unequipItem(key);
