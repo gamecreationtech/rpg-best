@@ -258,7 +258,9 @@ export class HeroMenu {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
       const [sw, sh] = (this.mouse ? SLOT_PX : TOUCH_SLOT_PX)[size];
-      el.appendChild(fitItemIcon(item, Math.round(sw * unit) - 16, Math.round(sh * unit) - 16));
+      // A worn ring is drawn at half the room its slot has (producer's call, 2026-10-01)
+      const shrink = key.startsWith('ring') ? 2 : 1;
+      el.appendChild(fitItemIcon(item, Math.round((Math.round(sw * unit) - 16) / shrink), Math.round((Math.round(sh * unit) - 16) / shrink)));
       el.onclick = () => {
         if (this.mouse) {
           const r = w.unequipItem(key);
