@@ -113,7 +113,12 @@ type SlotSize = 'big' | 'mid' | 'small' | 'belt';
 const SLOT_PX: Record<SlotSize, [number, number]> = { big: [72, 104], mid: [72, 72], small: [48, 48], belt: [72, 48] };
 const TOUCH_SLOT_PX: Record<SlotSize, [number, number]> = { big: [56, 80], mid: [56, 56], small: [40, 40], belt: [56, 40] };
 /** Worn items drawn with this share of their slot's room, by base id: under one for less, over one to spill past the frame. */
-const WORN_ROOM: Record<string, number> = { pilgrim_cap: 0.7, bardiche: 1.5 };
+const WORN_ROOM: Record<string, number> = {
+  pilgrim_cap: 0.7, pilgrim_boots: 0.8, pilgrim_gloves: 0.8, pilgrim_coat: 0.9,
+  bardiche: 1.5, sword: 0.8, wooden_sword: 0.8,
+  belt: 1.5, war_belt: 1.5, chest_armor: 0.9, boots: 0.9, gauntlets: 1.2,
+  skull: 0.5, energy_shield: 0.8,
+};
 
 /**
  * The gear layout follows the body on a six-column grid: the helmet on top
@@ -265,7 +270,7 @@ export class HeroMenu {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
       const [sw, sh] = (this.mouse ? SLOT_PX : TOUCH_SLOT_PX)[size];
-      // Some worn things get more or less room than their slot: rings half, the leather cap seven tenths, the bardiche half again (producer's calls, 2026-10-01)
+      // Some worn things get more or less room than their slot: rings half, and the shares in WORN_ROOM (producer's calls, 2026-10-01)
       const room = key.startsWith('ring') ? 0.5 : WORN_ROOM[item.baseId] ?? 1;
       el.appendChild(fitItemIcon(item, Math.round((Math.round(sw * unit) - 16) * room), Math.round((Math.round(sh * unit) - 16) * room)));
       el.onclick = () => {
