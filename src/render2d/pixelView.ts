@@ -132,6 +132,8 @@ export class PixelView {
   private readonly items: Item[] = [];
   /** Monsters thrown into the air by Seismic Slam: id to the time they left the ground. */
   private readonly launches = new Map<number, number>();
+  /** Where the Shade Army's shadows stand, trailing the hero. */
+  private readonly shadePos: { x: number; z: number }[] = [];
   /** Life bars to draw this frame: frame x, frame y, fraction, targeted, four numbers each. */
   private readonly bars: number[] = [];
   private beamTarget = -1;
@@ -505,8 +507,24 @@ export class PixelView {
         if (ev.visual === 'overhead') this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
         else if (ev.visual === 'bloody') this.bloodyHit(ev.x, ev.z);
         else if (ev.visual === 'holy') this.holyHit(ev.x, ev.z);
-        else this.holyShield(ev.x, ev.z);
+        else if (ev.visual === 'shade') {
+          // A shade's blow: a dark flicker and black wisps off the target
+          pt.burst(ev.x, 1.0, ev.z, 5, 1.4, 0x100818, 0.3, { up: 1, drag: 2, priority: 0.3, alpha: 0.9 });
+          this.effects.flash(ev.x, 1, ev.z, 0x8a4ab0, 0.7, 26, 0.1);
+        } else this.holyShield(ev.x, ev.z);
         break;
+      case 'blood_drain': {
+        // Blood torn out and pulled to the hero
+        this.effects.link(ev.x, 0.9, ev.z, w.px, 1.0, w.pz, 0xc01828, 0.3);
+        this.effects.flash(ev.x, 0.9, ev.z, 0xff2040, 1.4, 36, 0.25);
+        const dx = w.px - ev.x;
+        const dz = w.pz - ev.z;
+        for (let i = 0; i < 14; i++) {
+          const t = 0.3 + Math.random() * 0.25;
+          pt.spawn(ev.x + (Math.random() - 0.5) * 0.4, 0.6 + Math.random() * 0.8, ev.z + (Math.random() - 0.5) * 0.4, dx / t, (1.1 - 0.6) / t, dz / t, t, Math.random() < 0.5 ? 0xc01828 : 0xff4a58, { priority: 0.7, size: Math.random() < 0.4 ? 2 : 1, delay: Math.random() * 0.1 });
+        }
+        break;
+      }
       case 'holy_bolt':
         this.holyBolt(ev.x, ev.z);
         break;
@@ -537,6 +555,13 @@ export class PixelView {
           this.view.kick(0.1);
         }
         if (z.type === 'rockfall') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x9a8a70, 0.6, 1);
+        if (z.type === 'void_rift') {
+          // The world tears: a purple ring snapping out, darkness pouring in
+          this.effects.ring(z.x, z.z, 0.1, z.radius, 0xaa66cc, 0.4, 2, 1.5);
+          this.effects.flash(z.x, 0.5, z.z, 0xaa66cc, 2, 90, 0.3);
+          pt.burst(z.x, 0.3, z.z, 30, 3, 0x100818, 0.7, { drag: 1, priority: 0.7, size: 2, alpha: 0.9 });
+          this.view.kick(0.15);
+        }
         if (z.type === 'earthquake') {
           // The first heave: the ground splits under the hero and the screen jolts
           this.effects.cracks(z.x, z.z, 40, 0x9a8a70, 1.4, 10);
@@ -683,6 +708,14 @@ export class PixelView {
           pt.burst(w.px, 2.2, w.pz, 12, 1, 0xffe8a0, 0.6, { gravity: 2, priority: 0.7 });
           break;
         }
+        if (ev.id === 'shade_army') {
+          // The shades step out of the hero's shadow
+          this.shadePos.length = 0;
+          this.effects.disc(w.px, w.pz, 1.6, 0x0a0414, 0.8, 0.7);
+          pt.burst(w.px, 0.2, w.pz, 30, 1.6, 0x100818, 0.9, { up: 1.5, drag: 1, priority: 0.8, size: 2, alpha: 0.9 });
+          this.effects.ring(w.px, w.pz, 0.2, 1.6, 0xaa66cc, 0.45, 2, 0.8);
+          break;
+        }
         if (ev.id === 'consecrated_blade') {
           // Holy fire runs down the blade
           const dx = Math.sin(w.pyaw);
@@ -727,6 +760,12 @@ export class PixelView {
           // Dazzled: a hard white flash at the eyes and stars reeling round the head
           this.effects.flash(e.x, 1.6 * e.scale, e.z, 0xffffff, 1.6, 30, 0.2);
           pt.burst(e.x, 1.9 * e.scale, e.z, 8, 0.9, 0xffffff, 0.6, { drag: 2, priority: 0.6 });
+        }
+        if (ev.status === 'puppeted') {
+          // The blood seized: a red burst, a ring, and the strings drop from above
+          pt.burst(e.x, 1.0 * e.scale, e.z, 20, 1.8, 0xc01828, 0.6, { up: 1.5, gravity: 3, priority: 0.7, size: 2 });
+          this.effects.ring(e.x, e.z, 0.2, 1.0, 0xff2040, 0.4, 2, 1);
+          this.effects.flash(e.x, 1, e.z, 0xff2040, 1.8, 50, 0.3);
         }
         if (ev.status === 'judged') {
           // The light finds it: a flash from above, a ring on the ground and motes rising in the beam
@@ -1220,6 +1259,23 @@ export class PixelView {
       case 'rock':
         this.rockLand(x, z, radius);
         break;
+      case 'shadow_burst':
+        // Out of the shadow swinging: a black disc, a purple ring and a sweep of darkness all round
+        this.effects.disc(x, z, radius, 0x0a0414, 0.5, 0.7);
+        this.effects.ring(x, z, 0.1, radius, 0xaa66cc, 0.3, 2, 1.2);
+        this.effects.ring(x, z, 0.1, radius * 0.6, 0xffffff, 0.15, 1);
+        this.particles.burst(x, 0.5, z, 24, radius * 2.2, 0x100818, 0.5, { drag: 2, priority: 0.7, size: 2, alpha: 0.9 });
+        this.particles.burst(x, 0.8, z, 10, 1.5, 0xc080ff, 0.4, { up: 1.5, drag: 2, priority: 0.6 });
+        this.view.kick(0.08);
+        break;
+      case 'exsanguinate':
+        // The pull: a dark red disc and two rings closing on the hero
+        this.effects.disc(x, z, radius, 0x2a0410, 0.6, 0.5);
+        this.effects.ring(x, z, radius, 0.3, 0xc01828, 0.45, 2, 1.2);
+        this.effects.ring(x, z, radius * 0.7, 0.2, 0xff4a58, 0.35, 1, 0, 0.1);
+        this.effects.flash(x, 1, z, 0xff2040, 2.5, 90, 0.4);
+        this.view.kick(0.1);
+        break;
       case 'boulder':
         this.boulderLand(x, z, radius);
         break;
@@ -1495,6 +1551,8 @@ export class PixelView {
     const rite = w.buffs.some((b) => b.id === 'rite_of_blood');
     const sneaking = w.invisible && !w.playerDead;
     this.pushPuppet(this.hero, w.px, heroY, w.pz, sneaking ? 0.5 : 1, rite ? '#7a0a2a' : sneaking ? '#101828' : null, rite ? '#ff2040' : null);
+    const shades = w.buffs.find((b) => b.mods.shades)?.mods.shades;
+    if (shades && !w.playerDead) this.drawShades(heroY, shades.count);
     if (sneaking && Math.random() < 0.5) {
       // Shadow clinging to the hero: dark wisps drifting up off the body
       const a = Math.random() * Math.PI * 2;
@@ -1525,6 +1583,7 @@ export class PixelView {
       let tint: string | null = null;
       if (e.status.freeze > 0) tint = '#9fe0ff';
       else if (e.status.blind > 0) tint = '#ffffff';
+      else if (e.status.puppet > 0) tint = '#c01828';
       else if (e.status.curse) tint = '#c080ff';
       else if (e.status.poison) tint = '#66e070';
       const targeted = e.id === w.targetId && !e.dead;
@@ -1559,6 +1618,7 @@ export class PixelView {
         });
       }
       if (e.status.mark && !e.dead) this.drawJudgement(e, Math.round(fx), Math.round(fy), p.sheet.height);
+      if (e.status.puppet > 0 && !e.dead) this.drawStrings(e, Math.round(fx), Math.round(cam.frameY(e.x, hover, e.z)), p.sheet.height);
       this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null);
       if (e.status.blind > 0 && !e.dead && Math.random() < 0.5) {
         // Stars reeling round the head
@@ -1715,6 +1775,18 @@ export class PixelView {
           const a = Math.random() * Math.PI * 2;
           const r = z.radius * (0.7 + Math.random() * 0.3);
           this.particles.spawn(z.x + Math.cos(a) * r, 0.05, z.z + Math.sin(a) * r, -Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9, 1.2, 0xc8a870, { drag: 0.3, priority: 0.3 });
+        }
+      } else if (z.type === 'void_rift') {
+        // Darkness at the heart of it, a purple rim, and wisps pulled in from all round
+        const cx = cam.frameX(z.x, z.z);
+        const cy = cam.frameY(z.x, 0.3, z.z);
+        this.lights.push({ x: cx, y: cy, radius: z.radius * TILE_W * 1.1, intensity: -0.55, r: 0, g: 0, b: 0 });
+        this.lights.push({ x: cx, y: cy, radius: z.radius * TILE_W * 0.5, intensity: 0.7 + Math.sin(this.time * 9) * 0.15, r: 0.6, g: 0.3, b: 0.9 });
+        for (let i = 0; i < 2; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = z.radius * (0.8 + Math.random() * 0.4);
+          const t = 0.35 + Math.random() * 0.2;
+          this.particles.spawn(z.x + Math.cos(a) * r, 0.1 + Math.random() * 1.2, z.z + Math.sin(a) * r, (-Math.cos(a) * r) / t, 0, (-Math.sin(a) * r) / t, t, Math.random() < 0.5 ? 0x100818 : 0xaa66cc, { priority: 0.4, size: Math.random() < 0.3 ? 2 : 1, alpha: 0.9 });
         }
       } else if (z.type === 'rockfall') {
         if (Math.random() < 0.5) this.particles.spawn(z.x + (Math.random() - 0.5) * 2 * z.radius, 5 + Math.random() * 2, z.z + (Math.random() - 0.5) * 2 * z.radius, 0, -3, 0, 1.0, 0x8a7a68, { gravity: 5, priority: 0.3 });
@@ -1883,6 +1955,9 @@ export class PixelView {
           break;
         case 'rockfall':
           ellipse(z.x, z.z, z.radius, '#9a8a70', false, 0.3 + Math.sin(this.time * 3) * 0.1, 1);
+          break;
+        case 'void_rift':
+          this.drawVoidRift(ctx, z, ellipse);
           break;
         case 'spear_wall': {
           ctx.fillStyle = '#d8d0c0';
@@ -2543,6 +2618,80 @@ export class PixelView {
       ctx.globalAlpha = 0.4 * life;
       ctx.beginPath();
       ctx.ellipse(cx, cy, z.radius * RING_RX * f, z.radius * RING_RY * f, 0, a0, a0 + 1.8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** Shade Army: three black copies of the hero trailing behind in a wedge, easing after every move, with dark wisps drifting off them. */
+  private drawShades(heroY: number, count: number): void {
+    const w = this.world;
+    const dx = Math.sin(w.pyaw);
+    const dz = Math.cos(w.pyaw);
+    const px = -dz;
+    const pz = dx;
+    const slots: [number, number][] = [[-0.9, -0.8], [0.9, -0.8], [0, -1.5]];
+    for (let i = 0; i < count; i++) {
+      const [side, back] = slots[i % slots.length]!;
+      const tx = w.px + px * side + dx * back;
+      const tz = w.pz + pz * side + dz * back;
+      let s = this.shadePos[i];
+      if (!s) {
+        s = { x: tx, z: tz };
+        this.shadePos[i] = s;
+      }
+      s.x += (tx - s.x) * 0.12;
+      s.z += (tz - s.z) * 0.12;
+      this.pushPuppet(this.hero, s.x, heroY, s.z, 0.6, '#100818');
+      if (Math.random() < 0.25) this.particles.spawn(s.x + (Math.random() - 0.5) * 0.5, heroY + Math.random() * 1.6, s.z + (Math.random() - 0.5) * 0.5, 0, 0.6, 0, 0.5, 0x100818, { priority: 0.3, alpha: 0.8 });
+    }
+  }
+
+  /** Blood Puppet: red strings dropping from above onto the monster's head and hands, swaying as it moves. */
+  private drawStrings(e: Enemy, fx: number, fy: number, height: number): void {
+    const ctx = this.ctx;
+    const cam = this.view;
+    const sway = Math.sin(this.time * 5 + e.id) * 2;
+    const top = fy - height - 22;
+    const ends: [number, number][] = [[0, fy - height + 1], [-5, fy - (height >> 1)], [5, fy - (height >> 1)]];
+    this.items.push({
+      depth: cam.depth(e.x, e.z) + 0.001,
+      draw: () => {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#ff2040';
+        ctx.globalAlpha = 0.85;
+        for (const [ox, ey] of ends) {
+          ctx.beginPath();
+          ctx.moveTo(fx + Math.round(ox * 0.6) + sway, top);
+          ctx.lineTo(fx + ox, ey);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#ff2040';
+        ctx.fillRect(fx - 4 + sway, top - 1, 9, 2);
+        ctx.globalAlpha = 1;
+      },
+    });
+    this.lights.push({ x: fx, y: fy - (height >> 1), radius: 30, intensity: 0.6, r: 1, g: 0.15, b: 0.25 });
+  }
+
+  /** Void Rift on the floor: a black hole with a purple rim, three arcs of violet spiralling inward, all of it fading as it closes. */
+  private drawVoidRift(ctx: CanvasRenderingContext2D, z: Zone, ellipse: (x: number, z: number, r: number, style: string, fill: boolean, alpha: number, width?: number) => void): void {
+    const cam = this.view;
+    const life = Math.min(1, z.remaining / 0.5);
+    ellipse(z.x, z.z, z.radius, '#1a0a2a', true, 0.5 * life);
+    ellipse(z.x, z.z, z.radius * 0.55, '#0a0414', true, 0.8 * life);
+    ellipse(z.x, z.z, z.radius * 0.25, '#000000', true, 1 * life);
+    ellipse(z.x, z.z, z.radius, '#aa66cc', false, 0.7 * life, 1);
+    const cx = Math.round(cam.frameX(z.x, z.z));
+    const cy = Math.round(cam.frameY(z.x, 0, z.z));
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const f = 0.9 - i * 0.25;
+      const a0 = -this.time * (2.2 + i * 0.6) + i * 2.1;
+      ctx.strokeStyle = i === 1 ? '#e0a0ff' : '#aa66cc';
+      ctx.globalAlpha = 0.6 * life;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, z.radius * RING_RX * f, z.radius * RING_RY * f, 0, a0, a0 + 2.0);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;

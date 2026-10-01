@@ -136,6 +136,8 @@ export function castSkill(w: World, id: string, aim: Aim | null): CastResult {
       return castMark(w, def, eff, aim);
     case 'line':
       return castLine(w, def, eff, aim);
+    case 'puppet':
+      return castPuppet(w, def, eff, aim);
   }
 }
 
@@ -291,6 +293,20 @@ function landAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
     w.emit({ type: 'aoe', visual: eff.visual, x: cx, z: cz, radius, element: def.element });
     const list = eff.hitsAllVisible ? w.enemiesWithin(cx, cz, 22) : w.enemiesWithin(cx, cz, radius);
     if (eff.visual === 'winter') w.addZone({ type: 'winter', x: cx, z: cz, radius, duration: (eff.freeze ?? 3000) * MS, damage: 0, element: def.element, skillId: def.id });
+    if (eff.burstBleed) {
+      // Every open wound empties at once, and part of it flows to the hero
+      let drained = 0;
+      for (const e of list) {
+        const bleed = e.status.bleed;
+        if (!bleed) continue;
+        const total = bleed.ticks * bleed.damage;
+        e.status.bleed = null;
+        w.emit({ type: 'blood_drain', x: e.x, z: e.z });
+        drained += hitEnemy(w, e, { amount: total, element: 'physical', canCrit: false, skillId: def.id, weaponHit: false });
+      }
+      if (drained > 0) w.healPlayer(Math.round((drained * eff.burstBleed.healPct) / 100), false);
+      return;
+    }
     for (const e of list) {
       const p = packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, freeze: eff.freeze, bonusVsDisabled: eff.bonusVsDisabled, knockback: eff.knockback ? eff.knockback * PX : undefined });
       if (eff.poison) p.poison = { ticks: eff.poison.ticks, interval: eff.poison.interval, damage: Math.max(1, Math.round(p.amount * eff.poison.tickMult)) };
@@ -400,6 +416,9 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
     case 'earthquake':
       w.addZone({ ...common, type: 'earthquake', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, wallMult: eff.wallMult ?? 1.5 });
       break;
+    case 'void_rift':
+      w.addZone({ ...common, type: 'void_rift', tickInterval: (eff.tickInterval ?? 500) * MS, aoeRadius: (eff.aoeRadius ?? 60) * PX, pull: eff.pull ?? 2.5 });
+      break;
   }
   return { ok: true };
 }
@@ -421,6 +440,12 @@ function castMobility(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind:
     const fromX = w.px;
     const fromZ = w.pz;
     w.teleportTo(dest.x, dest.z);
+    if (eff.arrivalRadius) {
+      // Out of the shadow swinging: everything round the landing is struck
+      const r = eff.arrivalRadius * PX;
+      w.emit({ type: 'aoe', visual: 'shadow_burst', x: w.px, z: w.pz, radius: r, element: def.element });
+      for (const e of w.enemiesWithin(w.px, w.pz, r)) hitEnemy(w, e, packet(w, def, eff.damageMult ?? 1));
+    }
     if (eff.leaveFrost) w.addZone({ type: 'frost_patch', x: fromX, z: fromZ, radius: eff.leaveFrost.radius * PX, duration: eff.leaveFrost.duration * MS, freeze: eff.leaveFrost.freeze * MS, damage: 0, element: def.element, skillId: def.id });
   } else {
     w.startLeap(dest.x, dest.z, (eff.duration ?? 500) * MS, true, null, !!eff.invulnerable);
@@ -501,5 +526,21 @@ function castLine(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'li
     type: 'line_wave', x: sx, z: sz, dx: dir.x, dz: dir.z, length, radius: (eff.width / 2) * PX, duration: length / (eff.speed * PX), damage: skillDamage(w, def.id, eff.damageMult),
     element: def.element, skillId: def.id, stun: eff.stun ?? 0, knockback: (eff.knockback ?? 0) * PX, tickInterval: 0,
   });
+  return { ok: true };
+}
+
+/** Blood Puppet: the monster nearest the aim point turns on its own kind for a while, then dies. */
+function castPuppet(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'puppet' }>, aim: Aim | null): CastResult {
+  const at = aimPoint(w, aim, eff.maxRange, 0.5);
+  const target = at.enemy ?? w.nearestEnemy(at.x, at.z, 2);
+  if (!target) {
+    if (w.nearestEnemy(w.px, w.pz, 16)) return { ok: false, reason: 'Out of range', approach: true };
+    return { ok: false, reason: 'No target' };
+  }
+  const dir = facing(w, { x: target.x, z: target.z }, null);
+  pay(w, def, dir, target.x, target.z);
+  target.status.puppet = eff.duration * MS;
+  target.aggro = true;
+  w.emit({ type: 'status', id: target.id, status: 'puppeted' });
   return { ok: true };
 }

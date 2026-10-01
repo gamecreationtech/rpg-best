@@ -31,7 +31,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   nightlord: {
     id: 'nightlord', classId: 'knight', name: 'Nightlord', title: 'Knight of Darkness', color: 0xaa66cc, armor: { plate: 0x2a2a34, dark: 0x16161c, trim: 0x5a3a7a },
     description: 'Sworn to the void, the Nightlord commands the shadows: feared, ruthless, and shrouded in darkness.',
-    skills: ['rite_of_blood', 'hemorrhage', 'void_slash'],
+    skills: ['rite_of_blood', 'hemorrhage', 'void_slash', 'shadow_step', 'shade_army', 'exsanguinate', 'blood_puppet', 'void_rift'],
   },
   necromancer: {
     id: 'necromancer', classId: 'sorcerer', name: 'Necromancer', title: 'Master of Death', color: 0xb090c8, cloth: 0x1a1620,

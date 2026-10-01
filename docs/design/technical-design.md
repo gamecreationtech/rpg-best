@@ -148,6 +148,22 @@ What that means for each kind of asset:
   second, `wallMult` against monsters `circleBlocked` next to a wall, drawn
   as a constant shake, cracks spreading across the floor, grit falling from
   above and a dust wave on every heave.
+  The Nightlord's five: Shadow Step is a teleport with `arrivalRadius`, every
+  monster round the landing struck and a `shadow_burst` aoe visual (black
+  disc, purple ring, wisps); Shade Army a buff with `shades`, `hitEnemy`
+  landing each of the hero's own blows again per shade for a share of it
+  (`DamagePacket.fromShade` stops the echo echoing), drawn as black copies of
+  the hero's puppet easing after it in a wedge; Exsanguinate an aoe with
+  `burstBleed` that empties every bleed in reach at once and heals a share,
+  each wound a `blood_drain` event drawn as a red jagged line and blood
+  particles flying to the hero; Blood Puppet a `puppet` effect setting
+  `EnemyStatus.puppet`, `thinkPuppet` walking the monster at the nearest
+  other monster and striking it with its own attack, the status ticker
+  killing it at zero, drawn red with strings dropping from above; Void Rift
+  a `void_rift` zone that slides every monster in reach toward its centre at
+  `pull` tiles per second and hits what is within `aoeRadius` each tick,
+  drawn as a black hole with a purple rim, violet arcs spiralling in, a
+  negative light at its heart and wisps dragged in from all round.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

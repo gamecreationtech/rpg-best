@@ -52,6 +52,8 @@ export interface BuffMods {
   dmgTakenPct?: number;
   /** Retribution: a bolt of light strikes whatever hits the hero for `mult` times the damage it dealt. */
   retribution?: { mult: number };
+  /** Shade Army: `count` shadows of the hero that each strike whatever the hero hits for `mult` of the blow. */
+  shades?: { count: number; mult: number };
 }
 
 export type SkillEffect =
@@ -145,12 +147,14 @@ export type SkillEffect =
       thawPct?: number;
       /** Everything hit is shoved this many px away from the centre (Thunderclap). */
       knockback?: number;
-      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'winter' | 'thunderclap';
+      /** Exsanguinate: every bleeding monster in reach takes the rest of its bleed at once, and the hero heals `healPct` of the total. */
+      burstBleed?: { healPct: number };
+      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'winter' | 'thunderclap' | 'exsanguinate';
     }
   | { kind: 'buff'; duration: number; mods: BuffMods }
   | {
       kind: 'zone';
-      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'frostbite' | 'quicksand' | 'rockfall' | 'earthquake';
+      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'frostbite' | 'quicksand' | 'rockfall' | 'earthquake' | 'void_rift';
       duration: number;
       radius: number;
       damageMult?: number;
@@ -162,6 +166,8 @@ export type SkillEffect =
       aoeRadius?: number;
       /** Earthquake: damage multiplier for monsters standing against a wall. */
       wallMult?: number;
+      /** Void Rift: tiles per second everything in the zone is dragged toward its centre; the damage lands within `aoeRadius` of it. */
+      pull?: number;
       /** Frostbite: life lost per second inside, percent of max, and ms of cold before the freeze. */
       pctPerSec?: number;
       freezeAfter?: number;
@@ -182,6 +188,8 @@ export type SkillEffect =
       maxRange: number;
       /** Teleport: a patch of ice left where the hero stood that freezes what steps on it (Frost Step). */
       leaveFrost?: { radius: number; duration: number; freeze: number };
+      /** Teleport: everything within this many px of where the hero lands is struck for `damageMult` (Shadow Step). */
+      arrivalRadius?: number;
       duration?: number;
       invulnerable?: boolean;
       throughWalls?: boolean;
@@ -193,6 +201,8 @@ export type SkillEffect =
   | { kind: 'curse'; maxRange: number; radius: number; duration: number; pctPerSec: number; executeBelowPct: number }
   /** Judgement: one enemy takes `dmgTakenPct` percent more from every hit for `duration` ms. */
   | { kind: 'mark'; maxRange: number; duration: number; dmgTakenPct: number }
+  /** Blood Puppet: one enemy turns on its own kind for `duration` ms, then dies. */
+  | { kind: 'puppet'; maxRange: number; duration: number }
   /**
    * A wave along the ground from the hero's feet: `length` px long, `width` px
    * wide, its front travelling at `speed` px per second, hitting each monster
@@ -257,6 +267,11 @@ export const SKILLS: Record<string, SkillDef> = {
   divine_shield: { id: 'divine_shield', name: 'Divine Shield', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Nothing can hurt you for three seconds. When the light fades you are weakened and take 20% more damage for three seconds.', manaCost: 50, cooldown: 45000, rank5Cooldown: 30000, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 3000, mods: { invulnerable: true, afterWeakness: { dmgTakenPct: 20, duration: 3000 } } } },
   retribution: { id: 'retribution', name: 'Retribution', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'For eight seconds, whatever strikes you is struck back by a bolt of light for three times the damage it dealt.', manaCost: 40, cooldown: 30000, rank5Cooldown: 20000, reqLevel: 25, element: 'physical', effect: { kind: 'buff', duration: 8000, mods: { retribution: { mult: 3 } } } },
   hemorrhage: { id: 'hemorrhage', name: 'Hemorrhage', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Open a wound that bleeds away a quarter of the target\'s life over twenty seconds.', manaCost: 25, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.2, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 0, maxRange: 80, noInitialDamage: true, bleed: { pctOfMaxHp: 25, duration: 20000, interval: 500 }, visual: 'bloody' } },
+  shadow_step: { id: 'shadow_step', name: 'Shadow Step', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Vanish into shadow and step out again where you aim, tearing into everything around you as you arrive.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'mobility', mode: 'teleport', maxRange: 260, damageMult: 1.5, arrivalRadius: 80 } },
+  shade_army: { id: 'shade_army', name: 'Shade Army', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Three shades step out of your shadow for fifteen seconds. They mirror every blow you land, each striking the same monster for 35% of it.', manaCost: 40, cooldown: 30000, rank5Cooldown: 20000, rankBonus: 0.25, reqLevel: 10, element: 'physical', effect: { kind: 'buff', duration: 15000, mods: { shades: { count: 3, mult: 0.35 } } } },
+  exsanguinate: { id: 'exsanguinate', name: 'Exsanguinate', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Tear the blood out of every bleeding monster near you. Each takes the rest of its bleed at once, and a quarter of it flows back into you.', manaCost: 30, cooldown: 14000, rank5Cooldown: 9000, reqLevel: 15, element: 'physical', effect: { kind: 'aoe', damageMult: 0, radius: 220, at: 'self', burstBleed: { healPct: 25 }, visual: 'exsanguinate' } },
+  blood_puppet: { id: 'blood_puppet', name: 'Blood Puppet', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Seize a monster\'s blood. For six seconds it fights at your side against its own kind, then its heart gives out.', manaCost: 45, cooldown: 35000, rank5Cooldown: 24000, reqLevel: 20, element: 'physical', effect: { kind: 'puppet', maxRange: 300, duration: 6000 } },
+  void_rift: { id: 'void_rift', name: 'Void Rift', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Tear open the world where you aim. For five seconds every monster near the rift is dragged into it, and whatever it holds is torn apart.', manaCost: 50, cooldown: 25000, rank5Cooldown: 16000, rankBonus: 0.3, reqLevel: 25, element: 'physical', effect: { kind: 'zone', zone: 'void_rift', duration: 5000, radius: 150, maxRange: 300, damageMult: 0.7, tickInterval: 500, aoeRadius: 60, pull: 2.6 } },
   void_slash: { id: 'void_slash', name: 'Void Slash', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'A slash that leaves a burning void trail. Scales with strength and intelligence.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'melee', damageMult: 1.8, maxRange: 80, arc: 120, scalesWithInt: true, trail: { length: 300, duration: 5000, tickPct: 10 }, visual: 'void' } },
 
   // ---------------- SORCERER ----------------

@@ -121,6 +121,16 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   }
   // Item procs fire off weapon hits, never off their own damage
   if (p.weaponHit && !p.fromProc && amount > 0) fireProcs(w, e, amount, p.element);
+  // Shade Army: the hero's shadows land the same blow after the hero
+  if ((p.weaponHit || p.skillId) && !p.fromProc && !p.fromMinion && !p.fromShade && amount > 0 && !e.dead) {
+    const sh = w.buffs.find((b) => b.mods.shades)?.mods.shades;
+    if (sh) {
+      for (let i = 0; i < sh.count && !e.dead; i++) {
+        w.emit({ type: 'melee_impact', visual: 'shade', x: e.x, z: e.z, element: 'physical' });
+        hitEnemy(w, e, { amount: Math.max(1, Math.round(amount * sh.mult)), element: p.element, canCrit: false, skillId: p.skillId, weaponHit: false, fromMinion: true, fromShade: true });
+      }
+    }
+  }
   // Overload: a lightning hit may jump once to the nearest other enemy
   if (p.element === 'lightning' && !p.fromArc && !p.fromProc && amount > 0) {
     const ov = w.buffs.find((b) => b.mods.overload)?.mods.overload;
@@ -185,6 +195,18 @@ export function tickStatuses(w: World, e: Enemy, dt: number): void {
   s.shock = Math.max(0, s.shock - dt);
   s.blind = Math.max(0, s.blind - dt);
   s.sink = Math.max(0, s.sink - dt);
+  if (s.puppet > 0) {
+    // Blood Puppet: when the time runs out the heart gives out
+    s.puppet -= dt;
+    if (s.puppet <= 0) {
+      s.puppet = 0;
+      if (!e.dummy) {
+        w.emit({ type: 'damage', x: e.x, z: e.z, y: 1.8, amount: Math.round(e.hp), crit: true, element: 'physical', target: 'enemy' });
+        w.killEnemy(e, 0);
+        return;
+      }
+    }
+  }
   if (s.mark) {
     s.mark.remaining -= dt;
     if (s.mark.remaining <= 0) s.mark = null;

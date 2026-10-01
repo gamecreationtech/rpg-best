@@ -108,7 +108,7 @@ export interface Beam {
 }
 
 function emptyStatus(): Enemy['status'] {
-  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0, blind: 0, mark: null, sink: 0 };
+  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0, blind: 0, mark: null, sink: 0, puppet: 0 };
 }
 
 /**
@@ -746,7 +746,7 @@ export class World {
     const zone: Zone = {
       id: this.nextZoneId++,
       dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0,
-      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1,
+      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1, pull: 0,
       ...spec,
     };
     if (zone.type === 'fire_prison' && zone.holds) {
@@ -1817,7 +1817,13 @@ export class World {
       const dist = this.dist(e.x, e.z);
       e.thinkTimer -= dt;
       const far = dist > 22;
-      if (e.thinkTimer <= 0) {
+      if (e.status.puppet > 0) {
+        // A blood puppet: it turns on its own kind until its heart gives out
+        if (e.thinkTimer <= 0) {
+          e.thinkTimer = 0.05;
+          this.thinkPuppet(e);
+        }
+      } else if (e.thinkTimer <= 0) {
         e.thinkTimer = far ? 0.25 : 0.05;
         this.think(e, dist, hidden);
       }
@@ -1890,6 +1896,35 @@ export class World {
       const dx = o.x - e.x;
       const dz = o.z - e.z;
       if (dx * dx + dz * dz <= r2) o.aggro = true;
+    }
+  }
+
+  /** A blood puppet goes for the nearest other monster in sight and hits it with its own attack. */
+  private thinkPuppet(e: Enemy): void {
+    e.moveX = 0;
+    e.moveZ = 0;
+    let best: Enemy | null = null;
+    let bestD = 12 * 12;
+    for (const o of this.enemies) {
+      if (o === e || !o.alive || o.dead || o.dummy || o.status.puppet > 0) continue;
+      const d2 = (o.x - e.x) ** 2 + (o.z - e.z) ** 2;
+      if (d2 < bestD) {
+        bestD = d2;
+        best = o;
+      }
+    }
+    if (!best) return;
+    const dist = Math.sqrt(bestD);
+    const reach = e.attackRange + e.radius + best.radius;
+    e.yaw = Math.atan2(best.x - e.x, best.z - e.z);
+    if (dist > reach || this.map.lineBlocked(e.x, e.z, best.x, best.z)) {
+      const safe = Math.max(dist, 0.001);
+      e.moveX = (best.x - e.x) / safe;
+      e.moveZ = (best.z - e.z) / safe;
+    } else if (e.attackTimer <= 0 && e.status.shock <= 0) {
+      e.attackTimer = e.attackCooldown;
+      this.emit({ type: 'enemy_attack', id: e.id });
+      hitEnemy(this, best, { amount: e.damage, element: e.def!.element, canCrit: false, skillId: null, weaponHit: false, fromMinion: true, fromShade: true });
     }
   }
 
@@ -2318,6 +2353,25 @@ export class World {
             });
           }
           break;
+        case 'void_rift': {
+          // Everything near the rift is dragged toward it; what it holds is torn apart every tick
+          for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+            if (e.dummy) continue;
+            const dx = z.x - e.x;
+            const dz = z.z - e.z;
+            const d = Math.hypot(dx, dz);
+            if (d < 0.3) continue;
+            const step = Math.min(d - 0.25, z.pull * dt);
+            this.map.slide(e.x, e.z, e.x + (dx / d) * step, e.z + (dz / d) * step, e.radius, this.slid);
+            e.x = this.slid.x;
+            e.z = this.slid.z;
+          }
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            for (const e of this.enemiesWithin(z.x, z.z, z.aoeRadius)) hitEnemy(this, e, packetFor());
+          }
+          break;
+        }
         case 'earthquake':
           // Every second the ground heaves: everything in sight stumbles, cannot swing or shoot, and is crushed against any wall it stands by
           while (z.tickTimer >= z.tickInterval) {

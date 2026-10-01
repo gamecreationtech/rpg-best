@@ -132,9 +132,12 @@ describe('world', () => {
       for (const s of skillsFor(cls, pledge)) p.skillRanks[s.id] = 5;
       const w = new World(p, 7);
       w.travel('arena');
+      const home = { x: w.px, z: w.pz };
       const spawn = () => {
         for (const e of w.enemies) e.alive = false;
         w.playerDead = false;
+        // Back to the spawn: a teleport earlier in the list must not leave the next cast's monsters inside a wall
+        w.teleportTo(home.x, home.z);
         p.hp = w.derived.maxHp;
         for (let i = 0; i < 6; i++) {
           const e = w.spawnEnemy((i % 2 ? MONSTERS.skeleton! : MONSTERS.ghoul!), w.px + 2 + i * 0.8, w.pz + (i % 2 ? 0.7 : -0.7));
@@ -160,7 +163,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(78);
+    expect(Object.keys(SKILLS).length).toBe(83);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -1402,5 +1405,84 @@ describe('titan', () => {
     expect(open.status.shock).toBeGreaterThan(0);
     run(w, 3);
     expect(100000 - open.hp).toBeGreaterThanOrEqual(a * 4);
+  });
+});
+
+describe('nightlord', () => {
+  const setup = (): World => {
+    const w = new World(createPlayer('knight', 'nightlord'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    for (const id of ['shadow_step', 'shade_army', 'exsanguinate', 'blood_puppet', 'void_rift']) w.player.skillRanks[id] = 1;
+    return w;
+  };
+  const ghoul = (w: World, dx: number, dz: number): Enemy => {
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + dx, w.pz + dz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    return e;
+  };
+
+  it('shadow step moves the hero to the spot and strikes everything there', () => {
+    const w = setup();
+    const e = ghoul(w, 0.8, 5);
+    const far = ghoul(w, -3, 1);
+    const from = w.pz;
+    expect(castSkill(w, 'shadow_step', { x: w.px, z: w.pz + 5 }).ok).toBe(true);
+    expect(w.pz).toBeGreaterThan(from + 4);
+    expect(e.hp).toBeLessThan(100000);
+    expect(far.hp).toBe(100000);
+  });
+
+  it('shade army mirrors every blow three times over', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 2);
+    expect(castSkill(w, 'shade_army', null).ok).toBe(true);
+    hitEnemy(w, e, { amount: 100, element: 'physical', canCrit: false, skillId: 'x', weaponHit: true });
+    expect(100000 - e.hp).toBe(205);
+    expect(w.events.filter((ev) => ev.type === 'melee_impact' && ev.visual === 'shade').length).toBe(3);
+  });
+
+  it('exsanguinate empties every wound at once and feeds the hero', () => {
+    const w = setup();
+    const a = ghoul(w, 0, 2);
+    const b = ghoul(w, 2, 2);
+    const whole = ghoul(w, -2, 2);
+    a.status.bleed = { ticks: 10, timer: 0, interval: 0.5, damage: 20 };
+    b.status.bleed = { ticks: 4, timer: 0, interval: 0.5, damage: 50 };
+    w.player.hp = 100;
+    expect(castSkill(w, 'exsanguinate', null).ok).toBe(true);
+    expect(100000 - a.hp).toBe(200);
+    expect(100000 - b.hp).toBe(200);
+    expect(whole.hp).toBe(100000);
+    expect(a.status.bleed).toBeNull();
+    expect(w.player.hp).toBe(200);
+  });
+
+  it('blood puppet turns a monster on its neighbours and kills it when the time is up', () => {
+    const w = setup();
+    const puppet = ghoul(w, 0, 3);
+    puppet.speed = 60;
+    const victim = ghoul(w, 1.2, 3);
+    expect(castSkill(w, 'blood_puppet', { x: puppet.x, z: puppet.z }).ok).toBe(true);
+    expect(puppet.status.puppet).toBeGreaterThan(0);
+    const hp = w.player.hp;
+    run(w, 3);
+    expect(victim.hp).toBeLessThan(100000);
+    expect(w.player.hp).toBe(hp);
+    run(w, 3.5);
+    expect(puppet.dead).toBe(true);
+  });
+
+  it('void rift drags monsters in and tears at what it holds', () => {
+    const w = setup();
+    const e = ghoul(w, 2.5, 4);
+    expect(castSkill(w, 'void_rift', { x: w.px, z: w.pz + 4 }).ok).toBe(true);
+    run(w, 1);
+    expect(Math.hypot(e.x - w.px, e.z - (w.pz + 4))).toBeLessThan(1.2);
+    run(w, 2);
+    expect(e.hp).toBeLessThan(100000);
   });
 });

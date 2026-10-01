@@ -51,6 +51,8 @@ export interface EnemyStatus {
   mark: { remaining: number; dmgTakenPct: number } | null;
   /** How deep in quicksand, in seconds of sinking; it climbs out at the same pace. */
   sink: number;
+  /** Seconds left fighting for the hero (Blood Puppet); it dies when they run out. */
+  puppet: number;
 }
 
 export interface Enemy {
@@ -121,6 +123,8 @@ export interface DamagePacket {
   vsUndead?: number;
   /** Seconds of blindness dealt (Blind). */
   blind?: number;
+  /** Struck by one of the hero's shades: never mirrored again. */
+  fromShade?: boolean;
 }
 
 export interface Projectile {
@@ -158,7 +162,7 @@ export interface Projectile {
   skillId: string | null;
 }
 
-export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon' | 'frostbite' | 'frost_patch' | 'winter' | 'line_wave' | 'quicksand' | 'rockfall' | 'earthquake';
+export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon' | 'frostbite' | 'frost_patch' | 'winter' | 'line_wave' | 'quicksand' | 'rockfall' | 'earthquake' | 'void_rift';
 
 export interface Zone {
   id: number;
@@ -200,6 +204,8 @@ export interface Zone {
   stun: number;
   knockback: number;
   wallMult: number;
+  /** Void Rift: tiles per second everything inside is dragged toward the centre. */
+  pull: number;
 }
 
 export interface Drop {
@@ -241,9 +247,11 @@ export type SimEvent =
   /** A companion's blow: the eagle's talons or the angel's sword, from x, z toward dirX, dirZ. */
   | { type: 'minion_strike'; kind: 'eagle' | 'angel'; x: number; z: number; dirX: number; dirZ: number }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */
-  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody' | 'holy'; x: number; z: number; element: Element }
+  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody' | 'holy' | 'shade'; x: number; z: number; element: Element }
   /** Retribution's answer: a bolt of light out of the sky onto whatever struck the hero. */
   | { type: 'holy_bolt'; x: number; z: number }
+  /** Exsanguinate: blood torn out of a monster at (x, z) and drawn to the hero. */
+  | { type: 'blood_drain'; x: number; z: number }
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }
   | { type: 'projectile_hit'; x: number; z: number; element: Element; shape: ProjectileShape; splash: number }
   | { type: 'zone_start'; zone: Zone }
@@ -263,4 +271,4 @@ export type SimEvent =
   | { type: 'open'; panel: InteractableKind }
   | { type: 'area'; area: 'town' | 'arena'; zone?: string; /** A picked monster level past the zone's own. */ level?: number }
   | { type: 'kick'; k: number }
-  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' | 'shattered' | 'blinded' | 'judged' };
+  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' | 'shattered' | 'blinded' | 'judged' | 'puppeted' };
