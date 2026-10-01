@@ -134,6 +134,8 @@ export function castSkill(w: World, id: string, aim: Aim | null): CastResult {
       return castCurse(w, def, eff, aim);
     case 'mark':
       return castMark(w, def, eff, aim);
+    case 'line':
+      return castLine(w, def, eff, aim);
   }
 }
 
@@ -389,6 +391,15 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
     case 'frostbite':
       w.addZone({ ...common, type: 'frostbite', tickInterval: (eff.tickInterval ?? 500) * MS, slow: (eff.slow ?? 1000) * MS, pctPerSec: eff.pctPerSec ?? 2, freezeAfter: (eff.freezeAfter ?? 3000) * MS, freeze: 1.5 });
       break;
+    case 'quicksand':
+      w.addZone({ ...common, type: 'quicksand', tickInterval: (eff.tickInterval ?? 500) * MS });
+      break;
+    case 'rockfall':
+      w.addZone({ ...common, type: 'rockfall', tickInterval: (eff.tickInterval ?? 400) * MS, aoeRadius: (eff.aoeRadius ?? 50) * PX });
+      break;
+    case 'earthquake':
+      w.addZone({ ...common, type: 'earthquake', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, wallMult: eff.wallMult ?? 1.5 });
+      break;
   }
   return { ok: true };
 }
@@ -467,5 +478,28 @@ function castMark(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'ma
   pay(w, def, dir, target.x, target.z);
   target.status.mark = { remaining: eff.duration * MS, dmgTakenPct: eff.dmgTakenPct };
   w.emit({ type: 'status', id: target.id, status: 'judged' });
+  return { ok: true };
+}
+
+/** A wave along the ground from the hero's feet, cut short at the first wall. The zone's front does the hitting as it travels. */
+function castLine(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'line' }>, aim: Aim | null): CastResult {
+  const at = aimPoint(w, aim, eff.length, 1);
+  const dir = facing(w, at, null);
+  const full = eff.length * PX;
+  // Walk the line until it meets a wall
+  let length = full;
+  for (let t = 0.5; t <= full; t += 0.5) {
+    if (w.map.circleBlocked(w.px + dir.x * t, w.pz + dir.z * t, 0.2)) {
+      length = Math.max(0.5, t - 0.5);
+      break;
+    }
+  }
+  pay(w, def, dir, w.px + dir.x * length, w.pz + dir.z * length);
+  const sx = w.px + dir.x * 0.4;
+  const sz = w.pz + dir.z * 0.4;
+  w.addZone({
+    type: 'line_wave', x: sx, z: sz, dx: dir.x, dz: dir.z, length, radius: (eff.width / 2) * PX, duration: length / (eff.speed * PX), damage: skillDamage(w, def.id, eff.damageMult),
+    element: def.element, skillId: def.id, stun: eff.stun ?? 0, knockback: (eff.knockback ?? 0) * PX, tickInterval: 0,
+  });
   return { ok: true };
 }

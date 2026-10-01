@@ -91,8 +91,8 @@ export class Effects2D {
   }
 
   /** A sprite animation played once at a point; `y` lifts it off the floor. */
-  anim(frames: HTMLCanvasElement[], x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, light?: { color: number; intensity: number; radius: number }): void {
-    const fx = this.push({ kind: 'anim', layer, x, y, z, life, frames, ox, oy });
+  anim(frames: HTMLCanvasElement[], x: number, y: number, z: number, ox: number, oy: number, life: number, layer: Layer, light?: { color: number; intensity: number; radius: number }, delay = 0): void {
+    const fx = this.push({ kind: 'anim', layer, x, y, z, life, frames, ox, oy, t: -delay });
     if (light) this.withLight(fx, light.color, light.intensity, light.radius);
   }
 

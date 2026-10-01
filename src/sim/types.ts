@@ -49,6 +49,8 @@ export interface EnemyStatus {
   blind: number;
   /** Judgement's mark: every hit lands for `dmgTakenPct` percent more while it lasts. */
   mark: { remaining: number; dmgTakenPct: number } | null;
+  /** How deep in quicksand, in seconds of sinking; it climbs out at the same pace. */
+  sink: number;
 }
 
 export interface Enemy {
@@ -156,7 +158,7 @@ export interface Projectile {
   skillId: string | null;
 }
 
-export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon' | 'frostbite' | 'frost_patch' | 'winter';
+export type ZoneType = 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'poison' | 'void_trail' | 'smoke' | 'boulder' | 'prison_hold' | 'summon' | 'frostbite' | 'frost_patch' | 'winter' | 'line_wave' | 'quicksand' | 'rockfall' | 'earthquake';
 
 export interface Zone {
   id: number;
@@ -194,6 +196,10 @@ export interface Zone {
   freeze: number;
   /** A summon's one action, run once when `tickInterval` has passed (the daemon looses its arrow). */
   onFire: (() => void) | null;
+  /** Line wave: ms of stun and world units of shove dealt to each monster the front reaches. Earthquake: multiplier against a wall. */
+  stun: number;
+  knockback: number;
+  wallMult: number;
 }
 
 export interface Drop {
@@ -241,7 +247,7 @@ export type SimEvent =
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }
   | { type: 'projectile_hit'; x: number; z: number; element: Element; shape: ProjectileShape; splash: number }
   | { type: 'zone_start'; zone: Zone }
-  | { type: 'zone_tick'; id: number; x: number; z: number }
+  | { type: 'zone_tick'; id: number; x: number; z: number; /** The monster hit, when the tick is a blow on one. */ enemyId?: number }
   | { type: 'zone_end'; id: number }
   | { type: 'buff_start'; id: string; color: number }
   | { type: 'buff_end'; id: string }

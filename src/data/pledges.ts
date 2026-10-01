@@ -26,7 +26,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   titan: {
     id: 'titan', classId: 'knight', name: 'Titan', title: 'God of Earth', color: 0xc8945a, armor: { plate: 0x7a5636, dark: 0x7a2a2a, trim: 0xb03a2a },
     description: 'Born from stone and soil, the Titan is an immovable force of nature: raw, relentless, unbreakable.',
-    skills: ['rock_solid', 'boulder_toss', 'leap'],
+    skills: ['rock_solid', 'boulder_toss', 'leap', 'earthen_spikes', 'quicksand', 'seismic_slam', 'rockfall', 'earthquake'],
   },
   nightlord: {
     id: 'nightlord', classId: 'knight', name: 'Nightlord', title: 'Knight of Darkness', color: 0xaa66cc, armor: { plate: 0x2a2a34, dark: 0x16161c, trim: 0x5a3a7a },

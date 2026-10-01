@@ -184,6 +184,7 @@ export function tickStatuses(w: World, e: Enemy, dt: number): void {
   s.slow = Math.max(0, s.slow - dt);
   s.shock = Math.max(0, s.shock - dt);
   s.blind = Math.max(0, s.blind - dt);
+  s.sink = Math.max(0, s.sink - dt);
   if (s.mark) {
     s.mark.remaining -= dt;
     if (s.mark.remaining <= 0) s.mark = null;

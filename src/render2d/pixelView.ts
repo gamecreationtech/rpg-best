@@ -130,6 +130,8 @@ export class PixelView {
   private readonly staticLights: StaticLight[] = [];
   private readonly lights: Light[] = [];
   private readonly items: Item[] = [];
+  /** Monsters thrown into the air by Seismic Slam: id to the time they left the ground. */
+  private readonly launches = new Map<number, number>();
   /** Life bars to draw this frame: frame x, frame y, fraction, targeted, four numbers each. */
   private readonly bars: number[] = [];
   private beamTarget = -1;
@@ -524,6 +526,23 @@ export class PixelView {
       }
       case 'zone_start': {
         const z = ev.zone;
+        if (z.type === 'line_wave') {
+          if (z.skillId === 'earthen_spikes') this.spikesRise(z);
+          else this.slamWave(z);
+        }
+        if (z.type === 'quicksand') {
+          // The ground gives: a ring of dust and sand sliding inward
+          this.effects.ring(z.x, z.z, z.radius * 0.5, z.radius, 0xc8a870, 0.5, 2);
+          pt.burst(z.x, 0.1, z.z, 30, 3 * z.radius, 0xc8a870, 0.8, { up: 0.8, gravity: 3, priority: 0.6, size: 2 });
+          this.view.kick(0.1);
+        }
+        if (z.type === 'rockfall') this.effects.ring(z.x, z.z, 0.3, z.radius, 0x9a8a70, 0.6, 1);
+        if (z.type === 'earthquake') {
+          // The first heave: the ground splits under the hero and the screen jolts
+          this.effects.cracks(z.x, z.z, 40, 0x9a8a70, 1.4, 10);
+          pt.burst(z.x, 0.1, z.z, 30, 3, 0x8a7a68, 0.8, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
+          this.view.kick(0.4);
+        }
         if (z.type === 'fire_prison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xff7a2a, 0.4, 2, 1.5);
         if (z.type === 'sanctuary') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xffe87a, 0.6, 2, 1.2);
         if (z.type === 'wind') {
@@ -565,7 +584,22 @@ export class PixelView {
       case 'zone_tick': {
         const zone = w.zones.find((z) => z.id === ev.id);
         if (zone?.type === 'arrow_storm') this.arrowFall(ev.x, ev.z);
-        else this.snowflakeHit(ev.x, ev.z);
+        else if (zone?.type === 'line_wave') {
+          // The front reaches a monster: thrown up by the slam, or a spray of dust and stone off the spikes
+          if (zone.skillId === 'seismic_slam' && ev.enemyId !== undefined) this.launches.set(ev.enemyId, this.time);
+          pt.burst(ev.x, 0.3, ev.z, 10, 1.6, 0x8a7a68, 0.5, { up: 2.5, gravity: 6, priority: 0.6, size: 2 });
+        } else if (zone?.type === 'earthquake') {
+          if (ev.enemyId !== undefined) {
+            // Crushed against the wall: stone bursts off it
+            this.effects.cracks(ev.x, ev.z, 16, 0x9a8a70, 0.6, 5);
+            pt.burst(ev.x, 0.8, ev.z, 14, 2, 0x8a7a68, 0.6, { up: 2, gravity: 7, priority: 0.7, size: 2 });
+          } else {
+            // The heave: a hard jolt and a wave of dust rolling out from the hero
+            this.view.kick(0.35);
+            this.effects.ring(ev.x, ev.z, 0.3, 8, 0xc8b8a0, 0.7, 2);
+            this.effects.ring(ev.x, ev.z, 0.3, 8, 0x9a8a70, 0.8, 1, 0, 0.1);
+          }
+        } else this.snowflakeHit(ev.x, ev.z);
         break;
       }
       case 'buff_start': {
@@ -1183,6 +1217,9 @@ export class PixelView {
         this.view.kick(0.06);
         break;
       }
+      case 'rock':
+        this.rockLand(x, z, radius);
+        break;
       case 'boulder':
         this.boulderLand(x, z, radius);
         break;
@@ -1492,7 +1529,35 @@ export class PixelView {
       else if (e.status.poison) tint = '#66e070';
       const targeted = e.id === w.targetId && !e.dead;
       // Flying things bob above the ground
-      const hover = e.def?.hover && !e.dead ? (e.def.hover + Math.sin(this.time * 4 + e.id) * 2) / 12 : 0;
+      let hover = e.def?.hover && !e.dead ? (e.def.hover + Math.sin(this.time * 4 + e.id) * 2) / 12 : 0;
+      const launch = this.launches.get(e.id);
+      if (launch !== undefined) {
+        // Thrown up by Seismic Slam: a short arc into the air and back down
+        const k = (this.time - launch) / 0.55;
+        if (k >= 1 || e.dead) this.launches.delete(e.id);
+        else hover += 1.8 * Math.sin(k * Math.PI);
+      }
+      if (e.status.sink > 0 && !e.dead) {
+        // Sunk in quicksand: lower in the ground, with the sand closing over its feet
+        hover -= Math.min(0.5, e.status.sink * 0.17);
+        const sx = Math.round(fx);
+        const sy = Math.round(fy);
+        this.items.push({
+          depth: cam.depth(e.x, e.z) + 0.001,
+          draw: () => {
+            ctx.globalAlpha = 0.95;
+            ctx.fillStyle = '#a08858';
+            ctx.beginPath();
+            ctx.ellipse(sx, sy, 12 + e.radius * 6, 6 + e.radius * 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 0.6;
+            ctx.strokeStyle = '#7a6440';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          },
+        });
+      }
       if (e.status.mark && !e.dead) this.drawJudgement(e, Math.round(fx), Math.round(fy), p.sheet.height);
       this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null);
       if (e.status.blind > 0 && !e.dead && Math.random() < 0.5) {
@@ -1631,6 +1696,30 @@ export class PixelView {
         this.items.push({ depth: cam.depth(bx, bz), draw: () => ctx.drawImage(f, fx - (f.width >> 1), fy - f.height + 2) });
       }
     }
+    // The Titan's ground: a quake shakes the frame and splits the floor, sand slides into quicksand, grit falls under a rockfall
+    for (const z of w.zones) {
+      if (z.type === 'earthquake') {
+        this.view.kick(0.05);
+        if (Math.random() < 0.5) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * 6;
+          this.effects.cracks(w.px + Math.cos(a) * r, w.pz + Math.sin(a) * r, 14, 0x9a8a70, 1.0, 5);
+        }
+        for (let i = 0; i < 3; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.random() * 7;
+          this.particles.spawn(w.px + Math.cos(a) * r, 4 + Math.random() * 2, w.pz + Math.sin(a) * r, 0, -4, 0, 0.8, 0x8a7a68, { gravity: 6, priority: 0.3, size: Math.random() < 0.3 ? 2 : 1 });
+        }
+      } else if (z.type === 'quicksand') {
+        if (Math.random() < 0.7) {
+          const a = Math.random() * Math.PI * 2;
+          const r = z.radius * (0.7 + Math.random() * 0.3);
+          this.particles.spawn(z.x + Math.cos(a) * r, 0.05, z.z + Math.sin(a) * r, -Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9, 1.2, 0xc8a870, { drag: 0.3, priority: 0.3 });
+        }
+      } else if (z.type === 'rockfall') {
+        if (Math.random() < 0.5) this.particles.spawn(z.x + (Math.random() - 0.5) * 2 * z.radius, 5 + Math.random() * 2, z.z + (Math.random() - 0.5) * 2 * z.radius, 0, -3, 0, 1.0, 0x8a7a68, { gravity: 5, priority: 0.3 });
+      }
+    }
     if (!w.playerDead) {
       if (w.buffs.some((b) => b.id === 'fire_armor')) this.drawArmorBubble(heroY, 'fire');
       if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
@@ -1656,10 +1745,11 @@ export class PixelView {
       const k = Math.max(0, 1 - z.remaining / z.duration - 0.35) / 0.65;
       const h = 9 * (1 - k * k);
       if (h > 8.5) continue;
-      const rock = this.fx.boulder;
+      const small = z.radius < 2;
+      const rock = small ? this.fx.stones[z.id % 2]! : this.fx.boulder;
       const fx = Math.round(cam.frameX(z.x, z.z));
       const fy = Math.round(cam.frameY(z.x, h, z.z));
-      this.items.push({ depth: cam.depth(z.x, z.z) + 0.02, draw: () => ctx.drawImage(rock, fx - (rock.width >> 1), fy - rock.height + 6) });
+      this.items.push({ depth: cam.depth(z.x, z.z) + 0.02, draw: () => ctx.drawImage(rock, fx - (rock.width >> 1), fy - rock.height + (small ? 3 : 6)) });
     }
 
     // Drops
@@ -1788,6 +1878,12 @@ export class PixelView {
         case 'trap':
           this.drawTrap(ctx, z, ellipse);
           break;
+        case 'quicksand':
+          this.drawQuicksand(ctx, z, ellipse);
+          break;
+        case 'rockfall':
+          ellipse(z.x, z.z, z.radius, '#9a8a70', false, 0.3 + Math.sin(this.time * 3) * 0.1, 1);
+          break;
         case 'spear_wall': {
           ctx.fillStyle = '#d8d0c0';
           const px = -z.dz;
@@ -1873,8 +1969,8 @@ export class PixelView {
         case 'boulder': {
           // The target ring, and the rock's shadow growing as it comes down
           const k = Math.max(0, 1 - z.remaining / z.duration - 0.35) / 0.65;
-          ellipse(z.x, z.z, z.radius, '#ff9a40', false, 0.7);
-          ellipse(z.x, z.z, 0.3 + 0.55 * k * k, '#000000', true, 0.15 + 0.35 * k);
+          ellipse(z.x, z.z, z.radius, z.radius < 2 ? '#c8b8a0' : '#ff9a40', false, z.radius < 2 ? 0.4 : 0.7);
+          ellipse(z.x, z.z, (z.radius < 2 ? 0.15 : 0.3) + 0.55 * k * k * (z.radius < 2 ? 0.6 : 1), '#000000', true, 0.15 + 0.35 * k);
           break;
         }
         default:
@@ -2376,6 +2472,80 @@ export class PixelView {
     });
     if (Math.random() < 0.3) this.particles.spawn(w.px + (Math.random() - 0.5) * 0.5, heroY + 2.2, w.pz + (Math.random() - 0.5) * 0.5, 0, -0.6, 0, 0.6, 0xffe8a0, { priority: 0.3, gravity: 1, alpha: 0.9 });
     this.lights.push({ x: fx, y: fy, radius: 36, intensity: 0.8 + Math.sin(this.time * 5) * 0.1, r: 1, g: 0.88, b: 0.5 });
+  }
+
+  /** Earthen Spikes: two staggered rows of stone spikes bursting up along the line in turn, each with a spray of dirt, then sinking back. */
+  private spikesRise(z: Zone): void {
+    const frames = this.fx.spikes;
+    const cycle = [frames[0]!, frames[1]!, frames[2]!, frames[2]!, frames[2]!, frames[2]!, frames[1]!, frames[0]!];
+    const speed = z.length / z.duration;
+    const px = -z.dz;
+    const pz = z.dx;
+    let side = 1;
+    for (let t = 0.2; t <= z.length; t += 0.32) {
+      const off = side * z.radius * 0.45;
+      side = -side;
+      const x = z.x + z.dx * t + px * off;
+      const zz = z.z + z.dz * t + pz * off;
+      const delay = t / speed;
+      this.effects.anim(cycle, x, 0, zz, 5, 17, 0.9, 'air', undefined, delay);
+      this.particles.burst(x, 0.1, zz, 5, 1.2, 0x8a7a68, 0.45, { up: 2.5, gravity: 7, priority: 0.5, size: 2, delay });
+    }
+    this.effects.cracks(z.x, z.z, 18, 0x9a8a70, 0.8, 6);
+    this.view.kick(0.1);
+  }
+
+  /** Seismic Slam: the fists land, then a heave of earth rolls out along the line: cracks, dust and a bump of ground at every step. */
+  private slamWave(z: Zone): void {
+    const dust = 0xc8b8a0;
+    this.effects.cracks(z.x, z.z, 36, 0x9a8a70, 1.0, 10);
+    this.effects.ring(z.x, z.z, 0.1, 1.2, 0xfff0d0, 0.15, 3, 1);
+    this.particles.burst(z.x, 0.1, z.z, 24, 2.5, 0x6a5a48, 0.7, { up: 3, gravity: 7, priority: 0.7, size: 2 });
+    this.view.kick(0.3);
+    const speed = z.length / z.duration;
+    for (let t = 0.5; t <= z.length; t += 0.45) {
+      const x = z.x + z.dx * t;
+      const zz = z.z + z.dz * t;
+      const delay = t / speed;
+      this.effects.ring(x, zz, 0.1, z.radius * 1.1, dust, 0.35, 2, 0, delay);
+      this.effects.cracks(x, zz, 12, 0x9a8a70, 0.9, 4, delay);
+      this.particles.burst(x, 0.1, zz, 10, 2, 0x8a7a68, 0.5, { up: 2.5, gravity: 7, priority: 0.6, size: 2, delay });
+      this.particles.burst(x, 0.1, zz, 6, z.radius * 2, dust, 0.6, { up: 1, gravity: 4, priority: 0.5, delay });
+    }
+  }
+
+  /** Rockfall: one stone lands. It lies there a moment in a small crater with dust thrown up. */
+  private rockLand(x: number, z: number, radius: number): void {
+    const rock = this.fx.stones[Math.floor(Math.random() * this.fx.stones.length)]!;
+    this.effects.sprite(rock, x, 0, z, rock.width >> 1, rock.height - 3, 0.9, 'air');
+    this.effects.cracks(x, z, 16, 0x9a8a70, 0.7, 6);
+    this.effects.ring(x, z, 0.1, radius, 0xc8b8a0, 0.35, 2);
+    this.particles.burst(x, 0.2, z, 12, 2.5, 0x6a6058, 0.6, { up: 2.5, gravity: 8, priority: 0.6, size: 2 });
+    this.particles.burst(x, 0.1, z, 10, 2 * radius, 0xc8b8a0, 0.5, { up: 1, gravity: 5, priority: 0.5 });
+    this.view.kick(0.08);
+  }
+
+  /** Quicksand on the floor: a sandy pit, darker toward the middle, with three arcs of sand turning slowly inward. */
+  private drawQuicksand(ctx: CanvasRenderingContext2D, z: Zone, ellipse: (x: number, z: number, r: number, style: string, fill: boolean, alpha: number, width?: number) => void): void {
+    const cam = this.view;
+    const life = Math.min(1, z.remaining / 0.6);
+    ellipse(z.x, z.z, z.radius, '#a08858', true, 0.6 * life);
+    ellipse(z.x, z.z, z.radius * 0.62, '#7a6440', true, 0.5 * life);
+    ellipse(z.x, z.z, z.radius * 0.28, '#4a3a28', true, 0.6 * life);
+    ellipse(z.x, z.z, z.radius, '#6a5438', false, 0.8 * life, 1);
+    const cx = Math.round(cam.frameX(z.x, z.z));
+    const cy = Math.round(cam.frameY(z.x, 0, z.z));
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#d8c090';
+    for (let i = 0; i < 3; i++) {
+      const f = 0.86 - i * 0.24;
+      const a0 = -this.time * (0.7 + i * 0.3) + i * 2.1;
+      ctx.globalAlpha = 0.4 * life;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, z.radius * RING_RX * f, z.radius * RING_RY * f, 0, a0, a0 + 1.8);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
   /** Overload: the hero crackles. Short arcs leap off the body at random and a blue-white light pulses. */

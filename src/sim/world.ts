@@ -108,7 +108,7 @@ export interface Beam {
 }
 
 function emptyStatus(): Enemy['status'] {
-  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0, blind: 0, mark: null };
+  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0, blind: 0, mark: null, sink: 0 };
 }
 
 /**
@@ -746,7 +746,7 @@ export class World {
     const zone: Zone = {
       id: this.nextZoneId++,
       dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0,
-      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0,
+      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1,
       ...spec,
     };
     if (zone.type === 'fire_prison' && zone.holds) {
@@ -2271,6 +2271,65 @@ export class World {
           }
           break;
         case 'winter':
+          break;
+        case 'line_wave': {
+          // The front moves out from the start; each monster is struck the moment it is reached
+          const front = z.length * Math.min(1, 1 - z.remaining / z.duration);
+          for (const e of this.enemies) {
+            if (!e.alive || e.dead || z.hit.includes(e.id)) continue;
+            const t = (e.x - z.x) * z.dx + (e.z - z.z) * z.dz;
+            if (t < -e.radius || t > front) continue;
+            const cx = z.x + z.dx * t;
+            const cz = z.z + z.dz * t;
+            if (Math.hypot(e.x - cx, e.z - cz) > z.radius + e.radius) continue;
+            z.hit.push(e.id);
+            this.emit({ type: 'zone_tick', id: z.id, x: e.x, z: e.z, enemyId: e.id });
+            hitEnemy(this, e, { ...packetFor(), stun: z.stun || undefined, knockback: z.knockback || undefined });
+          }
+          break;
+        }
+        case 'quicksand':
+          // Whatever stands in it sinks: slowed, and hurt more the deeper it is
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+              e.status.slow = Math.max(e.status.slow, z.tickInterval + 0.1);
+              e.status.sink = Math.min(3, e.status.sink + z.tickInterval * 2);
+              hitEnemy(this, e, { ...packetFor(), amount: Math.max(1, Math.round(z.damage * (1 + e.status.sink))) });
+            }
+          }
+          break;
+        case 'rockfall':
+          // A stone every tick on a random spot, landing after a short fall
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            const a = this.rng.range(0, Math.PI * 2);
+            const r = Math.sqrt(this.rng.next()) * z.radius;
+            const rx = z.x + Math.cos(a) * r;
+            const rz = z.z + Math.sin(a) * r;
+            if (this.map.circleBlocked(rx, rz, 0.3)) continue;
+            const crater = z.aoeRadius;
+            this.addZone({
+              type: 'boulder', x: rx, z: rz, radius: crater, duration: 0.6, damage: 0, element: z.element, skillId: z.skillId,
+              onEnd: () => {
+                this.emit({ type: 'aoe', visual: 'rock', x: rx, z: rz, radius: crater, element: z.element });
+                for (const e of this.enemiesWithin(rx, rz, crater)) hitEnemy(this, e, packetFor());
+              },
+            });
+          }
+          break;
+        case 'earthquake':
+          // Every second the ground heaves: everything in sight stumbles, cannot swing or shoot, and is crushed against any wall it stands by
+          while (z.tickTimer >= z.tickInterval) {
+            z.tickTimer -= z.tickInterval;
+            this.emit({ type: 'zone_tick', id: z.id, x: z.x, z: z.z });
+            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+              e.status.shock = Math.max(e.status.shock, z.tickInterval + 0.1);
+              const crushed = !e.dummy && this.map.circleBlocked(e.x, e.z, e.radius + 0.5);
+              if (crushed) this.emit({ type: 'zone_tick', id: z.id, x: e.x, z: e.z, enemyId: e.id });
+              hitEnemy(this, e, { ...packetFor(), amount: Math.max(1, Math.round(z.damage * (crushed ? z.wallMult : 1))), stun: 350 });
+            }
+          }
           break;
         case 'summon':
           // The summoned thing acts once, when its rise is done

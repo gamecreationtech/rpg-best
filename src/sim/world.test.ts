@@ -160,7 +160,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(73);
+    expect(Object.keys(SKILLS).length).toBe(78);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -1313,5 +1313,94 @@ describe('paladin', () => {
     damagePlayer(w, 40, 'physical', e, true);
     expect(100000 - e.hp).toBe(120);
     expect(w.events.some((ev) => ev.type === 'holy_bolt')).toBe(true);
+  });
+});
+
+describe('titan', () => {
+  const setup = (): World => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    for (const id of ['earthen_spikes', 'quicksand', 'seismic_slam', 'rockfall', 'earthquake']) w.player.skillRanks[id] = 1;
+    return w;
+  };
+  const ghoul = (w: World, dx: number, dz: number): Enemy => {
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + dx, w.pz + dz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    return e;
+  };
+
+  it('earthen spikes run out along a line, reaching the far monster after the near one', () => {
+    const w = setup();
+    const near = ghoul(w, 0, 1.5);
+    const far = ghoul(w, 0, 5);
+    const aside = ghoul(w, 3, 3);
+    expect(castSkill(w, 'earthen_spikes', { x: w.px, z: w.pz + 6 }).ok).toBe(true);
+    run(w, 0.1);
+    expect(near.hp).toBeLessThan(100000);
+    expect(far.hp).toBe(100000);
+    expect(near.status.stun).toBeGreaterThan(0);
+    run(w, 0.4);
+    expect(far.hp).toBeLessThan(100000);
+    expect(aside.hp).toBe(100000);
+  });
+
+  it('quicksand slows what stands in it and bites harder the longer it stays', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 4);
+    expect(castSkill(w, 'quicksand', { x: e.x, z: e.z }).ok).toBe(true);
+    run(w, 0.6);
+    const first = 100000 - e.hp;
+    expect(first).toBeGreaterThan(0);
+    expect(e.status.slow).toBeGreaterThan(0);
+    expect(e.status.sink).toBeGreaterThan(0);
+    const hpBefore = e.hp;
+    run(w, 3);
+    const lastTicks = hpBefore - e.hp;
+    // Six more ticks, each heavier than the first
+    expect(lastTicks).toBeGreaterThan(first * 6);
+  });
+
+  it('seismic slam throws the line back and stuns it', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 2);
+    const before = e.z;
+    expect(castSkill(w, 'seismic_slam', { x: w.px, z: w.pz + 6 }).ok).toBe(true);
+    run(w, 0.3);
+    expect(e.hp).toBeLessThan(100000);
+    expect(e.status.stun).toBeGreaterThan(1);
+    expect(e.z).toBeGreaterThan(before + 0.5);
+  });
+
+  it('rockfall drops stones over the area for five seconds', () => {
+    const w = setup();
+    const list = [ghoul(w, 0, 4), ghoul(w, 1, 5), ghoul(w, -1, 3), ghoul(w, 0.5, 3.5)];
+    expect(castSkill(w, 'rockfall', { x: w.px, z: w.pz + 4 }).ok).toBe(true);
+    run(w, 1);
+    expect(w.zones.some((z) => z.type === 'boulder')).toBe(true);
+    run(w, 5);
+    expect(list.some((e) => e.hp < 100000)).toBe(true);
+    expect(w.events.filter((ev) => ev.type === 'aoe' && ev.visual === 'rock').length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('earthquake hurts everything in sight each second and crushes what stands against a wall', () => {
+    const w = setup();
+    const open = ghoul(w, 0, 3);
+    // Walk east until the wall, and stand a monster right against it
+    let wx = w.px;
+    while (!w.map.circleBlocked(wx + 0.5, w.pz, 0.4) && wx < w.px + 20) wx += 0.25;
+    const wall = ghoul(w, wx - w.px, 0);
+    expect(castSkill(w, 'earthquake', null).ok).toBe(true);
+    run(w, 1.05);
+    const a = 100000 - open.hp;
+    const b = 100000 - wall.hp;
+    expect(a).toBeGreaterThan(0);
+    expect(b).toBe(Math.round(a * 1.5));
+    expect(open.status.shock).toBeGreaterThan(0);
+    run(w, 3);
+    expect(100000 - open.hp).toBeGreaterThanOrEqual(a * 4);
   });
 });

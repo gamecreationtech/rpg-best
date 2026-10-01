@@ -131,6 +131,23 @@ What that means for each kind of asset:
   on its rim; Retribution a buff with `retribution` that strikes the attacker
   for a multiple of the blow with a `holy_bolt` event, drawn as a `pillar`
   effect (a column of light from the sky) and a halo over the hero.
+  The Titan's five: Earthen Spikes and Seismic Slam are `line` effects, a
+  `line_wave` zone whose front travels from the hero's feet (cut short at the
+  first wall) and strikes each monster as it reaches it, with `stun` and
+  `knockback` on the zone; the spikes are drawn as two staggered rows of
+  `spikes` sprite animations rising in turn, the slam as cracks, dust and a
+  bump of ground at every step, with each monster it reaches thrown into the
+  air by the renderer (`launches`); Quicksand a `quicksand` zone that slows
+  what stands in it and raises `EnemyStatus.sink`, scaling its tick by
+  `1 + sink`, drawn as a sandy pit with turning arcs and sand sliding in,
+  monsters inside drawn lower with the sand closing over their feet; Rockfall
+  a `rockfall` zone that drops a small `boulder` zone on a random spot every
+  tick, each landing as a `rock` aoe visual with a `stones` sprite and a
+  crater; Earthquake an `earthquake` zone following the hero that shocks
+  (no swinging or shooting), stumbles and hurts everything in sight every
+  second, `wallMult` against monsters `circleBlocked` next to a wall, drawn
+  as a constant shake, cracks spreading across the floor, grit falling from
+  above and a dust wave on every heave.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

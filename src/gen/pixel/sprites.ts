@@ -196,6 +196,10 @@ export interface EffectSprites {
   boulder: HTMLCanvasElement;
   /** Three small rocks that circle a Rock Solid hero. */
   rocks: HTMLCanvasElement[];
+  /** Earthen Spikes: a stone spike at three heights, short to full, bottom-aligned in 10x18. */
+  spikes: HTMLCanvasElement[];
+  /** Rockfall's stones: between a rock and the boulder. */
+  stones: HTMLCanvasElement[];
   /** The big skull Death raises over its area. */
   skull: HTMLCanvasElement;
   /** Four frames of a standing tongue of flame, a hero tall, for Fire Prison's bars. */
@@ -281,6 +285,32 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
     b.set(Math.round(rw * 0.35) * s + 1, Math.round(rh * 0.3) * s + 1, rockRamp[3]);
     b.shadeRamp((c) => (c[0] === rockRamp[1][0] && c[1] === rockRamp[1][1] && c[2] === rockRamp[1][2] ? rockRamp : null));
     rocks.push(b.toCanvas());
+  }
+  // Spikes: a tapering shard of stone, lit from the left, at three heights
+  const spikes: HTMLCanvasElement[] = [];
+  for (const h of [7, 12, 18]) {
+    const b = new PixelBuffer(10 * s, 18 * s);
+    for (let row = 0; row < h; row++) {
+      const half = Math.max(1, Math.round((row / h) * 4.5));
+      const y = (18 - h + row) * s;
+      b.rect((5 - half) * s, y, half * s, s, rockRamp[2]);
+      b.rect(5 * s, y, half * s, s, rockRamp[1]);
+      b.rect((5 - half) * s, y, s, s, rockRamp[0]);
+      b.rect((4 + half) * s, y, s, s, rockRamp[0]);
+    }
+    b.rect(4 * s, (18 - h) * s, s, s, rockRamp[3]);
+    spikes.push(b.toCanvas());
+  }
+  // Stones: two lumps with a crack across each
+  const stones: HTMLCanvasElement[] = [];
+  for (const [sw, sh] of [[16, 13], [14, 11]] as [number, number][]) {
+    const b = new PixelBuffer(sw * s + 2, sh * s + 2);
+    b.ellipse((sw / 2) * s + 1, (sh / 2) * s + 1, (sw / 2) * s, (sh / 2) * s, rockRamp[1]);
+    b.ellipse((sw * 0.35) * s + 1, (sh * 0.35) * s + 1, (sw / 4) * s, (sh / 4) * s, rockRamp[2]);
+    b.shadeRamp((c) => (c[0] === rockRamp[1][0] && c[1] === rockRamp[1][1] && c[2] === rockRamp[1][2] ? rockRamp : null));
+    b.line((sw * 0.55) * s, 2 * s, (sw * 0.4) * s, (sh - 2) * s, rockRamp[0]);
+    b.set((sw * 0.3) * s + 1, (sh * 0.3) * s + 1, rockRamp[3]);
+    stones.push(b.toCanvas());
   }
   // A skull, 26 wide: domed cranium, hollow eyes, a nose slit and a row of teeth, with a dark outline
   const bone: Rgb = [232, 224, 200];
@@ -368,7 +398,7 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
   arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
   arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s), eagle: eagleFrames(s), angel: angelFrames(s) };
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, spikes, stones, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s), eagle: eagleFrames(s), angel: angelFrames(s) };
 }
 
 /** Head and horns of the daemon, placed pixel by pixel, 52 wide. See `DAEMON_INK` for what each mark means. */

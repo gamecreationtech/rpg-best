@@ -150,7 +150,7 @@ export type SkillEffect =
   | { kind: 'buff'; duration: number; mods: BuffMods }
   | {
       kind: 'zone';
-      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'frostbite';
+      zone: 'trap' | 'fire_prison' | 'spear_wall' | 'blizzard' | 'sanctuary' | 'wind' | 'storm' | 'arrow_storm' | 'frostbite' | 'quicksand' | 'rockfall' | 'earthquake';
       duration: number;
       radius: number;
       damageMult?: number;
@@ -158,8 +158,10 @@ export type SkillEffect =
       tickInterval?: number;
       slow?: number;
       slowPct?: number;
-      /** Trap: area damaged when triggered. */
+      /** Trap: area damaged when triggered. Rockfall: the crater of each rock. */
       aoeRadius?: number;
+      /** Earthquake: damage multiplier for monsters standing against a wall. */
+      wallMult?: number;
       /** Frostbite: life lost per second inside, percent of max, and ms of cold before the freeze. */
       pctPerSec?: number;
       freezeAfter?: number;
@@ -190,7 +192,14 @@ export type SkillEffect =
   | { kind: 'beam'; drainMult: number; interval: number; duration: number; maxRange: number; extendedRange: number; farEffectiveness: number }
   | { kind: 'curse'; maxRange: number; radius: number; duration: number; pctPerSec: number; executeBelowPct: number }
   /** Judgement: one enemy takes `dmgTakenPct` percent more from every hit for `duration` ms. */
-  | { kind: 'mark'; maxRange: number; duration: number; dmgTakenPct: number };
+  | { kind: 'mark'; maxRange: number; duration: number; dmgTakenPct: number }
+  /**
+   * A wave along the ground from the hero's feet: `length` px long, `width` px
+   * wide, its front travelling at `speed` px per second, hitting each monster
+   * as it reaches it. Stops at walls. `spikes` is a row of stone spikes
+   * (Earthen Spikes), `slam` a heave of earth that throws monsters up (Seismic Slam).
+   */
+  | { kind: 'line'; damageMult: number; length: number; width: number; speed: number; stun?: number; knockback?: number; visual: 'spikes' | 'slam' };
 
 export interface SkillDef {
   id: string;
@@ -235,6 +244,11 @@ export const SKILLS: Record<string, SkillDef> = {
   rock_solid: { id: 'rock_solid', name: 'Rock Solid', classId: K, tier: 'pledge', pledgeId: 'titan', description: '+200 armor and a shield equal to your max life for ten seconds. It soaks up any kind of damage, and when it breaks a boulder falls on you, crushing everything around.', manaCost: 55, cooldown: 35000, rank5Cooldown: 22000, reqLevel: 15, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { armor: 200, shieldPct: 100, onShieldBreak: 'boulder_toss' } } },
   boulder_toss: { id: 'boulder_toss', name: 'Boulder Toss', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Throw a boulder that lands after a short delay and crushes a wide area.', manaCost: 45, cooldown: 14000, rank5Cooldown: 9000, rankBonus: 0.35, reqLevel: 10, element: 'physical', effect: { kind: 'aoe', damageMult: 3.5, radius: 200, at: 'target', maxRange: 320, delay: 900, visual: 'boulder' } },
   leap: { id: 'leap', name: 'Leap', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Jump over walls and enemies. Invulnerable while airborne.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, reqLevel: 5, element: 'physical', effect: { kind: 'mobility', mode: 'leap', maxRange: 300, duration: 520, invulnerable: true, throughWalls: true } },
+  earthen_spikes: { id: 'earthen_spikes', name: 'Earthen Spikes', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Stone spikes burst from the ground in a line ahead of you, impaling everything along it and holding it for a moment.', manaCost: 25, cooldown: 6000, rank5Cooldown: 4000, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'line', damageMult: 1.6, length: 200, width: 44, speed: 700, stun: 800, visual: 'spikes' } },
+  quicksand: { id: 'quicksand', name: 'Quicksand', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Soften the ground in a wide circle for eight seconds. Everything inside slows to a crawl and sinks, taking more every moment it stays.', manaCost: 35, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.25, reqLevel: 10, element: 'physical', effect: { kind: 'zone', zone: 'quicksand', duration: 8000, radius: 130, maxRange: 300, damageMult: 0.3, tickInterval: 500 } },
+  seismic_slam: { id: 'seismic_slam', name: 'Seismic Slam', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Smash the ground with both fists. A heave of earth rolls out in a line, throwing everything in its path into the air and stunning it on landing.', manaCost: 35, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.3, reqLevel: 15, element: 'physical', effect: { kind: 'line', damageMult: 2.2, length: 260, width: 64, speed: 600, stun: 1500, knockback: 30, visual: 'slam' } },
+  rockfall: { id: 'rockfall', name: 'Rockfall', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Stones rain down over a wide area for five seconds, each one cratering the ground where it lands.', manaCost: 45, cooldown: 20000, rank5Cooldown: 13000, rankBonus: 0.3, reqLevel: 20, element: 'physical', effect: { kind: 'zone', zone: 'rockfall', duration: 5000, radius: 150, maxRange: 320, damageMult: 1.2, tickInterval: 400, aoeRadius: 50 } },
+  earthquake: { id: 'earthquake', name: 'Earthquake', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'The whole ground shakes for four seconds. Every monster in sight stumbles and is hurt each second, none can swing or shoot, and anything against a wall is crushed for half again as much.', manaCost: 60, cooldown: 45000, rank5Cooldown: 30000, rankBonus: 0.3, reqLevel: 25, element: 'physical', effect: { kind: 'zone', zone: 'earthquake', duration: 4000, radius: 600, damageMult: 0.8, tickInterval: 1000, wallMult: 1.5 } },
   rite_of_blood: { id: 'rite_of_blood', name: 'Rite of Blood', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Double your damage, attack speed and movement for ten seconds. Every hit costs 2% of your life.', manaCost: 40, cooldown: 45000, rank5Cooldown: 32000, reqLevel: 15, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { atkSpdPct: 100, dmgPct: 100, moveSpdPct: 100, selfCostPct: 2 } } },
   summon_angel: { id: 'summon_angel', name: 'Summon Angel', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Call down a fallen angel to fight at your side for thirty seconds. It cuts down whatever you attack, and anything that comes near.', manaCost: 60, cooldown: 40000, rank5Cooldown: 25000, rankBonus: 0.25, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 30000, mods: { companion: { kind: 'angel', damageMult: 1.6, interval: 1000, reach: 40 } } } },
   consecrated_blade: { id: 'consecrated_blade', name: 'Consecrated Blade', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Your blade burns with holy fire for ten seconds: every hit deals 30% more, and 60% more against the undead.', manaCost: 30, cooldown: 20000, rank5Cooldown: 13000, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { holyBlade: { pct: 30, vsUndead: 2 } } } },
