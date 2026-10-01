@@ -134,6 +134,8 @@ const DOLL: [EquipKey, SlotSize, string, number][] = [
 ];
 /** The trinkets sit in a row over the bag. */
 const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
+/** The doll's height in px at unit scale: its rows, gaps, padding and the label above it. */
+const DOLL_HEIGHT = 72 + 104 + 48 + 72 + 18 + 20 + 26;
 
 /**
  * The hero menu: one pixel-art window with Inventory, Stats, Skills and
@@ -207,9 +209,12 @@ export class HeroMenu {
     const rerender = () => this.render(content.parentElement!.parentElement!);
     // The worn gear on the left as a paper doll; the trinkets in a row over the bag on the right,
     // which gets everything else. On touch the selected item's panel sits under the doll.
+    // With a mouse the doll scales so it stands half the window tall; icons grow in whole pixels with it
+    const unit = this.mouse ? Math.max(1, Math.min(2.4, (content.clientHeight * 0.5) / DOLL_HEIGHT)) : 1;
     const doll = h('div', { class: 'px-inset doll' });
+    doll.style.setProperty('--du', unit.toFixed(3));
     for (const [key, size, cols, row] of DOLL) {
-      const slot = this.dollSlot(w, key, size, rerender);
+      const slot = this.dollSlot(w, key, size, rerender, unit);
       slot.style.gridColumn = cols;
       slot.style.gridRow = String(row);
       doll.append(slot);
@@ -241,13 +246,13 @@ export class HeroMenu {
     return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   }
 
-  private dollSlot(w: World, key: EquipKey, size: SlotSize, rerender: () => void): HTMLElement {
+  private dollSlot(w: World, key: EquipKey, size: SlotSize, rerender: () => void, unit = 1): HTMLElement {
     const item = w.player.equipment.get(key);
     const on = !!item && item === this.selected;
     const el = h('button', { class: `doll-slot ${size}` + (on ? ' on' : '') + (item ? '' : ' empty') });
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
-      el.appendChild(this.icon(item, (this.mouse ? ICON_SCALE : TOUCH_ICON_SCALE)[size]));
+      el.appendChild(this.icon(item, Math.max(1, Math.round((this.mouse ? ICON_SCALE : TOUCH_ICON_SCALE)[size] * unit))));
       el.onclick = () => {
         if (this.mouse) {
           const r = w.unequipItem(key);

@@ -434,7 +434,7 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-icon { display: inline-block; image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
 .mt { font-size: 14px; line-height: 1.3; white-space: pre-line; }
 .mt.small { font-size: 11px; }
-.doll-slot .mt { font-size: 9px; letter-spacing: 0; }
+.doll-slot .mt { font-size: calc(9px * var(--du, 1)); letter-spacing: 0; }
 .px-tabs .mt { font-size: 15px; letter-spacing: 0.06em; }
 .px-tabs-title .mt { font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
 .pxb .mt { font-size: 13px; }
@@ -505,13 +505,13 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .bag-block { flex: 1; min-height: 0; align-items: flex-start; }
 
 /* Paper doll: a six-column grid following the body */
-.doll { display: grid; grid-template-columns: repeat(6, 36px); grid-template-rows: 72px 104px 48px 72px; gap: 6px 3px; padding: 10px 12px; justify-items: center; align-items: center; }
+.doll { --du: 1; display: grid; grid-template-columns: repeat(6, calc(36px * var(--du))); grid-template-rows: calc(72px * var(--du)) calc(104px * var(--du)) calc(48px * var(--du)) calc(72px * var(--du)); gap: calc(6px * var(--du)) calc(3px * var(--du)); padding: 10px 12px; justify-items: center; align-items: center; }
 .doll-rule { width: 100%; height: 2px; background: var(--line); margin: 2px 0; }
 .doll-slot { display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
-.doll-slot.big { width: 72px; height: 104px; }
-.doll-slot.mid { width: 72px; height: 72px; }
-.doll-slot.small { width: 48px; height: 48px; }
-.doll-slot.belt { width: 72px; height: 48px; }
+.doll-slot.big { width: calc(72px * var(--du, 1)); height: calc(104px * var(--du, 1)); }
+.doll-slot.mid { width: calc(72px * var(--du, 1)); height: calc(72px * var(--du, 1)); }
+.doll-slot.small { width: calc(48px * var(--du, 1)); height: calc(48px * var(--du, 1)); }
+.doll-slot.belt { width: calc(72px * var(--du, 1)); height: calc(48px * var(--du, 1)); }
 .doll-slot.trinket { width: 60px; height: 60px; }
 .doll-slot.on { border-image-source: var(--px-slotOn); }
 .doll-slot.empty { cursor: default; }
