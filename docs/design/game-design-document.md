@@ -135,7 +135,7 @@ monster numbers change; the numbers live in `docs/design/systems-reference.md`.
   from a pool of eight, scaled by rarity and item level. Divine specials carry
   their numbers as written.
 - **Slots:** weapon, shield, helmet, chest, gloves, boots, belt, amulet, two
-  rings, totem, relic, charm. An 18x14 bag and a three-page stash of 12x12.
+  rings, totem, relic, charm. A 16x18 bag and a three-page stash of 12x12.
 - **Offhands:** a lantern (attack and movement speed), a skull (critical
   chance and damage) or a quiver (both crits and attack speed) can take the
   shield's spot. Like a shield they need a one-handed weapon; a bow takes a

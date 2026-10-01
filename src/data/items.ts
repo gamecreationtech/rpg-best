@@ -200,8 +200,8 @@ export const ITEM_RULES = {
   /** value = rarityGold * width * height * (1 + (ilvl - 1) * valueScale) */
   valueScale: 0.05,
   sellRatio: 0.4,
-  inventoryCols: 18,
-  inventoryRows: 14,
+  inventoryCols: 16,
+  inventoryRows: 18,
   stashCols: 12,
   stashRows: 12,
   stashPages: 3,

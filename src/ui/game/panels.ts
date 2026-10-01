@@ -105,7 +105,7 @@ export class Panels {
     this.selectedFrom = null;
     this.root.style.display = 'flex';
     this.titleEl.textContent = TITLES[kind];
-    // The bag is 18 wide: cells shrink so every column fits on a phone
+    // The bag is 16 wide: cells shrink so every column fits on a phone
     this.cellSize = Math.max(18, Math.min(34, Math.floor((Math.min(window.innerWidth, 720) - 32) / ITEM_RULES.inventoryCols)));
     this.half = 'left';
     if (this.isHero) {

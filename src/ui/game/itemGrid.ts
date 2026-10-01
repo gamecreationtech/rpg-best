@@ -16,7 +16,7 @@ export interface GridCallbacks {
   dim?: (item: Item) => boolean;
 }
 
-/** Renders an item grid (the 18x14 bag or a 12x12 stash page) with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
+/** Renders an item grid (the 16x18 bag or a 12x12 stash page) with items as blocks. Tapping an item selects it; tapping a cell moves the selection. */
 export class ItemGrid {
   readonly root: HTMLDivElement;
   private cell = 30;

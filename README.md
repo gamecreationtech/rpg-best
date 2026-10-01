@@ -8,7 +8,7 @@ image, model or audio files.
 ## Status
 
 Playable pre-alpha. Three classes with nine pledges, 53 skills, passive trees,
-items with six rarities, an 18x14 bag, a stash, merchant, three crafting
+items with six rarities, a 16x18 bag, a stash, merchant, three crafting
 stations, consumables, synthesised sound and saves with a shareable code. Zones and
 monsters are first drafts: eleven zones from level 1 to 100 and forty-six
 monsters, to be replaced by the producer's data. Level cap 100, about twenty
