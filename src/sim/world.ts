@@ -1103,11 +1103,17 @@ export class World {
   buyItem(item: Item): { ok: boolean; reason?: string } {
     const price = buyPrice(item);
     if (this.player.gold < price) return { ok: false, reason: 'Not enough gold' };
-    if (!this.player.inventory.add(item)) return { ok: false, reason: 'Inventory is full' };
+    // Off the shelf before it goes in the bag: taking it off afterwards would wipe the bag position it was just given
+    const shelfCol = item.col;
+    const shelfRow = item.row;
+    this.vendorShelf.remove(item);
+    if (!this.player.inventory.add(item)) {
+      this.vendorShelf.place(item, shelfCol, shelfRow);
+      return { ok: false, reason: 'Inventory is full' };
+    }
     this.player.gold -= price;
     const i = this.vendorStock.indexOf(item);
     if (i >= 0) this.vendorStock.splice(i, 1);
-    this.vendorShelf.remove(item);
     this.emit({ type: 'sound', id: 'coin' });
     return { ok: true };
   }

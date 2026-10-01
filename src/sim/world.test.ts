@@ -23,6 +23,13 @@ describe('world', () => {
     expect(w.enemies.filter((e) => e.alive && e.dummy).length).toBe(5);
     expect(w.interactables.map((i) => i.kind)).toContain('vendor');
     expect(w.vendorStock.length).toBe(18);
+    // Buying takes the item off the shelf and sets it down inside the bag, where the bag's cells know it
+    w.player.gold = 100000;
+    const bought = w.vendorStock[0]!;
+    expect(w.buyItem(bought).ok).toBe(true);
+    expect(w.player.inventory.itemAt(bought.col, bought.row)).toBe(bought);
+    expect(w.vendorShelf.has(bought)).toBe(false);
+    expect(w.vendorStock.length).toBe(17);
     run(w, 1);
     expect(w.player.hp).toBe(w.derived.maxHp);
   });
