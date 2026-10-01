@@ -475,6 +475,11 @@ export class PixelView {
         pt.burst(ev.x + ev.dirX * 0.5, 1.2, ev.z + ev.dirZ * 0.5, 6, 1.5, color, 0.35, { priority: 0.5 });
         break;
       }
+      case 'arc':
+        // Lightning jumps: a jagged line between the two, sparks at the far end
+        this.effects.link(ev.x0, 1, ev.z0, ev.x1, 1, ev.z1, 0xa8c8ff, 0.18);
+        pt.burst(ev.x1, 1, ev.z1, 6, 1.5, 0xd8e8ff, 0.25, { priority: 0.5 });
+        break;
       case 'minion_strike':
         if (ev.kind === 'eagle') {
           // Talons: a quick white rake and a few feathers knocked loose
@@ -1065,6 +1070,20 @@ export class PixelView {
       case 'stomp':
         this.shockwave(x, z, radius);
         break;
+      case 'thunderclap': {
+        // A crack of thunder: a blinding white ring snapping outward, a hard flash, sparks everywhere and a jolt
+        this.effects.ring(x, z, 0.2, radius, 0xffffff, 0.18, 3, 2.5);
+        this.effects.ring(x, z, 0.2, radius * 1.1, 0xa8c8ff, 0.35, 2, 0, 0.05);
+        this.effects.wave(x, z, 0.2, radius, 0xa8c8ff, 0.3, 1.5);
+        this.effects.flash(x, 1, z, 0xffffff, 3, 120, 0.2);
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2 + z;
+          this.effects.link(x, 1, z, x + Math.cos(a) * radius, 0.2, z + Math.sin(a) * radius, 0xa8c8ff, 0.12);
+        }
+        this.particles.burst(x, 0.8, z, 30, 4, 0xd8e8ff, 0.4, { drag: 2, priority: 0.7 });
+        this.view.kick(0.3);
+        break;
+      }
       case 'winter': {
         // Winter's Heart: the cold takes the whole field at once. A hard white flash, a wave of frost racing to the
         // edge of sight, frost thrown up everywhere, and the screen shakes
@@ -1441,7 +1460,19 @@ export class PixelView {
       const venom = pr.shape === 'arrow' && pr.element === 'poison' && pr.owner !== 'enemy';
       const great = pr.shape === 'greatarrow';
       const lance = pr.shape === 'lance';
-      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : great ? 0x55cc33 : lance ? 0x9fe0ff : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      const orb = pr.shape === 'orb';
+      const color = pr.owner === 'enemy' ? 0xff4a3a : pr.shape === 'star' ? 0xffe070 : pr.shape === 'hammer' ? 0xffd860 : venom ? 0x66e070 : great ? 0x55cc33 : lance ? 0x9fe0ff : orb || pr.shape === 'spark' ? 0xa8c8ff : pr.shape === 'arrow' || pr.shape === 'dagger' ? 0xe8e0d0 : ELEMENT_COLORS[pr.element];
+      if (orb) {
+        // Ball lightning crackles: a hard flickering light and sparks jumping off it to the ground
+        this.lights.push({ x: Math.round(cam.frameX(pr.x, pr.z)), y: Math.round(cam.frameY(pr.x, pr.y, pr.z)), radius: 70, intensity: 1.6 + Math.sin(this.time * 40) * 0.5, r: 0.65, g: 0.8, b: 1 });
+        if (Math.random() < 0.7) {
+          const a = Math.random() * Math.PI * 2;
+          this.particles.spawn(pr.x + Math.cos(a) * 0.6, pr.y + (Math.random() - 0.5) * 0.6, pr.z + Math.sin(a) * 0.6, Math.cos(a) * 3, -2, Math.sin(a) * 3, 0.25, Math.random() < 0.5 ? 0xffffff : 0xa8c8ff, { priority: 0.5, drag: 3 });
+        }
+        if (Math.random() < 0.15) this.effects.link(pr.x, pr.y, pr.z, pr.x + (Math.random() - 0.5) * 2.5, 0, pr.z + (Math.random() - 0.5) * 2.5, 0xa8c8ff, 0.1);
+      } else if (pr.shape === 'spark') {
+        this.lights.push({ x: Math.round(cam.frameX(pr.x, pr.z)), y: Math.round(cam.frameY(pr.x, pr.y, pr.z)), radius: 30, intensity: 1.2, r: 0.65, g: 0.8, b: 1 });
+      }
       if (lance) {
         // Frost crystals shed behind the lance, and a cold light on it
         if (Math.random() < 0.8) this.particles.spawn(pr.x, pr.y + (Math.random() - 0.5) * 0.3, pr.z, (Math.random() - 0.5) * 0.5, 0.3, (Math.random() - 0.5) * 0.5, 0.45, Math.random() < 0.4 ? 0xffffff : 0x9fe0ff, { priority: 0.5, alpha: 0.9, drag: 2 });
@@ -1550,6 +1581,8 @@ export class PixelView {
       if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
       if (w.zones.some((z) => z.type === 'wind' && z.followsPlayer)) this.drawTornado(heroY);
       if (w.buffs.some((b) => b.id === 'quickshot')) this.drawQuickWind(heroY);
+      if (w.buffs.some((b) => b.mods.deflect)) this.drawWindBarrier(heroY);
+      if (w.buffs.some((b) => b.mods.overload)) this.drawOverload(heroY);
     }
 
     // Arrow of Beyond: the daemon, rising out of the ground, drawing, loosing, and sinking back
@@ -2120,6 +2153,51 @@ export class PixelView {
       this.lights.push({ x: fx, y: fy - 30, radius: 52, intensity: 1.1 + Math.sin(this.time * 3) * 0.1, r: 1, g: 0.85, b: 0.5 });
       if (Math.random() < 0.35) this.particles.spawn(m.x + (Math.random() - 0.5) * 1.4, y + Math.random() * 1.8, m.z + (Math.random() - 0.5) * 1.4, 0, 0.5, 0, 1.2, Math.random() < 0.4 ? 0xffffff : 0xffe070, { priority: 0.3, size: 1, alpha: 0.9 });
     }
+  }
+
+  /** Wind Barrier: a wide sphere of wind round the hero, three streaks racing round at chest height and two more leaning the other way above and below, with dust whipped round the edge. */
+  private drawWindBarrier(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, heroY + 0.7, w.pz));
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        ctx.lineWidth = 1;
+        const bands: [number, number, number][] = [[0, 30, 12], [-14, 24, 9], [14, 24, 9]];
+        for (const [dy, rx, ry] of bands) {
+          for (let i = 0; i < 3; i++) {
+            const a0 = this.time * (6 + Math.abs(dy) * 0.1) * (dy < 0 ? -1 : 1) + (i * Math.PI * 2) / 3;
+            const front = Math.sin(a0 + 0.6) > 0;
+            ctx.globalAlpha = front ? 0.8 : 0.3;
+            ctx.strokeStyle = i === 0 ? '#ffffff' : '#c8e0ff';
+            ctx.beginPath();
+            ctx.ellipse(fx, fy + dy, rx, ry, 0, a0, a0 + 1.2);
+            ctx.stroke();
+          }
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+    if (Math.random() < 0.8) {
+      const a = this.time * 6 + Math.random() * 0.5;
+      this.particles.spawn(w.px + Math.cos(a) * 1.3, heroY + Math.random() * 1.6, w.pz + Math.sin(a) * 1.3, -Math.sin(a) * 4, 0, Math.cos(a) * 4, 0.3, 0xc8e0ff, { drag: 4, priority: 0.4, alpha: 0.7 });
+    }
+    this.lights.push({ x: fx, y: fy, radius: 44, intensity: 0.6, r: 0.7, g: 0.85, b: 1 });
+  }
+
+  /** Overload: the hero crackles. Short arcs leap off the body at random and a blue-white light pulses. */
+  private drawOverload(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    if (Math.random() < 0.25) {
+      const a = Math.random() * Math.PI * 2;
+      this.effects.link(w.px, heroY + 0.4 + Math.random() * 0.8, w.pz, w.px + Math.cos(a) * 0.9, heroY + Math.random() * 1.4, w.pz + Math.sin(a) * 0.9, 0xa8c8ff, 0.08);
+    }
+    if (Math.random() < 0.4) this.particles.spawn(w.px + (Math.random() - 0.5) * 0.7, heroY + Math.random() * 1.5, w.pz + (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 2, 1, (Math.random() - 0.5) * 2, 0.25, 0xffffff, { priority: 0.4, drag: 3 });
+    this.lights.push({ x: Math.round(cam.frameX(w.px, w.pz)), y: Math.round(cam.frameY(w.px, heroY + 0.8, w.pz)), radius: 40, intensity: 0.9 + Math.sin(this.time * 30) * 0.3, r: 0.65, g: 0.8, b: 1 });
   }
 
   /** Storm and Blizzard change the sky: a shadow over the storm's whole patch (flickering when a bolt lands), a cold white cast over a blizzard. */

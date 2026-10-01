@@ -104,6 +104,17 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   }
   // Item procs fire off weapon hits, never off their own damage
   if (p.weaponHit && !p.fromProc && amount > 0) fireProcs(w, e, amount, p.element);
+  // Overload: a lightning hit may jump once to the nearest other enemy
+  if (p.element === 'lightning' && !p.fromArc && !p.fromProc && amount > 0) {
+    const ov = w.buffs.find((b) => b.mods.overload)?.mods.overload;
+    if (ov && roll() < ov.chance) {
+      const other = w.nearestEnemy(e.x, e.z, ov.range * PX, [e.id]);
+      if (other) {
+        w.emit({ type: 'arc', x0: e.x, z0: e.z, x1: other.x, z1: other.z });
+        hitEnemy(w, other, { amount: Math.max(1, Math.round(amount * ov.mult)), element: 'lightning', canCrit: false, skillId: p.skillId, weaponHit: false, fromArc: true });
+      }
+    }
+  }
   return amount;
 }
 

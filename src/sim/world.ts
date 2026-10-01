@@ -53,6 +53,8 @@ export interface ProjectileSpec {
   element: Element;
   /** Height off the floor; shoulder height when left out. */
   y?: number;
+  ricochetDecay?: number;
+  rehit?: number;
   x: number;
   z: number;
   dirX: number;
@@ -775,6 +777,9 @@ export class World {
     p.homing = !!spec.homing;
     p.homingTarget = -1;
     p.ricochets = spec.ricochets ?? 0;
+    p.ricochetDecay = spec.ricochetDecay ?? 1;
+    p.rehit = spec.rehit ?? 0;
+    p.rehitTimer = 0;
     p.returns = !!spec.returns;
     p.returning = false;
     p.throughWalls = !!spec.throughWalls;
@@ -1983,7 +1988,7 @@ export class World {
   private blankProjectile(id: number): Projectile {
     return {
       id, alive: false, owner: 'player', shape: 'bolt', element: 'physical', x: 0, z: 0, y: 1, vx: 0, vz: 0, speed: 0, radius: 0.2, traveled: 0, maxRange: 1,
-      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0,
+      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0, ricochetDecay: 1, rehit: 0, rehitTimer: 0,
       returns: false, returning: false, throughWalls: false, splashRadius: 0, onHitZone: null, burstOnHit: null, skillId: null,
     };
   }
@@ -2031,6 +2036,14 @@ export class World {
       p.z = nz;
       p.traveled += step;
       if (p.owner === 'player') {
+        // A lingering projectile hits the same enemy again every so often
+        if (p.rehit > 0) {
+          p.rehitTimer += dt;
+          if (p.rehitTimer >= p.rehit) {
+            p.rehitTimer -= p.rehit;
+            p.hit.length = 0;
+          }
+        }
         let consumed = false;
         this.hash.query(p.x, p.z, p.radius + 0.8, (id) => {
           if (consumed) return;
@@ -2057,6 +2070,8 @@ export class World {
             if (next) {
               p.ricochets--;
               p.traveled = 0;
+              p.packet.amount = Math.max(1, Math.round(p.packet.amount * p.ricochetDecay));
+              this.emit({ type: 'arc', x0: e.x, z0: e.z, x1: next.x, z1: next.z });
               const dx = next.x - p.x;
               const dz = next.z - p.z;
               const len = Math.hypot(dx, dz) || 1;
@@ -2075,6 +2090,12 @@ export class World {
         });
         if (!p.alive) continue;
       } else if (!this.playerDead) {
+        // Wind Barrier: anything that comes within reach of the hero is torn apart
+        if (this.buffs.some((b) => b.mods.deflect) && (p.x - this.px) ** 2 + (p.z - this.pz) ** 2 <= 2.2 * 2.2) {
+          this.emit({ type: 'projectile_hit', x: p.x, z: p.z, element: 'lightning', shape: p.shape, splash: 0 });
+          p.alive = false;
+          continue;
+        }
         const titan = this.titan;
         if (titan) {
           const rt = p.radius + TITAN_RADIUS;

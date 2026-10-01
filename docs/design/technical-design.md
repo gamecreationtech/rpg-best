@@ -106,6 +106,16 @@ What that means for each kind of asset:
   screen-wide freeze with `thawPct`, drawn as a white flash, a frost wave to
   the edge of sight and a `winter` zone that casts a cold white light and
   snow until the ice breaks in shards on every monster.
+  The Stormsinger's five: Chain Lightning is a `spark` projectile with
+  `ricochets` and `ricochetDecay`, each hop drawn as a jagged `arc` between the
+  two; Thunderclap an aoe with `knockback` drawn as a snapping white ring,
+  flash and radial bolts; Wind Barrier a buff with `deflect` that destroys
+  enemy projectiles within 2.2 tiles of the hero, drawn as three bands of wind
+  streaks; Overload a buff whose lightning hits may jump once to the nearest
+  other enemy (`DamagePacket.fromArc` stops a second jump), with arcs leaping
+  off the hero; Ball Lightning an `orb` projectile with `rehit`, clearing its
+  hit list every half second so it shocks what it sits on again, crackling
+  with a flickering light and bolts to the ground.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

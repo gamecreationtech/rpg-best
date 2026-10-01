@@ -85,7 +85,7 @@ export interface Enemy {
   taunt: number;
 }
 
-export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
+export type ProjectileShape = 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'spark' | 'orb' | 'hammer' | 'star' | 'boulder' | 'enemy_bolt';
 
 export interface DamagePacket {
   amount: number;
@@ -109,6 +109,8 @@ export interface DamagePacket {
   fromMinion?: boolean;
   /** Shove the target this many world units away from the hero. */
   knockback?: number;
+  /** Jumped from another hit by Overload, so it never arcs again. */
+  fromArc?: boolean;
 }
 
 export interface Projectile {
@@ -132,6 +134,11 @@ export interface Projectile {
   homing: boolean;
   homingTarget: number;
   ricochets: number;
+  /** Damage kept per ricochet hop. */
+  ricochetDecay: number;
+  /** Seconds between repeat hits on the same enemy, 0 for once only; `rehitTimer` counts up to it. */
+  rehit: number;
+  rehitTimer: number;
   returns: boolean;
   returning: boolean;
   throughWalls: boolean;
@@ -215,6 +222,8 @@ export type SimEvent =
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
   | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' | 'avalanche' }
+  /** Lightning jumping from one point to another: a chain hop or an Overload arc. */
+  | { type: 'arc'; x0: number; z0: number; x1: number; z1: number }
   /** A companion's blow: the eagle's talons or the angel's sword, from x, z toward dirX, dirZ. */
   | { type: 'minion_strike'; kind: 'eagle' | 'angel'; x: number; z: number; dirX: number; dirZ: number }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */

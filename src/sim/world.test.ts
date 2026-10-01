@@ -160,7 +160,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(63);
+    expect(Object.keys(SKILLS).length).toBe(68);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -466,6 +466,79 @@ describe('skeleton army', () => {
     b.remaining = 0.01;
     run(w, 0.1);
     expect(w.minions.some((m) => m.active)).toBe(false);
+  });
+});
+
+describe('stormsinger', () => {
+  const setup = (): World => {
+    const w = new World(createPlayer('sorcerer', 'stormsinger'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    for (const id of ['chain_lightning', 'thunderclap', 'wind_barrier', 'overload', 'ball_lightning']) w.player.skillRanks[id] = 1;
+    return w;
+  };
+  const ghoul = (w: World, dx: number, dz: number): Enemy => {
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + dx, w.pz + dz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    return e;
+  };
+
+  it('chain lightning jumps from the first enemy to the next, losing a little each hop', () => {
+    const w = setup();
+    const a = ghoul(w, 0, 3);
+    const b = ghoul(w, 1.5, 4.5);
+    const c = ghoul(w, -1.5, 6);
+    expect(castSkill(w, 'chain_lightning', { x: a.x, z: a.z }).ok).toBe(true);
+    run(w, 1);
+    const hits = [a, b, c].map((e) => 100000 - e.hp);
+    expect(hits.every((h) => h > 0)).toBe(true);
+    expect(hits[1]!).toBeLessThan(hits[0]!);
+    expect(w.events.filter((ev) => ev.type === 'arc').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('thunderclap stuns and shoves everything close', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 2);
+    const before = e.z;
+    expect(castSkill(w, 'thunderclap', null).ok).toBe(true);
+    expect(e.status.stun).toBeGreaterThan(0);
+    expect(e.z).toBeGreaterThan(before + 1);
+    expect(e.hp).toBeLessThan(100000);
+  });
+
+  it('overload arcs lightning hits to a neighbour', () => {
+    const w = setup();
+    const a = ghoul(w, 0, 3);
+    const b = ghoul(w, 1.2, 3);
+    expect(castSkill(w, 'overload', null).ok).toBe(true);
+    // Twenty lightning hits on one: at 40% the other must catch at least one arc
+    for (let i = 0; i < 20; i++) hitEnemy(w, a, { amount: 10, element: 'lightning', canCrit: false, skillId: null, weaponHit: false });
+    expect(b.hp).toBeLessThan(100000);
+    expect(w.events.some((ev) => ev.type === 'arc')).toBe(true);
+  });
+
+  it('wind barrier tears enemy bolts apart before they land', () => {
+    const w = setup();
+    w.derived.dodge = 0;
+    expect(castSkill(w, 'wind_barrier', null).ok).toBe(true);
+    const hp = w.player.hp;
+    w.spawnProjectile({ owner: 'enemy', shape: 'enemy_bolt', element: 'fire', x: w.px + 5, z: w.pz, dirX: -1, dirZ: 0, speed: 9, radius: 0.25, maxRange: 10, packet: { amount: 50, element: 'fire', canCrit: false, skillId: null, weaponHit: false } });
+    run(w, 1.5);
+    expect(w.player.hp).toBe(hp);
+    expect(w.projectiles.some((p) => p.alive)).toBe(false);
+  });
+
+  it('ball lightning drifts slowly and shocks the same enemy again and again', () => {
+    const w = setup();
+    const e = ghoul(w, 0, 2.5);
+    expect(castSkill(w, 'ball_lightning', { x: w.px, z: w.pz + 6 }).ok).toBe(true);
+    run(w, 2.5);
+    const hits = w.events.filter((ev) => ev.type === 'enemy_hit' && ev.id === e.id).length;
+    expect(hits).toBeGreaterThanOrEqual(3);
+    expect(w.projectiles.some((p) => p.alive && p.shape === 'orb')).toBe(true);
   });
 });
 

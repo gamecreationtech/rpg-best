@@ -36,6 +36,10 @@ export interface BuffMods {
   skeletons?: { count: number; damageMult: number; interval: number; range: number };
   /** A colossal titan raised for the buff's duration: `hpMult` times the hero's life, taunts monsters within `tauntRadius` px of the hero, smashes everything within `reach` px every `interval` ms. */
   titan?: { hpMult: number; damageMult: number; interval: number; reach: number; tauntRadius: number };
+  /** Overload: every lightning hit has `chance` percent to arc to the nearest other enemy within `range` px for `mult` of the hit. */
+  overload?: { chance: number; mult: number; range: number };
+  /** Wind Barrier: enemy bolts and arrows that come near the hero are blown apart. */
+  deflect?: boolean;
   /** A single companion at the hero's side for the buff's duration: an eagle that dives on what the hero attacks, or a fallen angel that fights whatever is near. Strikes within `reach` px every `interval` ms. */
   companion?: { kind: 'eagle' | 'angel'; damageMult: number; interval: number; reach: number };
 }
@@ -97,10 +101,14 @@ export type SkillEffect =
       rateLimited?: 'cast' | 'attack';
       /** Multiplier against stunned or frozen targets (Ice Lance). */
       bonusVsDisabled?: number;
+      /** Damage kept on each ricochet hop (Chain Lightning loses some every jump). */
+      ricochetDecay?: number;
+      /** Ms between hits on the same enemy while the projectile stays on it (Ball Lightning). */
+      rehit?: number;
       /** The shot is loosed by something summoned behind the hero: it rises for `delay` ms, `behind` px back along the line of fire, then fires from there (Arrow of Beyond's daemon). */
       summon?: { delay: number; behind: number };
       /** Which projectile visual to use. */
-      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'hammer' | 'star' | 'boulder';
+      shape: 'bolt' | 'ball' | 'dagger' | 'arrow' | 'greatarrow' | 'lance' | 'spark' | 'orb' | 'hammer' | 'star' | 'boulder';
     }
   | {
       kind: 'aoe';
@@ -121,7 +129,9 @@ export type SkillEffect =
       hitsAllVisible?: boolean;
       /** Everything frozen by this takes this share of its max life when it thaws (Winter's Heart). */
       thawPct?: number;
-      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'winter';
+      /** Everything hit is shoved this many px away from the centre (Thunderclap). */
+      knockback?: number;
+      visual: 'stomp' | 'nova_cold' | 'nova_poison' | 'boulder' | 'lightning' | 'winter' | 'thunderclap';
     }
   | { kind: 'buff'; duration: number; mods: BuffMods }
   | {
@@ -233,6 +243,11 @@ export const SKILLS: Record<string, SkillDef> = {
   blizzard: { id: 'blizzard', name: 'Blizzard', classId: S, tier: 'pledge', pledgeId: 'wintercaller', description: 'Ten seconds of falling ice across the whole battlefield. Slows everything by half.', manaCost: 90, cooldown: 25000, rank5Cooldown: 15000, rankBonus: 0.25, reqLevel: 20, element: 'cold', effect: { kind: 'zone', zone: 'blizzard', duration: 10000, radius: 600, damageMult: 0.8, tickInterval: 500, perWave: 15, slowPct: 50 } },
   call_of_the_wind: { id: 'call_of_the_wind', name: 'Call of the Wind', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'A gale that slows enemies by half and doubles your speed for ten seconds.', manaCost: 60, cooldown: 35000, rank5Cooldown: 22000, reqLevel: 10, element: 'lightning', effect: { kind: 'zone', zone: 'wind', duration: 10000, radius: 300, slowPct: 50, playerMoveSpdPct: 100 } },
   storm: { id: 'storm', name: 'Storm', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'For ten seconds, lightning strikes the five nearest enemies every second.', manaCost: 80, cooldown: 30000, rank5Cooldown: 20000, rankBonus: 0.25, reqLevel: 15, element: 'lightning', effect: { kind: 'zone', zone: 'storm', duration: 10000, radius: 300, damageMult: 1.5, tickInterval: 1000, targets: 5 } },
+  chain_lightning: { id: 'chain_lightning', name: 'Chain Lightning', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'A bolt that leaps from its first victim to the next nearest, up to five jumps, losing a little bite with each.', manaCost: 22, cooldown: 2500, rank5Cooldown: 1500, rankBonus: 0.25, reqLevel: 5, element: 'lightning', effect: { kind: 'projectile', damageMult: 1.3, projSpeed: 1400, projRadius: 8, maxRange: 300, ricochets: 5, ricochetDecay: 0.85, shape: 'spark' } },
+  thunderclap: { id: 'thunderclap', name: 'Thunderclap', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'A crack of thunder around you that stuns everything close for a second and knocks it back a step.', manaCost: 30, cooldown: 7000, rank5Cooldown: 4500, rankBonus: 0.25, reqLevel: 10, element: 'lightning', effect: { kind: 'aoe', damageMult: 1.2, radius: 110, at: 'self', stun: 1000, knockback: 60, visual: 'thunderclap' } },
+  wind_barrier: { id: 'wind_barrier', name: 'Wind Barrier', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'Six seconds of wind round you that tears apart any bolt or arrow before it lands.', manaCost: 25, cooldown: 15000, rank5Cooldown: 10000, reqLevel: 10, element: 'lightning', effect: { kind: 'buff', duration: 6000, mods: { deflect: true } } },
+  overload: { id: 'overload', name: 'Overload', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'For eight seconds, every lightning hit you land has a 40% chance to arc to a nearby enemy for half the damage.', manaCost: 35, cooldown: 20000, rank5Cooldown: 14000, reqLevel: 15, element: 'lightning', effect: { kind: 'buff', duration: 8000, mods: { overload: { chance: 40, mult: 0.5, range: 120 } } } },
+  ball_lightning: { id: 'ball_lightning', name: 'Ball Lightning', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'A slow sphere of lightning drifts the way you aim for six seconds, shocking everything it passes over again and again.', manaCost: 55, cooldown: 14000, rank5Cooldown: 9000, rankBonus: 0.25, reqLevel: 20, element: 'lightning', effect: { kind: 'projectile', damageMult: 0.6, projSpeed: 55, projRadius: 40, maxRange: 330, pierce: Infinity, rehit: 500, shape: 'orb' } },
   lightning_strike: { id: 'lightning_strike', name: 'Lightning Strike', classId: S, tier: 'pledge', pledgeId: 'stormsinger', description: 'Call a bolt down on one enemy. Half again as strong against stunned or frozen targets.', manaCost: 28, cooldown: 6000, rank5Cooldown: 3500, rankBonus: 0.3, reqLevel: 10, element: 'lightning', effect: { kind: 'aoe', damageMult: 2.2, radius: 40, at: 'target', maxRange: 300, bonusVsDisabled: 1.5, visual: 'lightning' } },
   death: { id: 'death', name: 'Death', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'Curse enemies to lose 1% of their life per second. Below 5% they die instantly.', manaCost: 60, cooldown: 20000, rank5Cooldown: 12000, reqLevel: 15, element: 'poison', effect: { kind: 'curse', maxRange: 250, radius: 50, duration: 10000, pctPerSec: 1, executeBelowPct: 5 } },
   poison_nova: { id: 'poison_nova', name: 'Poison Nova', classId: S, tier: 'pledge', pledgeId: 'necromancer', description: 'A burst of plague that poisons everything nearby.', manaCost: 45, cooldown: 14000, rank5Cooldown: 8000, rankBonus: 0.25, reqLevel: 5, element: 'poison', effect: { kind: 'aoe', damageMult: 0.5, radius: 250, at: 'self', poison: { ticks: 15, tickMult: 0.55, interval: 1000 }, visual: 'nova_poison' } },

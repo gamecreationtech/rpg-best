@@ -230,6 +230,8 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
         pierce: eff.pierce ?? (eff.shape === 'arrow' ? w.derived.pierce : 0),
         homing,
         ricochets: eff.ricochets ?? 0,
+      ricochetDecay: eff.ricochetDecay,
+      rehit: eff.rehit ? eff.rehit * MS : 0,
         returns: !!eff.returns,
         throughWalls: !!eff.throughWalls,
         splashRadius: (eff.splashRadius ?? 0) * PX,
@@ -286,7 +288,7 @@ function landAoe(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'aoe
     const list = eff.hitsAllVisible ? w.enemiesWithin(cx, cz, 22) : w.enemiesWithin(cx, cz, radius);
     if (eff.visual === 'winter') w.addZone({ type: 'winter', x: cx, z: cz, radius, duration: (eff.freeze ?? 3000) * MS, damage: 0, element: def.element, skillId: def.id });
     for (const e of list) {
-      const p = packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, freeze: eff.freeze, bonusVsDisabled: eff.bonusVsDisabled });
+      const p = packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, freeze: eff.freeze, bonusVsDisabled: eff.bonusVsDisabled, knockback: eff.knockback ? eff.knockback * PX : undefined });
       if (eff.poison) p.poison = { ticks: eff.poison.ticks, interval: eff.poison.interval, damage: Math.max(1, Math.round(p.amount * eff.poison.tickMult)) };
       if (eff.thawPct && !e.dummy) e.status.thaw = Math.max(e.status.thaw, eff.thawPct);
       hitEnemy(w, e, p);

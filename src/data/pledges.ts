@@ -41,7 +41,7 @@ export const PLEDGES: Record<string, PledgeDef> = {
   stormsinger: {
     id: 'stormsinger', classId: 'sorcerer', name: 'Stormsinger', title: 'Voice of the Storm', color: 0xffd83a, cloth: 0x8a6a14,
     description: 'Where thunder breaks, the Stormsinger stands. A master of lightning and wind, calling down the fury of the sky.',
-    skills: ['call_of_the_wind', 'storm', 'lightning_strike'],
+    skills: ['call_of_the_wind', 'storm', 'lightning_strike', 'chain_lightning', 'thunderclap', 'wind_barrier', 'overload', 'ball_lightning'],
   },
   wintercaller: {
     id: 'wintercaller', classId: 'sorcerer', name: 'Wintercaller', title: 'Herald of the Frost', color: 0x6aa8ff, cloth: 0x2a4a9a,

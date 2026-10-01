@@ -297,6 +297,42 @@ export function projectileProp(shape: ProjectileShape, color: number, pal: Palet
       frames.push(b.toCanvas());
       return prop(frames, 6 * s, s, 1);
     }
+    case 'spark': {
+      // Chain lightning's bolt: a short jagged streak of white-blue, flipping its zigzag between frames
+      for (let f = 0; f < 2; f++) {
+        const b = new PixelBuffer(14 * s, 7 * s);
+        const zig = [3, 1, 4, 2, 5, 3, 2];
+        for (let i = 0; i < 7; i++) {
+          const y = (f ? 6 - zig[i]! : zig[i]!) * s;
+          b.rect(i * 2 * s, y, 2 * s, s, c[3]);
+          b.rect(i * 2 * s, y - s, 2 * s, s, [255, 255, 255]);
+          if (i < 6) b.rect((i * 2 + 1) * s, y + s, s, s, c[2]);
+        }
+        frames.push(b.toCanvas());
+      }
+      return prop(frames, 7 * s, 3 * s, 0.05);
+    }
+    case 'orb': {
+      // Ball lightning: a sphere of crackling light with a white core and arcs skating over its surface
+      const R = 11 * s;
+      for (let f = 0; f < 3; f++) {
+        const b = new PixelBuffer(R * 2 + 2, R * 2 + 2);
+        b.ellipse(R + 1, R + 1, R, R, c[0]);
+        b.ellipse(R + 1, R + 1, R * 0.75, R * 0.75, c[1]);
+        b.ellipse(R + 1, R + 1, R * 0.45, R * 0.45, c[3]);
+        b.ellipse(R + 1, R + 1, R * 0.22, R * 0.22, [255, 255, 255]);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + f * 0.7;
+          const x0 = Math.round(R + 1 + Math.cos(a) * R * 0.5);
+          const y0 = Math.round(R + 1 + Math.sin(a) * R * 0.5);
+          const x1 = Math.round(R + 1 + Math.cos(a + 0.5) * R * 0.95);
+          const y1 = Math.round(R + 1 + Math.sin(a + 0.5) * R * 0.95);
+          b.line(x0, y0, x1, y1, [255, 255, 255]);
+        }
+        frames.push(b.toCanvas());
+      }
+      return prop(frames, R + 1, R + 1, 0.07);
+    }
     case 'lance': {
       // A spear of ice: a long crystal shaft, a faceted head, a blue-white glow along the core and frost flaking off the tail
       const L = 26 * s;
