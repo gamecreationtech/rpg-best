@@ -1,5 +1,5 @@
 import { COMBAT_RULES, PROC_CHANCE, STATUS_RULES } from '../data/status';
-import { LEVELING } from '../data/classes';
+import { LEVELING, powerCurve } from '../data/classes';
 import { PROCS } from '../data/procs';
 import { isUndead } from '../data/monsters';
 import { PX } from '../data/units';
@@ -12,7 +12,7 @@ import type { World } from './world';
 export function baseDamage(w: World, magic: boolean): number {
   const d = w.derived;
   const roll = d.dmgMin + w.rng.next() * (d.dmgMax - d.dmgMin);
-  const statBonus = magic ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage;
+  const statBonus = magic ? d.int * 0.5 * d.power + d.spellDmg : d.str * 0.5 * d.power + d.bonusDamage;
   return Math.max(1, roll + statBonus);
 }
 
@@ -22,7 +22,7 @@ export function skillDamage(w: World, skillId: string, damageMult: number, scale
   const rank = w.skillRank(skillId);
   const rankMult = 1 + rank * (def.rankBonus ?? 0.2);
   let base = baseDamage(w, w.derived.isMagicWeapon);
-  if (scalesWithInt && !w.derived.isMagicWeapon) base += w.derived.int * 0.5 + w.derived.spellDmg;
+  if (scalesWithInt && !w.derived.isMagicWeapon) base += w.derived.int * 0.5 * w.derived.power + w.derived.spellDmg;
   return Math.max(1, Math.round(base * damageMult * rankMult * w.derived.dmgMult));
 }
 
@@ -30,7 +30,8 @@ export function skillDamage(w: World, skillId: string, damageMult: number, scale
 export function armorReduction(armor: number, level: number): number {
   const r = COMBAT_RULES;
   const t = (Math.min(Math.max(1, level), LEVELING.maxLevel) - 1) / (LEVELING.maxLevel - 1);
-  const k = r.armorConstantAtOne + (r.armorConstantAtCap - r.armorConstantAtOne) * t;
+  // The constant rides the power curve too, so armour keeps its worth as every number grows
+  const k = (r.armorConstantAtOne + (r.armorConstantAtCap - r.armorConstantAtOne) * t) * powerCurve(level);
   return Math.min(r.maxArmorReductionPct, (armor / (armor + k)) * 100);
 }
 

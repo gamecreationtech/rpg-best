@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { powerCurve } from '../../data/classes';
 import { Rng } from '../../gen/rng';
 import { ARCANA_OPS, FORGE_OPS, applyArcana, applyForge } from './crafting';
 import { Equipment } from './equipment';
@@ -35,9 +36,9 @@ describe('item generation', () => {
     // Weapon damage still climbs steeply with rarity and level
     const low = makeItem(baseItem('axe'), 'magic', 2, rng);
     expect(high.weapon!.dmgMax).toBeGreaterThan(low.weapon!.dmgMax * 10);
-    // Divine specials carry their numbers as written
+    // Divine specials carry their numbers as written, lifted only by the power curve of their level
     const charm = makeItem(baseItem('vital_charm'), 'divine', 60, rng);
-    expect(charm.stats.life).toBe(500);
+    expect(charm.stats.life).toBe(Math.round(500 * powerCurve(60)));
   });
 
   it('the Weak Amulet rolls its crit stats inside their ranges and carries its proc', () => {

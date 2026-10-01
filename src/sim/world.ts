@@ -2477,7 +2477,7 @@ export class World {
 export function baseAttackDamage(w: World): number {
   const d = w.derived;
   const roll = d.dmgMin + w.rng.next() * (d.dmgMax - d.dmgMin);
-  return roll + (d.isMagicWeapon ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage);
+  return roll + (d.isMagicWeapon ? d.int * 0.5 * d.power + d.spellDmg : d.str * 0.5 * d.power + d.bonusDamage);
 }
 
 function skillDamageFor(w: World, id: string, mult: number): number {

@@ -1,4 +1,4 @@
-import { CLASSES, LEVELING, type BaseStats, type ClassId, xpForLevel } from '../data/classes';
+import { CLASSES, LEVELING, type BaseStats, type ClassId, xpForLevel, powerCurve } from '../data/classes';
 import type { ConsumableId } from '../data/consumables';
 import { PROFESSIONS, PROFESSION_RULES, type ProfessionId } from '../data/professions';
 import { passivesFor } from '../data/passives';
@@ -73,6 +73,8 @@ export interface DerivedStats {
   dmgMin: number;
   dmgMax: number;
   bonusDamage: number;
+  /** The power curve at the hero's level: what strength and intelligence are worth, and what buffs' flat armour is worth. */
+  power: number;
   spellDmg: number;
   atkSpd: number;
   /** World units per second. */
@@ -207,8 +209,9 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
   const vit = base.vit + g('vit');
   const weapon = p.equipment.get('weapon');
   const w = weapon?.weapon;
+  const pow = powerCurve(p.level);
 
-  let armor = vit * COMBAT_RULES.armorPerVit + g('armor');
+  let armor = vit * COMBAT_RULES.armorPerVit * pow + g('armor');
   let allRes = g('allResists');
   let atkSpdPct = 0;
   let dmgPct = 0;
@@ -220,7 +223,7 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     if (set.mods && setPiecesWorn(p, set.id) >= set.pieces.length) mods.push(set.mods);
   }
   for (const m of mods) {
-    armor += m.armor ?? 0;
+    armor += (m.armor ?? 0) * pow;
     allRes += m.allResists ?? 0;
     atkSpdPct += m.atkSpdPct ?? 0;
     dmgPct += m.dmgPct ?? 0;
@@ -244,12 +247,13 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
 
   return {
     str, dex, int, vit,
-    maxHp: cls.baseHp + vit * cls.hpPerVit + g('life'),
-    maxMana: cls.baseMana + int * cls.manaPerInt + g('mana'),
+    maxHp: Math.round((cls.baseHp + vit * cls.hpPerVit) * pow) + g('life'),
+    maxMana: Math.round((cls.baseMana + int * cls.manaPerInt) * pow) + g('mana'),
     armor,
     dmgMin: w?.dmgMin ?? 1,
     dmgMax: w?.dmgMax ?? 2,
     bonusDamage: g('damage'),
+    power: pow,
     spellDmg: g('spellDmg'),
     atkSpd,
     moveSpeed: moveSpeedPx * PX,
@@ -327,7 +331,7 @@ export function skillRank(p: PlayerState, id: string): number {
  * damage, times every +% damage. The stat sheet shows this range.
  */
 export function attackDamageRange(d: DerivedStats): [number, number] {
-  const flat = d.isMagicWeapon ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage;
+  const flat = d.isMagicWeapon ? d.int * 0.5 * d.power + d.spellDmg : d.str * 0.5 * d.power + d.bonusDamage;
   return [Math.max(1, Math.round((d.dmgMin + flat) * d.dmgMult)), Math.max(1, Math.round((d.dmgMax + flat) * d.dmgMult))];
 }
 

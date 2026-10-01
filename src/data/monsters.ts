@@ -1,4 +1,5 @@
 import type { Element } from './stats';
+import { powerCurve } from './classes';
 
 /**
  * Monsters. Numbers are in pixels and milliseconds like the rest of the data;
@@ -143,7 +144,7 @@ export const MONSTER_RULES = {
   alertRange: 100,
   hpPerLevel: 0.12,
   dmgPerLevel: 0.055,
-  /** Past the hero's level cap (the difficulty page) life compounds so that level 1000 has `lifeAtInferno` times level 1 life; damage adds this much of the base per level. */
+  /** Past the hero's level cap (the difficulty page) life compounds so that level 1000 has `lifeAtInferno` times level 1 life before the power curve; damage adds this much of the base per level. */
   beyondLevel: 100,
   infernoLevel: 1000,
   lifeAtInferno: 26000,
@@ -165,5 +166,7 @@ export function monsterScale(level: number): { hp: number; dmg: number } {
   const beyond = Math.max(0, level - r.beyondLevel);
   const hpAtCap = 1 + r.hpPerLevel * (r.beyondLevel - 1);
   const rate = Math.pow(r.lifeAtInferno / hpAtCap, 1 / (r.infernoLevel - r.beyondLevel));
-  return { hp: (1 + r.hpPerLevel * base) * Math.pow(rate, beyond), dmg: 1 + r.dmgPerLevel * base + r.beyondDmgPerLevel * beyond };
+  // The straight line and the beyond-cap curve, both lifted by the power curve
+  const pow = powerCurve(level);
+  return { hp: (1 + r.hpPerLevel * base) * Math.pow(rate, beyond) * pow, dmg: (1 + r.dmgPerLevel * base + r.beyondDmgPerLevel * beyond) * pow };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELING, xpForLevel, xpPerMinuteAt } from '../data/classes';
+import { LEVELING, powerCurve, xpForLevel, xpPerMinuteAt } from '../data/classes';
 import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlearnSkill, unlockUltimate, unlockedSlots } from './player';
 import { skillsFor } from '../data/skills';
 import { SETS } from '../data/sets';
@@ -107,8 +107,8 @@ describe('player', () => {
     expect(p.skillPoints).toBe(1);
     expect(p.passivePoints).toBe(1);
     const d = deriveStats(p, [], {});
-    // No automatic stat growth: 10 INT -> 200 mana, the level only grants free points
-    expect(d.maxMana).toBe(100 + 10 * 10);
+    // No automatic stat growth: 10 INT -> 200 mana lifted by the power curve of level 2; the level only grants free points
+    expect(d.maxMana).toBe(Math.round((100 + 10 * 10) * powerCurve(2)));
     expect(p.statPoints).toBe(LEVELING.statPointsPerLevel);
   });
 

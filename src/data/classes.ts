@@ -112,6 +112,17 @@ export const LEVELING = {
   /** Player level at which each skill slot (after the basic attack) unlocks. */
   slotUnlockLevels: [1, 5, 10, 15, 20],
   maxLevel: 100,
+  /**
+   * The power curve (producer's call, 2026-10-01: a steeper monster curve).
+   * Every flat number in a fight compounds by this much per level up to the
+   * cap: monster life and damage, item damage, armour, life, mana and the
+   * on-hit flats, and the hero's own base life, mana, armour and the damage
+   * its strength or intelligence adds. At 4% a level 100 monster has about
+   * 49 times the life it would have on the old straight line (some 630 times a
+   * level 1 monster all told), and a hero ten levels under a zone does about
+   * two thirds of the damage it needs while taking half again as much.
+   */
+  powerPerLevel: 0.04,
 };
 
 /** Experience a hero of this level is expected to earn per minute in a zone of its own level. */
@@ -128,4 +139,9 @@ export function minutesForLevel(level: number): number {
 /** Experience needed to leave the given level: the target minutes times the expected rate. */
 export function xpForLevel(level: number): number {
   return Math.round(minutesForLevel(level) * xpPerMinuteAt(level));
+}
+
+/** The power curve's multiplier at a level: 1 at level 1, compounding to the cap and flat past it. */
+export function powerCurve(level: number): number {
+  return Math.pow(1 + LEVELING.powerPerLevel, Math.min(Math.max(1, level), LEVELING.maxLevel) - 1);
 }

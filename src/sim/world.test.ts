@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MONSTERS, MONSTER_RULES, monsterScale } from '../data/monsters';
+import { powerCurve } from '../data/classes';
 import { ZONES } from '../data/zones';
 import { SKILLS, SKILL_RULES, skillsFor } from '../data/skills';
 import { makeItem, makeStarterItem } from './items/item';
@@ -103,7 +104,7 @@ describe('world', () => {
       expect(spawned.length).toBeGreaterThan(0);
       for (const e of spawned) {
         expect(zone.spawns[e.def!.id]).toBeGreaterThan(0);
-        expect(e.maxHp).toBe(Math.round(e.def!.hp * (1 + MONSTER_RULES.hpPerLevel * (zone.level - 1))));
+        expect(e.maxHp).toBe(Math.round(e.def!.hp * (1 + MONSTER_RULES.hpPerLevel * (zone.level - 1)) * powerCurve(zone.level)));
       }
     }
   });
@@ -364,7 +365,7 @@ describe('hidden skills', () => {
 describe('armour', () => {
   it('80% reduction takes 100 armor at level 1 and 5000 at level 100', () => {
     expect(armorReduction(100, 1)).toBeCloseTo(80, 5);
-    expect(armorReduction(5000, 100)).toBeCloseTo(80, 5);
+    expect(armorReduction(5000 * powerCurve(100), 100)).toBeCloseTo(80, 5);
     expect(armorReduction(100, 100)).toBeLessThan(10);
     expect(armorReduction(1e9, 50)).toBe(90);
   });
@@ -381,9 +382,9 @@ describe('beyond 100', () => {
     const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 12, w.pz);
     // Past the cap life compounds toward 26,000x at level 1000; damage adds +10% of the base a level (Nightmare is 300)
     const rate = Math.pow(MONSTER_RULES.lifeAtInferno / (1 + MONSTER_RULES.hpPerLevel * 99), 1 / 900);
-    expect(e.maxHp).toBe(Math.round(17 * (1 + MONSTER_RULES.hpPerLevel * 99) * Math.pow(rate, 200)));
-    expect(e.damage).toBe(Math.round(3 * (1 + MONSTER_RULES.dmgPerLevel * 99 + 0.1 * 200)));
-    expect(monsterScale(1000).hp).toBeCloseTo(26000, 0);
+    expect(e.maxHp).toBe(Math.round(17 * (1 + MONSTER_RULES.hpPerLevel * 99) * Math.pow(rate, 200) * powerCurve(100)));
+    expect(e.damage).toBe(Math.round(3 * (1 + MONSTER_RULES.dmgPerLevel * 99 + 0.1 * 200) * powerCurve(100)));
+    expect(monsterScale(1000).hp / powerCurve(100)).toBeCloseTo(26000, 0);
     let drop = null;
     for (let i = 0; i < 60 && !drop; i++) {
       const g = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 12, w.pz);

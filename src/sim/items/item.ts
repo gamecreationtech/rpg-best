@@ -1,6 +1,6 @@
 import { AFFIX_POOL, ALL_BASES, ITEM_RULES, RARITIES, RARITY_ORDER, SET_BASES, SPECIAL_BASES, baseItem, type BaseItem, type EquipSlot, type OffhandKind, type Rarity, type WeaponProps } from '../../data/items';
 import type { StatKey, StatMap } from '../../data/stats';
-import { LEVELING } from '../../data/classes';
+import { LEVELING, powerCurve } from '../../data/classes';
 import { PROCS, type ItemProc } from '../../data/procs';
 import type { Rng } from '../../gen/rng';
 
@@ -60,6 +60,8 @@ export function bonusMultiplier(rarity: Rarity, ilvl: number): number {
 
 /** The stats that use the big multiplier; everything else is an attribute bonus. */
 const HEAVY_STATS: StatKey[] = ['armor', 'block'];
+/** Flat numbers that ride the power curve with the item's level; percentages and attributes do not (attributes convert at the hero's own level). */
+const POWER_STATS: StatKey[] = ['armor', 'damage', 'spellDmg', 'life', 'mana', 'lifeOnHit', 'manaOnHit', 'hpRegen', 'manaRegen'];
 
 /** Small decimal stats keep their precision; everything else rounds to whole numbers. */
 const DECIMAL_STATS: StatKey[] = ['atkSpd', 'critChance', 'lifeSteal', 'dodge'];
@@ -80,7 +82,9 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
   const fixed = base.noDrop || !!base.rarity;
   const mult = fixed ? 1 : statMultiplier(rarity, ilvl);
   const bonus = fixed ? 1 : bonusMultiplier(rarity, ilvl);
-  const multFor = (key: StatKey) => (HEAVY_STATS.includes(key) ? mult : bonus);
+  // The power curve lifts every flat number, written numbers included, so a divine special found at level 80 is a level 80 item
+  const pow = powerCurve(ilvl);
+  const multFor = (key: StatKey) => (HEAVY_STATS.includes(key) ? mult : bonus) * (POWER_STATS.includes(key) ? pow : 1);
   const stats: StatMap = {};
   for (const k in base.stats) {
     const key = k as StatKey;
@@ -105,7 +109,7 @@ export function makeItem(base: BaseItem, rarity: Rarity, ilvl: number, rng: Rng 
     }
   }
   const weapon = base.weapon
-    ? { ...base.weapon, dmgMin: Math.max(1, Math.round(base.weapon.dmgMin * mult)), dmgMax: Math.max(1, Math.round(base.weapon.dmgMax * mult)) }
+    ? { ...base.weapon, dmgMin: Math.max(1, Math.round(base.weapon.dmgMin * mult * pow)), dmgMax: Math.max(1, Math.round(base.weapon.dmgMax * mult * pow)) }
     : undefined;
   return {
     uid: nextUid++,

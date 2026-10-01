@@ -77,8 +77,8 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
   // The base roll: weapon plus the stat that scales it
   const magic = d.isMagicWeapon;
   const scalesWithInt = 'scalesWithInt' in eff && !!eff.scalesWithInt && !magic;
-  let statBonus = magic ? d.int * 0.5 + d.spellDmg : d.str * 0.5 + d.bonusDamage;
-  if (scalesWithInt) statBonus += d.int * 0.5 + d.spellDmg;
+  let statBonus = magic ? d.int * 0.5 * d.power + d.spellDmg : d.str * 0.5 * d.power + d.bonusDamage;
+  if (scalesWithInt) statBonus += d.int * 0.5 * d.power + d.spellDmg;
   const baseText = `weapon ${d.dmgMin}-${d.dmgMax} + ${magic ? `Intelligence ${d.int}` : `Strength ${d.str}`} x 0.5${magic ? (d.spellDmg ? ` + spell damage ${d.spellDmg}` : '') : (d.bonusDamage ? ` + bonus damage ${d.bonusDamage}` : '')}${scalesWithInt ? ` + Intelligence ${d.int} x 0.5` : ''}`;
   const hit = (mult: number) => [Math.max(1, Math.round((d.dmgMin + statBonus) * mult * rankMult * d.dmgMult)), Math.max(1, Math.round((d.dmgMax + statBonus) * mult * rankMult * d.dmgMult))];
   const chain = (mult: number) => `(${baseText}) x ${mult} skill x ${rankMult.toFixed(2)} rank (1 + ${rankBonus} per rank)${d.dmgMult !== 1 ? ` x ${d.dmgMult.toFixed(2)} bonuses` : ''}`;
