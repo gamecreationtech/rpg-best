@@ -4,7 +4,7 @@ import { SETS, describeSetBonus } from '../../data/sets';
 import { armorReduction } from '../../sim/combat';
 import { PROCS } from '../../data/procs';
 import { COMBAT_RULES } from '../../data/status';
-import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
+import { CLASS_TREES, GENERAL_TREE, PLEDGE_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
 import { formatStat, type StatKey } from '../../data/stats';
@@ -192,7 +192,7 @@ export class HeroMenu {
     const tabs = h(
       'div',
       { class: 'px-tabs' },
-      ...((this.mouse ? ['inventory', 'skills', 'passives'] : ['inventory', 'stats', 'skills', 'passives']) as HeroTab[]).map((t) => {
+      ...((this.mouse ? ['inventory', 'skills'] : ['inventory', 'stats', 'skills']) as HeroTab[]).map((t) => {
         const b = h('button', { class: 'px-tab' + (t === this.tab ? ' on' : ''), onclick: () => { this.tab = t; this.render(body); } }, pxText(t === 'inventory' ? 'Inventory' : t === 'stats' ? 'Stats' : t === 'skills' ? 'Skills' : 'Passives', { color: t === this.tab ? GOLD : MUTED }));
         b.addEventListener('pointerdown', (e) => e.stopPropagation());
         return b;
@@ -207,7 +207,7 @@ export class HeroMenu {
     if (this.tab === 'inventory') this.renderInventory(w, content);
     else if (this.tab === 'stats') this.renderStats(w, content);
     else if (this.tab === 'skills') this.renderSkills(w, content);
-    else this.renderPassives(w, content);
+    else this.renderSkills(w, content);
     if (keepScroll) content.scrollTop = keepScroll;
     const stats = content.querySelector<HTMLElement>('.px-stats');
     if (stats && keepStats) stats.scrollTop = keepStats;
@@ -666,8 +666,14 @@ export class HeroMenu {
     const list = skillsFor(p.classId, p.pledgeId).filter((s) => s.tier !== 'ultimate').sort((a, b) => (a.reqLevel ?? 1) - (b.reqLevel ?? 1));
     const slotsUnlocked = unlockedSlots(p.level);
     const keys = ['LMB', 'Q', 'E', 'R', 'Y', 'RMB'];
+    const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
+    // One page: the skills on the left, the passives on the right, one pool of points for both
+    const book = h('div', { class: 'px-skillbook' });
     const wrap = h('div', { class: 'px-skills' });
-    wrap.append(h('div', { class: 'px-row tight' }, pxText(`+${p.skillPoints} Unused Skill Points`, { color: p.skillPoints ? GOLD : MUTED }), p.ultimatePoints > 0 ? pxText(`[+${p.ultimatePoints} Unused Ultimate Skill Points]`, { color: '#ffdd44' }) : null));
+    const head = (text: string, color: string) => h('div', { class: 'px-group-head' }, pxText(text, { color }));
+    content.append(h('div', { class: 'px-row tight points-row' }, pxText(`+${p.skillPoints} Unused Skill Points`, { color: p.skillPoints ? GOLD : MUTED }), pxText('(skills and passives)', { color: MUTED, scale: 1 }), p.ultimatePoints > 0 ? pxText(`[+${p.ultimatePoints} Unused Ultimate Skill Points]`, { color: '#ffdd44' }) : null));
+    wrap.append(head(`${CLASSES[p.classId].name} Skills`, hex(CLASSES[p.classId].color)));
+    let pledgeHeadDone = false;
     const slotBar = h('div', { class: 'px-row slotbar' });
     for (let i = 0; i < 6; i++) {
       const id = p.slots[i];
@@ -676,7 +682,11 @@ export class HeroMenu {
       slotBar.append(h('div', { class: 'px-inset px-chip' + (locked ? ' locked' : '') }, pxText(keys[i]!, { color: GOLD }), pxText(name, { color: locked ? MUTED : TEXT })));
     }
     wrap.append(slotBar);
-    for (const s of list) {
+    for (const s of [...list.filter((s) => s.tier !== 'pledge'), ...list.filter((s) => s.tier === 'pledge')]) {
+      if (s.tier === 'pledge' && !pledgeHeadDone) {
+        pledgeHeadDone = true;
+        wrap.append(head(`${pledge?.name ?? 'Pledge'} Skills`, pledge ? hex(pledge.color) : MUTED));
+      }
       const rank = p.skillRanks[s.id] ?? 0;
       const ult = s.upgradesTo ? SKILLS[s.upgradesTo] : null;
       const ultOn = !!ult && p.unlockedUltimates.includes(ult.id);
@@ -742,17 +752,17 @@ export class HeroMenu {
       row.append(actions);
       wrap.append(row);
     }
-    content.append(wrap);
+    book.append(wrap, this.passivesColumn(w, rerender));
+    content.append(book);
   }
 
-  private renderPassives(w: World, content: HTMLElement): void {
+  /** The right half of the skill book: the standard tree, the class tree and the pledge tree, drawing on the same points. */
+  private passivesColumn(w: World, rerender: () => void): HTMLElement {
     const p = w.player;
-    const rerender = () => this.render(content.parentElement!.parentElement!);
-    const wrap = h('div', { class: 'px-skills' });
+    const pledge = p.pledgeId ? PLEDGES[p.pledgeId]! : null;
     const passives = h('div', { class: 'px-passives' });
-    passives.append(h('div', { class: 'px-row' }, pxText('Passives', { color: GOLD }), pxText(`${p.passivePoints} points`, { color: MUTED })));
-    const tree = (title: string, defs: typeof GENERAL_TREE) =>
-      h('div', { class: 'px-tree' }, pxText(title, { color: MUTED }), ...defs.map((d) => {
+    const tree = (title: string, color: string, defs: typeof GENERAL_TREE) =>
+      h('div', { class: 'px-tree' }, h('div', { class: 'px-group-head' }, pxText(title, { color })), ...defs.map((d) => {
         const rank = p.passiveRanks[d.id] ?? 0;
         const can = canLearnPassive(p, d.id);
         const req = d.requires ? defs.find((x) => x.id === d.requires)?.name : null;
@@ -762,8 +772,10 @@ export class HeroMenu {
           pbtn('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else { w.markDirty(); w.recomputeStats(); } rerender(); }, can.ok ? 'gold' : 'dim'),
         );
       }));
-    passives.append(h('div', { class: 'px-trees' }, tree('General', GENERAL_TREE), tree(CLASSES[p.classId].name, CLASS_TREES[p.classId])));
-    wrap.append(passives);
-    content.append(wrap);
+    const pledgeTree = pledge
+      ? tree(`${pledge.name} Passives`, hex(pledge.color), PLEDGE_TREES[pledge.id] ?? [])
+      : h('div', { class: 'px-tree' }, h('div', { class: 'px-group-head' }, pxText('Pledge Passives', { color: MUTED })), pxText('Swear a pledge at level 20 to open this tree.', { color: MUTED, scale: 1 }));
+    passives.append(h('div', { class: 'px-trees' }, tree('Standard Passives', GOLD, GENERAL_TREE), tree(`${CLASSES[p.classId].name} Passives`, hex(CLASSES[p.classId].color), CLASS_TREES[p.classId]), pledgeTree));
+    return passives;
   }
 }

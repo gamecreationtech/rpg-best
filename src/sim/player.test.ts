@@ -104,8 +104,8 @@ describe('player', () => {
     expect(p.level).toBe(2);
     expect(p.xpToNext).toBe(xpForLevel(2));
     expect(p.statPoints).toBe(5);
-    expect(p.skillPoints).toBe(1);
-    expect(p.passivePoints).toBe(1);
+    // Two a level, shared by skills and passives
+    expect(p.skillPoints).toBe(2);
     const d = deriveStats(p, [], {});
     // No automatic stat growth: 10 INT -> 200 mana lifted by the power curve of level 2; the level only grants free points
     expect(d.maxMana).toBe(Math.round((100 + 10 * 10) * powerCurve(2)));
@@ -164,9 +164,23 @@ describe('player', () => {
     expect(p.slots).toContain('dagger_throw_ult');
   });
 
+  it('pledge passives open with the pledge and spend the same points as skills', () => {
+    const p = createPlayer('sorcerer', 'wintercaller');
+    p.skillPoints = 2;
+    expect(learnPassive(p, 'deep_cold_w')).toBe(false);
+    expect(learnPassive(p, 'frozen_heart_w')).toBe(true);
+    expect(p.skillPoints).toBe(1);
+    expect(learnPassive(p, 'deep_cold_w')).toBe(true);
+    expect(p.skillPoints).toBe(0);
+    expect(learnPassive(p, 'rime_skin_w')).toBe(false);
+    const other = createPlayer('sorcerer', 'stormsinger');
+    other.skillPoints = 1;
+    expect(learnPassive(other, 'frozen_heart_w')).toBe(false);
+  });
+
   it('passives respect prerequisites', () => {
     const p = createPlayer('knight', 'titan');
-    p.passivePoints = 3;
+    p.skillPoints = 3;
     expect(learnPassive(p, 'thick_skin')).toBe(false);
     expect(learnPassive(p, 'iron_constitution')).toBe(true);
     expect(learnPassive(p, 'thick_skin')).toBe(true);

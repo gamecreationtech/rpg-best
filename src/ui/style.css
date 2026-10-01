@@ -559,6 +559,16 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 
 /* Skills tab */
 .px-skills { display: flex; flex-direction: column; gap: 8px; max-width: 1000px; margin: 0 auto; }
+/* The skill book: skills on the left, passives on the right, one pool of points above both */
+.points-row { padding: 0 2px 8px; }
+.px-skillbook { display: flex; gap: 16px; align-items: flex-start; }
+.px-skillbook > .px-skills { flex: 3 1 0; min-width: 0; max-width: none; margin: 0; }
+.px-skillbook > .px-passives { flex: 2 1 0; min-width: 0; margin-top: 0; position: sticky; top: 0; }
+.px-skillbook .px-trees { flex-direction: column; flex-wrap: nowrap; }
+.px-skillbook .px-tree { flex: 0 0 auto; }
+.px-group-head { padding: 6px 0 2px; border-bottom: 2px solid #26262e; }
+.px-group-head .mt { font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+@media (max-width: 900px) { .px-skillbook { flex-direction: column; } .px-skillbook > .px-passives { position: static; } }
 .slotbar { gap: 6px; }
 .px-chip { display: flex; gap: 8px; align-items: center; padding: 2px 8px; }
 .px-chip.locked { opacity: 0.5; }

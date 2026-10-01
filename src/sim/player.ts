@@ -26,7 +26,9 @@ export interface PlayerState {
   xpToNext: number;
   allocated: BaseStats;
   statPoints: number;
+  /** Spent on skill ranks and passives alike (producer's call, 2026-10-01: one pool). */
   skillPoints: number;
+  /** No longer granted; old saves fold what they had into `skillPoints` on load. */
   passivePoints: number;
   ultimatePoints: number;
   skillRanks: Record<string, number>;
@@ -182,7 +184,7 @@ export function gearStats(p: PlayerState): StatMap {
   for (const set of Object.values(SETS)) {
     if (setPiecesWorn(p, set.id) >= set.pieces.length) addStats(total, set.bonus);
   }
-  for (const def of passivesFor(p.classId)) {
+  for (const def of passivesFor(p.classId, p.pledgeId)) {
     const rank = p.passiveRanks[def.id] ?? 0;
     if (rank > 0) addStats(total, { [def.stat]: def.perRank } as StatMap, rank);
   }
@@ -304,7 +306,6 @@ export function addXp(p: PlayerState, amount: number): LevelUpResult {
     p.xpToNext = xpForLevel(p.level);
     p.statPoints += LEVELING.statPointsPerLevel;
     p.skillPoints += LEVELING.skillPointsPerLevel;
-    p.passivePoints += LEVELING.passivePointsPerLevel;
     if (p.level === LEVELING.ultimatePointLevel) {
       p.ultimatePoints++;
       result.ultimatePointGained = true;
@@ -445,17 +446,17 @@ export function resolveSlotSkill(p: PlayerState, id: string | null): string | nu
 }
 
 export function canLearnPassive(p: PlayerState, id: string): { ok: boolean; reason?: string } {
-  const def = passivesFor(p.classId).find((d) => d.id === id);
+  const def = passivesFor(p.classId, p.pledgeId).find((d) => d.id === id);
   if (!def) return { ok: false, reason: 'Unknown passive' };
   if ((p.passiveRanks[id] ?? 0) >= def.maxRank) return { ok: false, reason: 'Max rank' };
   if (def.requires && (p.passiveRanks[def.requires] ?? 0) <= 0) return { ok: false, reason: 'Requires a previous passive' };
-  if (p.passivePoints <= 0) return { ok: false, reason: 'No passive points' };
+  if (p.skillPoints <= 0) return { ok: false, reason: 'No skill points' };
   return { ok: true };
 }
 
 export function learnPassive(p: PlayerState, id: string): boolean {
   if (!canLearnPassive(p, id).ok) return false;
-  p.passivePoints--;
+  p.skillPoints--;
   p.passiveRanks[id] = (p.passiveRanks[id] ?? 0) + 1;
   return true;
 }

@@ -76,6 +76,9 @@ export function deserialize(data: SaveData): PlayerState {
   while (p.stash.length < ITEM_RULES.stashPages) p.stash.push(new Inventory(ITEM_RULES.stashCols, ITEM_RULES.stashRows));
   // Older saves stored potion charges; a dose is now a fill from 0 to 1
   for (const c of CONSUMABLES) p.potions[c.id] = Math.min(1, p.potions[c.id] ?? 1);
+  // Skills and passives share one pool now: whatever passive points an older save held join it
+  p.skillPoints += p.passivePoints ?? 0;
+  p.passivePoints = 0;
   // The curve can change between builds; the level is what counts, so the need is recomputed
   p.xpToNext = xpForLevel(p.level);
   p.xp = Math.min(p.xp, p.xpToNext - 1);

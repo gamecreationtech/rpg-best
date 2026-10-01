@@ -112,7 +112,7 @@ export class Panels {
     this.half = 'left';
     if (this.isHero) {
       this.hero.reset();
-      this.hero.tab = kind === 'skills' ? 'skills' : kind === 'passives' ? 'passives' : kind === 'character' ? 'stats' : 'inventory';
+      this.hero.tab = kind === 'skills' || kind === 'passives' ? 'skills' : kind === 'character' ? 'stats' : 'inventory';
     }
     this.root.classList.toggle('hero', this.isHero || kind === 'waypoint');
     this.render();

@@ -104,8 +104,8 @@ export const LEVELING = {
   /** Monster experience grows by this per zone level (mirrors MONSTER_RULES.xpPerLevel). */
   xpPerLevel: 0.15,
   statPointsPerLevel: 5,
-  skillPointsPerLevel: 1,
-  passivePointsPerLevel: 1,
+  /** One pool for skill ranks and passives (producer's call, 2026-10-01): two a level. */
+  skillPointsPerLevel: 2,
   ultimatePointLevel: 20,
   /** The level at which a hero swears a pledge; play is held until they do. */
   pledgeLevel: 20,

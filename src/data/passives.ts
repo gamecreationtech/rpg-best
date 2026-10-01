@@ -76,6 +76,56 @@ export const CLASS_TREES: Record<ClassId, PassiveDef[]> = {
   ],
 };
 
-export function passivesFor(classId: ClassId): PassiveDef[] {
-  return [...GENERAL_TREE, ...CLASS_TREES[classId]];
+/** One small tree per pledge, in its colours: three passives each, the third needing the first. */
+export const PLEDGE_TREES: Record<string, PassiveDef[]> = {
+  paladin: [
+    { id: 'holy_vigor_p', name: 'Holy Vigor', maxRank: 3, stat: 'life', perRank: 60 },
+    { id: 'devotion_p', name: 'Devotion', maxRank: 3, stat: 'allResists', perRank: 8 },
+    { id: 'zeal_p', name: 'Zeal', maxRank: 3, stat: 'atkSpd', perRank: 0.15, requires: 'holy_vigor_p' },
+  ],
+  titan: [
+    { id: 'stone_hide_t', name: 'Stone Hide', maxRank: 3, stat: 'armor', perRank: 20 },
+    { id: 'mountain_blood_t', name: "Mountain's Blood", maxRank: 3, stat: 'life', perRank: 80 },
+    { id: 'earthen_might_t', name: 'Earthen Might', maxRank: 3, stat: 'damage', perRank: 10, requires: 'stone_hide_t' },
+  ],
+  nightlord: [
+    { id: 'dark_edge_n', name: 'Dark Edge', maxRank: 3, stat: 'critDamage', perRank: 30 },
+    { id: 'shadow_thirst_n', name: 'Shadow Thirst', maxRank: 3, stat: 'lifeSteal', perRank: 2 },
+    { id: 'nightstep_n', name: 'Nightstep', maxRank: 3, stat: 'moveSpeed', perRank: 6, requires: 'dark_edge_n' },
+  ],
+  necromancer: [
+    { id: 'grave_will_nc', name: 'Grave Will', maxRank: 3, stat: 'mana', perRank: 50 },
+    { id: 'soul_tap_nc', name: 'Soul Tap', maxRank: 3, stat: 'manaOnHit', perRank: 2 },
+    { id: 'dread_nc', name: 'Dread', maxRank: 3, stat: 'spellDmg', perRank: 10, requires: 'grave_will_nc' },
+  ],
+  stormsinger: [
+    { id: 'charged_mind_ss', name: 'Charged Mind', maxRank: 3, stat: 'fasterCast', perRank: 10 },
+    { id: 'static_fury_ss', name: 'Static Fury', maxRank: 3, stat: 'critChance', perRank: 3 },
+    { id: 'storm_blood_ss', name: 'Storm Blood', maxRank: 3, stat: 'spellDmg', perRank: 10, requires: 'charged_mind_ss' },
+  ],
+  wintercaller: [
+    { id: 'frozen_heart_w', name: 'Frozen Heart', maxRank: 3, stat: 'mana', perRank: 50 },
+    { id: 'rime_skin_w', name: 'Rime Skin', maxRank: 3, stat: 'armor', perRank: 15 },
+    { id: 'deep_cold_w', name: 'Deep Cold', maxRank: 3, stat: 'spellDmg', perRank: 10, requires: 'frozen_heart_w' },
+  ],
+  quiverbound: [
+    { id: 'fletchers_eye_q', name: "Fletcher's Eye", maxRank: 3, stat: 'critChance', perRank: 3 },
+    { id: 'quick_draw_q', name: 'Quick Draw', maxRank: 3, stat: 'atkSpd', perRank: 0.2 },
+    { id: 'far_sight_q', name: 'Far Sight', maxRank: 3, stat: 'range', perRank: 15, requires: 'fletchers_eye_q' },
+  ],
+  impaler: [
+    { id: 'spear_drill_i', name: 'Spear Drill', maxRank: 3, stat: 'damage', perRank: 10 },
+    { id: 'bulwark_i', name: 'Bulwark', maxRank: 3, stat: 'armor', perRank: 15 },
+    { id: 'brutal_thrust_i', name: 'Brutal Thrust', maxRank: 3, stat: 'critDamage', perRank: 30, requires: 'spear_drill_i' },
+  ],
+  silverblade: [
+    { id: 'silver_edge_sb', name: 'Silver Edge', maxRank: 3, stat: 'damage', perRank: 8 },
+    { id: 'flicker_sb', name: 'Flicker', maxRank: 3, stat: 'dodge', perRank: 2 },
+    { id: 'blade_dance_sb', name: 'Blade Dance', maxRank: 3, stat: 'atkSpd', perRank: 0.2, requires: 'silver_edge_sb' },
+  ],
+};
+
+/** Every passive a hero can learn: the general tree, the class tree and, once sworn, the pledge tree. */
+export function passivesFor(classId: ClassId, pledgeId: string | null = null): PassiveDef[] {
+  return [...GENERAL_TREE, ...CLASS_TREES[classId], ...(pledgeId ? PLEDGE_TREES[pledgeId] ?? [] : [])];
 }
