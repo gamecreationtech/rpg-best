@@ -502,28 +502,24 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-window:not(.touch) .gear-left { flex: 0 0 calc(50% - 7px); align-items: center; }
 .px-window:not(.touch) .gear-left > .mt { align-self: flex-start; }
 .gear-right { flex: 1 1 0; min-width: 0; min-height: 0; justify-content: flex-start; }
-.gear-right .doll-rule { margin: 6px 0 2px; }
-.trinket-row { gap: 8px; }
 .bag-block { flex: 1; min-height: 0; align-items: flex-start; }
 
 /* Paper doll: a six-column grid following the body */
-.doll { --du: 1; display: grid; grid-template-columns: repeat(6, calc(36px * var(--du))); grid-template-rows: calc(72px * var(--du)) calc(104px * var(--du)) calc(48px * var(--du)) calc(72px * var(--du)); gap: calc(6px * var(--du)) calc(3px * var(--du)); padding: 10px 12px; justify-items: center; align-items: center; }
-.doll-rule { width: 100%; height: 2px; background: var(--line); margin: 2px 0; }
+.doll { --du: 1; display: grid; grid-template-columns: repeat(6, calc(36px * var(--du))); grid-template-rows: calc(72px * var(--du)) calc(104px * var(--du)) calc(48px * var(--du)) calc(72px * var(--du)) 8px calc(72px * var(--du)); gap: calc(6px * var(--du)) calc(3px * var(--du)); padding: 10px 12px; justify-items: center; align-items: center; }
+.doll-rule { width: 100%; height: 2px; background: var(--line); margin: 2px 0; align-self: center; }
 .doll-slot { display: inline-flex; align-items: center; justify-content: center; border-image-source: var(--px-slot); border-image-slice: 4 fill; background: none; padding: 0; cursor: pointer; }
 .doll-slot.big { width: calc(72px * var(--du, 1)); height: calc(104px * var(--du, 1)); }
 .doll-slot.mid { width: calc(72px * var(--du, 1)); height: calc(72px * var(--du, 1)); }
 .doll-slot.small { width: calc(48px * var(--du, 1)); height: calc(48px * var(--du, 1)); }
 .doll-slot.belt { width: calc(72px * var(--du, 1)); height: calc(48px * var(--du, 1)); }
-.doll-slot.trinket { width: 60px; height: 60px; }
 .doll-slot.on { border-image-source: var(--px-slotOn); }
 .doll-slot.empty { cursor: default; }
 /* Smaller on touch so the whole doll fits a phone held sideways */
-.px-window.touch .doll { grid-template-columns: repeat(6, 28px); grid-template-rows: 56px 80px 40px 56px; gap: 4px 2px; padding: 8px 10px; }
+.px-window.touch .doll { grid-template-columns: repeat(6, 28px); grid-template-rows: 56px 80px 40px 56px 6px 56px; gap: 4px 2px; padding: 8px 10px; }
 .px-window.touch .doll-slot.big { width: 56px; height: 80px; }
 .px-window.touch .doll-slot.mid { width: 56px; height: 56px; }
 .px-window.touch .doll-slot.small { width: 40px; height: 40px; }
 .px-window.touch .doll-slot.belt { width: 56px; height: 40px; }
-.px-window.touch .doll-slot.trinket { width: 48px; height: 48px; }
 .px-window.touch .doll-slot .mt { font-size: 8px; }
 .px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 300px; max-width: 460px; }
 .px-grid-inner.dragging { cursor: grabbing; }

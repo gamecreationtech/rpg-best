@@ -109,16 +109,17 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
 }
 
 /** How big a worn slot is drawn, and how large the icon in it. */
-type SlotSize = 'big' | 'mid' | 'small' | 'belt' | 'trinket';
-const ICON_SCALE: Record<SlotSize, number> = { big: 3, mid: 3, small: 2, belt: 2, trinket: 2 };
+type SlotSize = 'big' | 'mid' | 'small' | 'belt';
+const ICON_SCALE: Record<SlotSize, number> = { big: 3, mid: 3, small: 2, belt: 2 };
 /** On touch the slots are smaller, and so are the icons. */
-const TOUCH_ICON_SCALE: Record<SlotSize, number> = { big: 2, mid: 2, small: 1, belt: 1, trinket: 2 };
+const TOUCH_ICON_SCALE: Record<SlotSize, number> = { big: 2, mid: 2, small: 1, belt: 1 };
 
 /**
  * The gear layout follows the body on a six-column grid: the helmet on top
  * with the amulet at its side, the chest between the weapon and shield, rings
- * either side of the belt, gloves and boots below. Each entry is the slot, its
- * size and its grid columns and row.
+ * either side of the belt, gloves and boots below, and under a rule the three
+ * trinkets, each as big as a boot slot. Each entry is the slot, its size and its
+ * grid columns and row; the rule takes row 5.
  */
 const DOLL: [EquipKey, SlotSize, string, number][] = [
   ['helmet', 'mid', '3 / 5', 1],
@@ -131,12 +132,13 @@ const DOLL: [EquipKey, SlotSize, string, number][] = [
   ['ring2', 'small', '5 / 7', 3],
   ['gloves', 'mid', '2 / 4', 4],
   ['boots', 'mid', '4 / 6', 4],
+  ['totem', 'mid', '1 / 3', 6],
+  ['charm', 'mid', '3 / 5', 6],
+  ['relic', 'mid', '5 / 7', 6],
 ];
-/** The trinkets sit in a row over the bag. */
-const TRINKETS: EquipKey[] = ['totem', 'charm', 'relic'];
-/** The doll's size in px at unit scale: six columns with their gaps and padding; the rows, gaps, padding and the label above. */
+/** The doll's size in px at unit scale: six columns with their gaps and padding; the rows, the rule, gaps, padding and the label above. */
 const DOLL_WIDTH = 6 * 36 + 5 * 3 + 24;
-const DOLL_HEIGHT = 72 + 104 + 48 + 72 + 18 + 20 + 26;
+const DOLL_HEIGHT = 72 + 104 + 48 + 72 + 8 + 72 + 30 + 20 + 26;
 
 /**
  * The hero menu: one pixel-art window with Inventory, Stats, Skills and
@@ -208,8 +210,8 @@ export class HeroMenu {
   private renderInventory(w: World, content: HTMLElement): void {
     const p = w.player;
     const rerender = () => this.render(content.parentElement!.parentElement!);
-    // The worn gear on the left as a paper doll; the trinkets in a row over the bag on the right,
-    // which gets everything else. On touch the selected item's panel sits under the doll.
+    // The worn gear on the left as a paper doll with the trinkets under a rule at its foot; the bag
+    // gets the whole right side. On touch the selected item's panel sits under the doll.
     // With a mouse the gear takes the left half of the window and the doll scales to fill it, as far as the height allows; icons grow in whole pixels with it
     const unit = this.mouse ? Math.max(1, Math.min(3, (content.clientWidth * 0.5 - 40) / DOLL_WIDTH, (content.clientHeight - 60) / DOLL_HEIGHT)) : 1;
     const doll = h('div', { class: 'px-inset doll' });
@@ -220,13 +222,16 @@ export class HeroMenu {
       slot.style.gridRow = String(row);
       doll.append(slot);
     }
+    const rule = h('div', { class: 'doll-rule' });
+    rule.style.gridColumn = '1 / 7';
+    rule.style.gridRow = '5';
+    doll.append(rule);
     const left = h('div', { class: 'px-col gear-left' }, label('Equipped'), doll);
     if (!this.mouse) left.append(label('Item'), this.itemPanel(w, rerender));
-    const trinkets = h('div', { class: 'px-row trinket-row' }, ...TRINKETS.map((key) => this.dollSlot(w, key, 'trinket', rerender)));
     const sortBtn = pbtn('Sort All', () => { p.inventory.sort(); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
     sortBtn.classList.add('tiny-wide');
     const bagBlock = h('div', { class: 'px-col bag-block' }, h('div', { class: 'px-row' }, label('Bag'), label(`${p.inventory.freeCells} cells free`), sortBtn, h('span', { class: 'grow' }), label(`${p.gold} gold`, GOLD)));
-    const right = h('div', { class: 'px-col gear-right' }, h('div', { class: 'px-row' }, label('Trinkets'), h('span', { class: 'grow' })), trinkets, h('div', { class: 'doll-rule' }), bagBlock);
+    const right = h('div', { class: 'px-col gear-right' }, bagBlock);
     content.append(h('div', { class: 'px-inventory' }, left, right));
     // Now that the column has its size, the bag fills whatever is left
     const inv = p.inventory;
