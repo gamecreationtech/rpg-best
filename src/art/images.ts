@@ -6,11 +6,11 @@
  * Images are used at their own pixel size, never scaled by a fraction.
  */
 
-/** Item base ids that may have an icon at `art/items/<id>.png` (16x16, transparent background). */
-export const ITEM_ART_IDS = ['sword'];
+/** Item base ids that may have an icon at `art/items/<id>.png` (any size, transparent background; see `public/art/README.md`). */
+export const ITEM_ART_IDS = ['sword', 'bow', 'dagger', 'mace'];
+/** Bases that share another base's drawing: the starters look like the plain weapon they are. */
+const ITEM_ART_ALIASES: Record<string, string> = { wooden_sword: 'sword', wooden_bow: 'bow', starter_dagger: 'dagger' };
 
-/** Icons are shown at this size; a larger square image whose side is a multiple of it is shrunk once at load. */
-const ICON = 16;
 
 const itemImages = new Map<string, HTMLCanvasElement>();
 
@@ -36,26 +36,67 @@ async function loadItemImage(id: string): Promise<void> {
   const ctx = c.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
-  const k = img.naturalWidth / ICON;
-  itemImages.set(id, k > 1 && Number.isInteger(k) && img.naturalHeight === img.naturalWidth ? shrink(c, k) : c);
+  // The drawing is kept at its own pixel size, transparent margins trimmed, so a slot can fit the drawing itself
+  itemImages.set(id, trim(c));
+}
+
+/** Cuts the transparent margins off an image; a fully transparent image is kept as it is. */
+function trim(src: HTMLCanvasElement): HTMLCanvasElement {
+  const px = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
+  let x0 = src.width;
+  let y0 = src.height;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < src.height; y++) {
+    for (let x = 0; x < src.width; x++) {
+      if (px[(y * src.width + x) * 4 + 3]! === 0) continue;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
+      if (y < y0) y0 = y;
+      if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0 || (x0 === 0 && y0 === 0 && x1 === src.width - 1 && y1 === src.height - 1)) return src;
+  const out = document.createElement('canvas');
+  out.width = x1 - x0 + 1;
+  out.height = y1 - y0 + 1;
+  out.getContext('2d')!.drawImage(src, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out;
+}
+
+const shrunkCache = new WeakMap<HTMLCanvasElement, Map<number, HTMLCanvasElement>>();
+
+/** The sprite shrunk by a whole factor, made once and kept, for slots too small to show it at its own size. */
+export function shrunk(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
+  let byK = shrunkCache.get(src);
+  if (!byK) {
+    byK = new Map();
+    shrunkCache.set(src, byK);
+  }
+  let out = byK.get(k);
+  if (!out) {
+    out = shrink(src, k);
+    byK.set(k, out);
+  }
+  return out;
 }
 
 /**
- * Shrinks a large icon by a whole factor: each output pixel is the
- * alpha-weighted average of its block, and the alpha is snapped to on or off
- * so the result has hard pixel edges like the generated icons. Done once at
- * load, never per frame.
+ * Shrinks an icon by a whole factor: each output pixel is the alpha-weighted
+ * average of its block, and the alpha is snapped to on or off so the result
+ * has hard pixel edges like the generated icons. Never done per frame.
  */
 function shrink(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
-  const size = src.width / k;
+  const w = Math.ceil(src.width / k);
+  const h = Math.ceil(src.height / k);
   const px = src.getContext('2d')!.getImageData(0, 0, src.width, src.height).data;
   const out = document.createElement('canvas');
-  out.width = size;
-  out.height = size;
+  out.width = w;
+  out.height = h;
   const ctx = out.getContext('2d')!;
-  const id = ctx.createImageData(size, size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  const id = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
       let r = 0;
       let g = 0;
       let b = 0;
@@ -63,7 +104,10 @@ function shrink(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
       let a = 0;
       for (let yy = 0; yy < k; yy++) {
         for (let xx = 0; xx < k; xx++) {
-          const i = ((y * k + yy) * src.width + (x * k + xx)) * 4;
+          const sx = x * k + xx;
+          const sy = y * k + yy;
+          if (sx >= src.width || sy >= src.height) continue;
+          const i = (sy * src.width + sx) * 4;
           const al = px[i + 3]! / 255;
           r += px[i]! * al;
           g += px[i + 1]! * al;
@@ -72,7 +116,7 @@ function shrink(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
           a += px[i + 3]!;
         }
       }
-      const o = (y * size + x) * 4;
+      const o = (y * w + x) * 4;
       if (wa > 0) {
         id.data[o] = r / wa;
         id.data[o + 1] = g / wa;
@@ -87,5 +131,5 @@ function shrink(src: HTMLCanvasElement, k: number): HTMLCanvasElement {
 
 /** The drawn icon for an item base, or null to use the generated one. */
 export function itemImage(baseId: string): HTMLCanvasElement | null {
-  return itemImages.get(baseId) ?? null;
+  return itemImages.get(ITEM_ART_ALIASES[baseId] ?? baseId) ?? null;
 }

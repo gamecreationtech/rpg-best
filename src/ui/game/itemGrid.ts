@@ -1,6 +1,7 @@
 import { RARITIES } from '../../data/items';
 import { SETS, describeSetBonus } from '../../data/sets';
 import { itemIconSprite } from '../../gen/pixel/icons';
+import { shrunk } from '../../art/images';
 import { formatStat, type StatKey } from '../../data/stats';
 import type { Inventory } from '../../sim/items/inventory';
 import { describeItem, type Item } from '../../sim/items/item';
@@ -47,21 +48,34 @@ export class ItemGrid {
       el.style.width = `${item.size[0] * this.cell - 2}px`;
       el.style.height = `${item.size[1] * this.cell - 2}px`;
       el.style.borderColor = hex(RARITIES[item.rarity].color);
-      el.appendChild(itemIcon(item, Math.min(item.size[0], item.size[1]) * this.cell * 0.55));
+      el.appendChild(fitItemIcon(item, item.size[0] * this.cell - 10, item.size[1] * this.cell - 10));
       this.root.appendChild(el);
     }
   }
 }
 
-/** The item's pixel icon, scaled by a whole number to roughly `size` pixels. */
+/** The item's icon in a square of about `size` pixels. */
 export function itemIcon(item: Item, size: number): HTMLCanvasElement {
-  const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
+  return fitItemIcon(item, size, size);
+}
+
+/**
+ * The item's icon fitted into a box: drawn at the largest whole-number scale
+ * that fits, or, when even its own size is too big for the box (a hand-made
+ * drawing in a small slot), shrunk by a whole factor and drawn at one.
+ */
+export function fitItemIcon(item: Item, boxW: number, boxH: number): HTMLCanvasElement {
+  let sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
+  let s = Math.floor(Math.min(boxW / sprite.width, boxH / sprite.height));
+  if (s < 1) {
+    sprite = shrunk(sprite, Math.ceil(Math.max(sprite.width / Math.max(1, boxW), sprite.height / Math.max(1, boxH))));
+    s = 1;
+  }
   const c = document.createElement('canvas');
   c.className = 'px-icon';
   c.width = sprite.width;
   c.height = sprite.height;
   c.getContext('2d')!.drawImage(sprite, 0, 0);
-  const s = Math.max(1, Math.floor(size / sprite.width));
   c.style.width = `${sprite.width * s}px`;
   c.style.height = `${sprite.height * s}px`;
   return c;

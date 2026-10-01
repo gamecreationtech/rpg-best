@@ -8,7 +8,7 @@ import { GENERAL_TREE, CLASS_TREES } from '../../data/passives';
 import { PLEDGES } from '../../data/pledges';
 import { SKILLS, skillsFor, type SkillDef } from '../../data/skills';
 import { formatStat, type StatKey } from '../../data/stats';
-import { itemIconSprite } from '../../gen/pixel/icons';
+import { fitItemIcon } from './itemGrid';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
 import { ATTACK_SLOT, allocateStat, attackDamageRange, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
@@ -108,11 +108,10 @@ function skillInfo(w: World, def: SkillDef, rank: number): { cooldown: string; d
   return { cooldown, damage: 'none', formula: null };
 }
 
-/** How big a worn slot is drawn, and how large the icon in it. */
+/** How big a worn slot is drawn: its outer size in px at unit scale with a mouse, and on touch. The icon fits inside the 8 px frame. */
 type SlotSize = 'big' | 'mid' | 'small' | 'belt';
-const ICON_SCALE: Record<SlotSize, number> = { big: 3, mid: 3, small: 2, belt: 2 };
-/** On touch the slots are smaller, and so are the icons. */
-const TOUCH_ICON_SCALE: Record<SlotSize, number> = { big: 2, mid: 2, small: 1, belt: 1 };
+const SLOT_PX: Record<SlotSize, [number, number]> = { big: [72, 104], mid: [72, 72], small: [48, 48], belt: [72, 48] };
+const TOUCH_SLOT_PX: Record<SlotSize, [number, number]> = { big: [56, 80], mid: [56, 56], small: [40, 40], belt: [56, 40] };
 
 /**
  * The gear layout follows the body on a six-column grid: the helmet on top
@@ -258,7 +257,8 @@ export class HeroMenu {
     const el = h('button', { class: `doll-slot ${size}` + (on ? ' on' : '') + (item ? '' : ' empty') });
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     if (item) {
-      el.appendChild(this.icon(item, Math.max(1, Math.round((this.mouse ? ICON_SCALE : TOUCH_ICON_SCALE)[size] * unit))));
+      const [sw, sh] = (this.mouse ? SLOT_PX : TOUCH_SLOT_PX)[size];
+      el.appendChild(fitItemIcon(item, Math.round(sw * unit) - 16, Math.round(sh * unit) - 16));
       el.onclick = () => {
         if (this.mouse) {
           const r = w.unequipItem(key);
@@ -281,17 +281,6 @@ export class HeroMenu {
     }
     el.title = this.mouse ? '' : keyLabel(key);
     return el;
-  }
-
-  private icon(item: Item, scale: number): HTMLCanvasElement {
-    const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
-    const c = h('canvas', { class: 'px-icon' }) as HTMLCanvasElement;
-    c.width = sprite.width;
-    c.height = sprite.height;
-    c.getContext('2d')!.drawImage(sprite, 0, 0);
-    c.style.width = `${sprite.width * scale}px`;
-    c.style.height = `${sprite.height * scale}px`;
-    return c;
   }
 
   private bagGrid(w: World, rerender: () => void): HTMLElement {
@@ -369,8 +358,7 @@ export class HeroMenu {
       el.style.width = `${item.size[0] * cell}px`;
       el.style.height = `${item.size[1] * cell}px`;
       el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
-      const sprite = itemIconSprite(item.slot, item.weapon?.type ?? null, item.rarity, item.offhand ?? null, item.baseId);
-      el.appendChild(this.icon(item, Math.max(1, Math.floor((Math.min(item.size[0], item.size[1]) * cell - 8) / sprite.width))));
+      el.appendChild(fitItemIcon(item, item.size[0] * cell - 8, item.size[1] * cell - 8));
       inner.appendChild(el);
     }
     grid.appendChild(inner);
