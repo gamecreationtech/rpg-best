@@ -115,7 +115,7 @@ const TOUCH_SLOT_PX: Record<SlotSize, [number, number]> = { big: [56, 80], mid: 
 /** Worn items drawn with this share of their slot's room, by base id: under one for less, over one to spill past the frame. */
 const WORN_ROOM: Record<string, number> = {
   pilgrim_cap: 0.7, pilgrim_boots: 0.8, pilgrim_gloves: 0.8, pilgrim_coat: 0.9, prisoner_cuffs: 1.2, prisoner_ball: 0.9,
-  bardiche: 1.35, sword: 0.96, wooden_sword: 0.96, axe: 0.5, warfork: 0.7, mace: 0.9, staff: 1.2, wooden_staff: 1.2, spellbook: 0.8, wand: 0.9,
+  bardiche: 1.35, sword: 0.96, wooden_sword: 0.96, axe: 0.5, warfork: 0.7, mace: 0.9, staff: 1.2, wooden_staff: 1.2, spellbook: 0.8, wand: 0.9, dagger: 0.9, starter_dagger: 0.9, crossbow: 1.2,
   belt: 1.2, war_belt: 1.2, chest_armor: 0.9, boots: 0.9, gauntlets: 0.96,
   skull: 0.5, energy_shield: 0.96, lantern: 0.8,
 };
@@ -311,25 +311,62 @@ export class HeroMenu {
       const rect = inner.getBoundingClientRect();
       return { col: Math.floor((e.clientX - rect.left) / cell), row: Math.floor((e.clientY - rect.top) / cell) };
     };
-    // Press on an item, release elsewhere: a move. Release in place: a click.
-    let drag: { item: Item; x: number; y: number; moved: boolean } | null = null;
+    // Press on an item, release elsewhere: a move. Release in place: a click. While it moves, a faded
+    // copy follows the pointer and the cells it would land on light up green, or red where it does not fit.
+    let drag: { item: Item; x: number; y: number; offX: number; offY: number; moved: boolean; col: number; row: number; ghost: HTMLElement | null; target: HTMLElement | null; source: HTMLElement | null } | null = null;
+    const itemEls = new Map<Item, HTMLElement>();
+    const follow = (e: PointerEvent) => {
+      if (!drag) return;
+      const rect = inner.getBoundingClientRect();
+      const left = e.clientX - rect.left - drag.offX;
+      const top = e.clientY - rect.top - drag.offY;
+      const [cw, ch] = drag.item.size;
+      drag.col = Math.max(0, Math.min(inv.cols - cw, Math.round(left / cell)));
+      drag.row = Math.max(0, Math.min(inv.rows - ch, Math.round(top / cell)));
+      if (!drag.ghost) {
+        drag.ghost = h('div', { class: 'px-drag-ghost' }, fitItemIcon(drag.item, cw * cell - 8, ch * cell - 8));
+        drag.ghost.style.width = `${cw * cell}px`;
+        drag.ghost.style.height = `${ch * cell}px`;
+        drag.target = h('div', { class: 'px-drop-target' });
+        drag.target.style.width = `${cw * cell}px`;
+        drag.target.style.height = `${ch * cell}px`;
+        inner.append(drag.target, drag.ghost);
+        drag.source = itemEls.get(drag.item) ?? null;
+        drag.source?.classList.add('lifted');
+      }
+      drag.ghost.style.left = `${Math.round(left)}px`;
+      drag.ghost.style.top = `${Math.round(top)}px`;
+      drag.target!.style.left = `${drag.col * cell}px`;
+      drag.target!.style.top = `${drag.row * cell}px`;
+      drag.target!.className = 'px-drop-target ' + (inv.fits(drag.item, drag.col, drag.row, drag.item) ? 'ok' : 'bad');
+    };
+    const endDrag = () => {
+      if (!drag) return;
+      drag.ghost?.remove();
+      drag.target?.remove();
+      drag.source?.classList.remove('lifted');
+      inner.classList.remove('dragging');
+    };
     inner.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       const { col, row } = cellAt(e);
       const item = inv.itemAt(col, row);
       if (item) {
-        drag = { item, x: e.clientX, y: e.clientY, moved: false };
+        const rect = inner.getBoundingClientRect();
+        drag = { item, x: e.clientX, y: e.clientY, offX: e.clientX - rect.left - item.col * cell, offY: e.clientY - rect.top - item.row * cell, moved: false, col: item.col, row: item.row, ghost: null, target: null, source: null };
         inner.setPointerCapture(e.pointerId);
       } else if (this.selected && this.selectedFrom === 'bag' && !this.mouse) {
         if (!inv.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
         rerender();
       }
     });
+    inner.addEventListener('pointercancel', () => { endDrag(); drag = null; });
     inner.addEventListener('pointermove', (e) => {
-      if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
+      if (drag && (drag.moved || Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6)) {
         drag.moved = true;
         this.hideTip();
         inner.classList.add('dragging');
+        follow(e);
       }
       if (!drag && e.pointerType === 'mouse') {
         const { col, row } = cellAt(e);
@@ -343,11 +380,10 @@ export class HeroMenu {
     inner.addEventListener('pointerup', (e) => {
       if (!drag) return;
       const d = drag;
+      endDrag();
       drag = null;
-      inner.classList.remove('dragging');
-      const { col, row } = cellAt(e);
       if (d.moved) {
-        if (inv.itemAt(col, row) !== d.item && !inv.place(d.item, col, row)) this.host.message('Does not fit there', 0xff8080);
+        if ((d.col !== d.item.col || d.row !== d.item.row) && !inv.place(d.item, d.col, d.row)) this.host.message('Does not fit there', 0xff8080);
         rerender();
         return;
       }
@@ -373,6 +409,7 @@ export class HeroMenu {
       el.style.height = `${item.size[1] * cell}px`;
       el.style.setProperty('--rc', hex(RARITIES[item.rarity].color));
       el.appendChild(fitItemIcon(item, item.size[0] * cell - 8, item.size[1] * cell - 8));
+      itemEls.set(item, el);
       inner.appendChild(el);
     }
     grid.appendChild(inner);

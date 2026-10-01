@@ -523,6 +523,11 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-window.touch .doll-slot .mt { font-size: 8px; }
 .px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 300px; max-width: 460px; }
 .px-grid-inner.dragging { cursor: grabbing; }
+/* Dragging in the bag: the item lifts, a faded copy follows the pointer, the landing cells light up */
+.px-item.lifted { opacity: 0.3; }
+.px-drag-ghost { position: absolute; display: flex; align-items: center; justify-content: center; opacity: 0.65; pointer-events: none; z-index: 3; }
+.px-drop-target { position: absolute; pointer-events: none; z-index: 2; box-sizing: border-box; border: 2px solid #58e070; background: rgba(88, 224, 112, 0.2); }
+.px-drop-target.bad { border-color: #ff5050; background: rgba(255, 80, 80, 0.2); }
 
 /* Stat sheet */
 .px-stats { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; }
