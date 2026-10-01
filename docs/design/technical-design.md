@@ -116,6 +116,21 @@ What that means for each kind of asset:
   off the hero; Ball Lightning an `orb` projectile with `rehit`, clearing its
   hit list every half second so it shocks what it sits on again, crackling
   with a flickering light and bolts to the ground.
+  The Paladin's five: Consecrated Blade is a buff with `holyBlade`
+  (`hitEnemy` raises the hero's own hits, more against `isUndead` looks from
+  `src/data/monsters.ts`), drawn as a gold streak along the blade with sparks
+  and a `holy` impact on every hit; Judgement a `mark` effect setting
+  `EnemyStatus.mark`, drawn as a beam from the top of the frame onto the
+  monster with a pool of light under it; Blind an arc melee with `knockback`,
+  `blind` and `vsUndeadMult`, drawn as a white-gold wedge with sparks across
+  the cone, blinded monsters tinted white with stars round the head while
+  their strikes emit `miss` damage events and their bolts fly wide; Divine
+  Shield a buff with `invulnerable` (`damagePlayer` emits `immune` and still
+  lets retaliation answer) that ends by adding a `Weakened` buff with
+  `dmgTakenPct` from `afterWeakness`, drawn as a gold armour bubble with stars
+  on its rim; Retribution a buff with `retribution` that strikes the attacker
+  for a multiple of the blow with a `holy_bolt` event, drawn as a `pillar`
+  effect (a column of light from the sky) and a halo over the hero.
 - **UI.** HTML and CSS, with icons drawn as inline SVG generated from code.
   Text uses system fonts.
 - **Audio.** Web Audio API synthesis. Oscillators, noise, envelopes, filters,

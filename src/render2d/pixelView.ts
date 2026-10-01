@@ -496,12 +496,17 @@ export class PixelView {
         if (ev.visual === 'cleave') this.cleave(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else if (ev.visual === 'void') this.voidSlash(ev.x, ev.z, ev.range);
         else if (ev.visual === 'avalanche') this.avalanche(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
+        else if (ev.visual === 'blind') this.blindFlash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc);
         else this.effects.slash(ev.x, ev.z, ev.dirX, ev.dirZ, ev.range, ev.arc, ELEMENT_COLORS[ev.element]);
         break;
       case 'melee_impact':
         if (ev.visual === 'overhead') this.smash(ev.x, ev.z, ELEMENT_COLORS[ev.element]);
         else if (ev.visual === 'bloody') this.bloodyHit(ev.x, ev.z);
+        else if (ev.visual === 'holy') this.holyHit(ev.x, ev.z);
         else this.holyShield(ev.x, ev.z);
+        break;
+      case 'holy_bolt':
+        this.holyBolt(ev.x, ev.z);
         break;
       case 'aoe':
         this.aoeVisual(ev.visual, ev.x, ev.z, ev.radius, ev.element);
@@ -629,6 +634,29 @@ export class PixelView {
           this.effects.ring(w.px, w.pz, 0.2, 1.6, 0x8aff8a, 0.6, 2, 1.5);
           break;
         }
+        if (ev.id === 'divine_shield') {
+          // The light closes over the hero: a white flash, a ring snapping out and sparks thrown up
+          this.effects.flash(w.px, 1, w.pz, 0xfff6d0, 3.5, 100, 0.4);
+          this.effects.ring(w.px, w.pz, 0.2, 1.8, 0xffffff, 0.35, 2, 1.5);
+          pt.burst(w.px, 0.3, w.pz, 30, 1.4, 0xfff0b0, 0.8, { up: 3, drag: 1, priority: 0.8, size: 2 });
+          this.view.kick(0.06);
+          break;
+        }
+        if (ev.id === 'retribution') {
+          // The halo lights: a pillar on the hero and a gold ring
+          this.effects.pillar(w.px, w.pz, 0xffd860, 0.4, 7);
+          this.effects.ring(w.px, w.pz, 0.2, 1.4, 0xffd860, 0.4, 2, 1);
+          pt.burst(w.px, 2.2, w.pz, 12, 1, 0xffe8a0, 0.6, { gravity: 2, priority: 0.7 });
+          break;
+        }
+        if (ev.id === 'consecrated_blade') {
+          // Holy fire runs down the blade
+          const dx = Math.sin(w.pyaw);
+          const dz = Math.cos(w.pyaw);
+          for (let i = 0; i < 8; i++) pt.spawn(w.px + dx * (0.3 + i * 0.1), 0.9 + i * 0.12, w.pz + dz * (0.3 + i * 0.1), 0, 1.2, 0, 0.5, i % 2 ? 0xffffff : 0xffd860, { priority: 0.7, delay: i * 0.03 });
+          this.effects.flash(w.px + dx * 0.5, 1.2, w.pz + dz * 0.5, 0xffd860, 2, 60, 0.3);
+          break;
+        }
         pt.burst(w.px, 0.3, w.pz, 24, 1.5, ev.color, 0.8, { up: 2, drag: 1.5, priority: 0.8 });
         this.effects.ring(w.px, w.pz, 0.2, 1.4, ev.color, 0.4, 1, 0.8);
         break;
@@ -661,6 +689,17 @@ export class PixelView {
         const e = w.enemies[ev.id]!;
         if (ev.status === 'frozen') pt.burst(e.x, 0.8, e.z, 12, 1.5, 0x9fe0ff, 0.5, { drag: 2, priority: 0.6 });
         if (ev.status === 'stunned') pt.burst(e.x, 1.8, e.z, 6, 0.8, 0xffe066, 0.5, { priority: 0.5 });
+        if (ev.status === 'blinded') {
+          // Dazzled: a hard white flash at the eyes and stars reeling round the head
+          this.effects.flash(e.x, 1.6 * e.scale, e.z, 0xffffff, 1.6, 30, 0.2);
+          pt.burst(e.x, 1.9 * e.scale, e.z, 8, 0.9, 0xffffff, 0.6, { drag: 2, priority: 0.6 });
+        }
+        if (ev.status === 'judged') {
+          // The light finds it: a flash from above, a ring on the ground and motes rising in the beam
+          this.effects.pillar(e.x, e.z, 0xffe8a0, 0.5, 8);
+          this.effects.ring(e.x, e.z, 0.2, 1.2, 0xffe8a0, 0.45, 2, 1.2);
+          pt.burst(e.x, 0.3, e.z, 16, 1.2, 0xfff0b0, 0.8, { up: 2.5, drag: 1, priority: 0.7 });
+        }
         if (ev.status === 'shattered') {
           // The ice breaks off the monster in shards
           pt.burst(e.x, 0.9, e.z, 22, 2.4, 0xd8f4ff, 0.6, { gravity: 7, up: 2, priority: 0.7, size: 2 });
@@ -822,7 +861,7 @@ export class PixelView {
    * flickering rim with embers rising off it and a warm light. Ice: a slow,
    * glassy rim with frost crystals, snow drifting down off it and a cold light.
    */
-  private drawArmorBubble(heroY: number, kind: 'fire' | 'ice'): void {
+  private drawArmorBubble(heroY: number, kind: 'fire' | 'ice' | 'holy'): void {
     const w = this.world;
     const cam = this.view;
     const ctx = this.ctx;
@@ -831,13 +870,14 @@ export class PixelView {
     const rx = 15;
     const ry = 20;
     const fire = kind === 'fire';
-    const fill = fire ? '#ff7a2a' : '#9fe0ff';
-    const rim = fire ? '#ff7a2a' : '#9fe0ff';
+    const holy = kind === 'holy';
+    const fill = fire ? '#ff7a2a' : holy ? '#ffe8a0' : '#9fe0ff';
+    const rim = fire ? '#ff7a2a' : holy ? '#ffd860' : '#9fe0ff';
     const bright = fire ? '#ffe070' : '#ffffff';
     this.items.push({
       depth: cam.depth(w.px, w.pz) + 0.001,
       draw: () => {
-        ctx.globalAlpha = (fire ? 0.14 : 0.16) + Math.sin(this.time * (fire ? 9 : 3)) * 0.03;
+        ctx.globalAlpha = (fire ? 0.14 : holy ? 0.2 : 0.16) + Math.sin(this.time * (fire ? 9 : 3)) * 0.03;
         ctx.fillStyle = fill;
         ctx.beginPath();
         ctx.ellipse(fx, fy, rx, ry, 0, 0, Math.PI * 2);
@@ -846,7 +886,7 @@ export class PixelView {
         if (!fire) {
           // A glassy sheen: a thin pale outline and a highlight on the upper left
           ctx.globalAlpha = 0.5;
-          ctx.strokeStyle = '#d8f4ff';
+          ctx.strokeStyle = holy ? '#fff4d0' : '#d8f4ff';
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.ellipse(fx, fy, rx, ry, 0, 0, Math.PI * 2);
@@ -871,7 +911,13 @@ export class PixelView {
           if (hot) {
             ctx.fillStyle = rim;
             if (fire) ctx.fillRect(x - 1, y - 3, 2, 2);
-            else {
+            else if (holy) {
+              // A four-pointed star of light
+              ctx.fillRect(x - 3, y, 2, 1);
+              ctx.fillRect(x + 2, y, 2, 1);
+              ctx.fillRect(x, y - 3, 1, 2);
+              ctx.fillRect(x, y + 2, 1, 2);
+            } else {
               // A little six-pointed crystal
               ctx.fillRect(x - 2, y, 1, 1);
               ctx.fillRect(x + 1, y, 1, 1);
@@ -885,9 +931,11 @@ export class PixelView {
     if (Math.random() < 0.6) {
       const a = Math.random() * Math.PI * 2;
       if (fire) this.particles.spawn(w.px + Math.cos(a) * 0.45, heroY + 0.3 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.45, 0, 1.2, 0, 0.5, Math.random() < 0.5 ? 0xffb040 : 0xff7a2a, { priority: 0.4, size: 1, alpha: 0.9 });
+      else if (holy) this.particles.spawn(w.px + Math.cos(a) * 0.5, heroY + 0.2 + Math.random() * 1.2, w.pz + Math.sin(a) * 0.5, 0, 0.8, 0, 0.7, Math.random() < 0.5 ? 0xffffff : 0xffd860, { priority: 0.4, size: 1, alpha: 0.9 });
       else this.particles.spawn(w.px + Math.cos(a) * 0.5, heroY + 1.2 + Math.random() * 0.8, w.pz + Math.sin(a) * 0.5, 0, -0.5, 0, 1.0, Math.random() < 0.5 ? 0xffffff : 0xd0f0ff, { priority: 0.4, size: 1, alpha: 0.9 });
     }
     if (fire) this.lights.push({ x: fx, y: fy, radius: 40, intensity: 1 + Math.sin(this.time * 9) * 0.15, r: 1, g: 0.5, b: 0.2 });
+    else if (holy) this.lights.push({ x: fx, y: fy, radius: 48, intensity: 1.3 + Math.sin(this.time * 4) * 0.15, r: 1, g: 0.9, b: 0.6 });
     else this.lights.push({ x: fx, y: fy, radius: 40, intensity: 0.9 + Math.sin(this.time * 3) * 0.1, r: 0.6, g: 0.85, b: 1 });
   }
 
@@ -1439,12 +1487,19 @@ export class PixelView {
       if (fy < -10 || fy > H + 50) continue;
       let tint: string | null = null;
       if (e.status.freeze > 0) tint = '#9fe0ff';
+      else if (e.status.blind > 0) tint = '#ffffff';
       else if (e.status.curse) tint = '#c080ff';
       else if (e.status.poison) tint = '#66e070';
       const targeted = e.id === w.targetId && !e.dead;
       // Flying things bob above the ground
       const hover = e.def?.hover && !e.dead ? (e.def.hover + Math.sin(this.time * 4 + e.id) * 2) / 12 : 0;
+      if (e.status.mark && !e.dead) this.drawJudgement(e, Math.round(fx), Math.round(fy), p.sheet.height);
       this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null);
+      if (e.status.blind > 0 && !e.dead && Math.random() < 0.5) {
+        // Stars reeling round the head
+        const a = this.time * 7 + e.id;
+        this.particles.spawn(e.x + Math.cos(a) * 0.35, 1.95 * e.scale + hover, e.z + Math.sin(a) * 0.35, 0, 0.3, 0, 0.2, 0xffffff, { priority: 0.3 });
+      }
       if (e.def?.glow && !e.dead) {
         const [gr, gg, gb] = rgb(e.def.glow);
         this.lights.push({ x: Math.round(fx), y: Math.round(fy) - p.sheet.height * 0.5, radius: 46, intensity: 0.8, r: gr, g: gg, b: gb });
@@ -1583,6 +1638,9 @@ export class PixelView {
       if (w.buffs.some((b) => b.id === 'quickshot')) this.drawQuickWind(heroY);
       if (w.buffs.some((b) => b.mods.deflect)) this.drawWindBarrier(heroY);
       if (w.buffs.some((b) => b.mods.overload)) this.drawOverload(heroY);
+      if (w.buffs.some((b) => b.mods.holyBlade)) this.drawHolyBlade(heroY);
+      if (w.buffs.some((b) => b.mods.invulnerable)) this.drawArmorBubble(heroY, 'holy');
+      if (w.buffs.some((b) => b.mods.retribution)) this.drawRetribution(heroY);
     }
 
     // Arrow of Beyond: the daemon, rising out of the ground, drawing, loosing, and sinking back
@@ -2186,6 +2244,138 @@ export class PixelView {
       this.particles.spawn(w.px + Math.cos(a) * 1.3, heroY + Math.random() * 1.6, w.pz + Math.sin(a) * 1.3, -Math.sin(a) * 4, 0, Math.cos(a) * 4, 0.3, 0xc8e0ff, { drag: 4, priority: 0.4, alpha: 0.7 });
     }
     this.lights.push({ x: fx, y: fy, radius: 44, intensity: 0.6, r: 0.7, g: 0.85, b: 1 });
+  }
+
+  /** Blind: a flash of holy light fanning out before the hero: a white-gold wedge, a hard flash and sparks thrown across the cone. */
+  private blindFlash(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
+    this.effects.sweep(x, z, dirX, dirZ, range, arc, 0xfff6d0, 0.3);
+    this.effects.sweep(x, z, dirX, dirZ, range * 0.6, arc, 0xffffff, 0.18);
+    this.effects.flash(x + dirX * range * 0.45, 0.8, z + dirZ * range * 0.45, 0xfff0b0, 3.5, 110, 0.3);
+    const half = (arc * Math.PI) / 360;
+    const base = Math.atan2(dirX, dirZ);
+    for (let i = 0; i < 26; i++) {
+      const a = base + (Math.random() - 0.5) * 2 * half;
+      const sx = Math.sin(a);
+      const sz = Math.cos(a);
+      const d = 0.3 + Math.random() * range * 0.9;
+      this.particles.spawn(x + sx * d, 0.4 + Math.random() * 1.4, z + sz * d, sx * 3, 1.5, sz * 3, 0.35, Math.random() < 0.5 ? 0xffffff : 0xffe8a0, { drag: 3, priority: 0.7, size: Math.random() < 0.4 ? 2 : 1 });
+    }
+    this.view.kick(0.08);
+  }
+
+  /** Consecrated Blade landing: a few gold sparks off the target. */
+  private holyHit(x: number, z: number): void {
+    this.particles.burst(x, 1.0, z, 5, 1.4, 0xffe8a0, 0.3, { up: 1, drag: 2, priority: 0.3 });
+    this.effects.flash(x, 1, z, 0xffe8a0, 0.8, 26, 0.12);
+  }
+
+  /** Retribution's answer: a pillar of light out of the sky onto the attacker, a ring on the ground and sparks thrown up. */
+  private holyBolt(x: number, z: number): void {
+    this.effects.pillar(x, z, 0xffe8a0, 0.35, 5);
+    this.effects.ring(x, z, 0.1, 0.9, 0xffe8a0, 0.3, 2, 1);
+    this.particles.burst(x, 0.3, z, 14, 1.6, 0xfff0b0, 0.5, { up: 3, gravity: 4, priority: 0.7, size: 2 });
+    this.view.kick(0.05);
+  }
+
+  /** Judgement: a beam of light out of the sky resting on the marked monster, a pool of light under it and motes climbing in the beam. */
+  private drawJudgement(e: Enemy, fx: number, fy: number, height: number): void {
+    const ctx = this.ctx;
+    const cam = this.view;
+    const k = Math.min(1, e.status.mark!.remaining / 0.3);
+    const pulse = 0.85 + Math.sin(this.time * 6) * 0.15;
+    this.items.push({
+      depth: cam.depth(e.x, e.z) - 0.001,
+      draw: () => {
+        ctx.fillStyle = '#ffe8a0';
+        ctx.globalAlpha = 0.3 * k;
+        ctx.beginPath();
+        ctx.ellipse(fx, fy, 14, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const layers: [number, number, string][] = [[10, 0.16, '#ffe8a0'], [6, 0.3, '#fff4d0'], [2, 0.8, '#ffffff']];
+        for (const [hw, a, c] of layers) {
+          ctx.globalAlpha = a * k * pulse;
+          ctx.fillStyle = c;
+          ctx.fillRect(fx - hw, 0, hw * 2, fy);
+        }
+        ctx.globalAlpha = 1;
+      },
+    });
+    if (Math.random() < 0.5) this.particles.spawn(e.x + (Math.random() - 0.5) * 0.5, Math.random() * 2, e.z + (Math.random() - 0.5) * 0.5, 0, 1.2, 0, 0.6, 0xfff0b0, { priority: 0.3 });
+    this.lights.push({ x: fx, y: fy - (height >> 1), radius: 52, intensity: 1.0 * k * pulse, r: 1, g: 0.9, b: 0.6 });
+  }
+
+  /** Consecrated Blade: a streak of gold light along the blade, sparks drifting up off it and a warm glow on the weapon hand. */
+  private drawHolyBlade(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const dx = Math.sin(w.pyaw);
+    const dz = Math.cos(w.pyaw);
+    const hx = w.px + dx * 0.35;
+    const hz = w.pz + dz * 0.35;
+    const y = heroY + 0.8;
+    const x0 = Math.round(cam.frameX(hx, hz));
+    const y0 = Math.round(cam.frameY(hx, y, hz));
+    const x1 = Math.round(cam.frameX(hx + dx * 0.7, hz + dz * 0.7));
+    const y1 = Math.round(cam.frameY(hx + dx * 0.7, y + 1.0, hz + dz * 0.7));
+    const flicker = 0.7 + Math.sin(this.time * 14) * 0.2;
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#ffd860';
+        ctx.globalAlpha = 0.45 * flicker;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.globalAlpha = flicker;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      },
+    });
+    if (Math.random() < 0.7) {
+      const t = Math.random();
+      this.particles.spawn(hx + dx * 0.7 * t, y + t, hz + dz * 0.7 * t, (Math.random() - 0.5) * 0.6, 1.0, (Math.random() - 0.5) * 0.6, 0.45, Math.random() < 0.5 ? 0xffffff : 0xffd860, { priority: 0.4, drag: 1.5, alpha: 0.9 });
+    }
+    this.lights.push({ x: x0, y: y0 - 6, radius: 34, intensity: 0.9 + Math.sin(this.time * 7) * 0.15, r: 1, g: 0.85, b: 0.45 });
+  }
+
+  /** Retribution: a halo of gold turning over the hero's head with a gleam running round it, and motes falling off it. */
+  private drawRetribution(heroY: number): void {
+    const w = this.world;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const fx = Math.round(cam.frameX(w.px, w.pz));
+    const fy = Math.round(cam.frameY(w.px, heroY + 2.3, w.pz));
+    this.items.push({
+      depth: cam.depth(w.px, w.pz) + 0.001,
+      draw: () => {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffd860';
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath();
+        ctx.ellipse(fx, fy, 7, 3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#ffffff';
+        ctx.globalAlpha = 0.6 + Math.sin(this.time * 5) * 0.2;
+        ctx.beginPath();
+        ctx.ellipse(fx, fy - 1, 7, 3, 0, Math.PI, Math.PI * 2);
+        ctx.stroke();
+        const a = this.time * 4;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(fx + Math.round(Math.cos(a) * 7) - 1, fy + Math.round(Math.sin(a) * 3) - 1, 2, 2);
+      },
+    });
+    if (Math.random() < 0.3) this.particles.spawn(w.px + (Math.random() - 0.5) * 0.5, heroY + 2.2, w.pz + (Math.random() - 0.5) * 0.5, 0, -0.6, 0, 0.6, 0xffe8a0, { priority: 0.3, gravity: 1, alpha: 0.9 });
+    this.lights.push({ x: fx, y: fy, radius: 36, intensity: 0.8 + Math.sin(this.time * 5) * 0.1, r: 1, g: 0.88, b: 0.5 });
   }
 
   /** Overload: the hero crackles. Short arcs leap off the body at random and a blue-white light pulses. */

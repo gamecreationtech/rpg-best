@@ -45,6 +45,10 @@ export interface EnemyStatus {
   thaw: number;
   /** Zone id holding this enemy in place (Fire Prison ultimate). */
   heldBy: number;
+  /** Seconds left swinging and shooting wide (Blind). */
+  blind: number;
+  /** Judgement's mark: every hit lands for `dmgTakenPct` percent more while it lasts. */
+  mark: { remaining: number; dmgTakenPct: number } | null;
 }
 
 export interface Enemy {
@@ -111,6 +115,10 @@ export interface DamagePacket {
   knockback?: number;
   /** Jumped from another hit by Overload, so it never arcs again. */
   fromArc?: boolean;
+  /** Multiplier against the undead (Blind). */
+  vsUndead?: number;
+  /** Seconds of blindness dealt (Blind). */
+  blind?: number;
 }
 
 export interface Projectile {
@@ -210,7 +218,7 @@ export interface Interactable {
 }
 
 export type SimEvent =
-  | { type: 'damage'; x: number; z: number; y: number; amount: number; crit: boolean; element: Element; target: 'enemy' | 'player'; kind?: 'dodge' | 'block' | 'absorb' }
+  | { type: 'damage'; x: number; z: number; y: number; amount: number; crit: boolean; element: Element; target: 'enemy' | 'player'; kind?: 'dodge' | 'block' | 'absorb' | 'miss' | 'immune' }
   | { type: 'heal'; amount: number }
   | { type: 'enemy_hit'; id: number }
   | { type: 'enemy_died'; id: number; x: number; z: number }
@@ -221,13 +229,15 @@ export type SimEvent =
   | { type: 'player_died' }
   | { type: 'player_respawn' }
   | { type: 'cast'; skillId: string; x: number; z: number; dirX: number; dirZ: number; tx: number; tz: number; element: Element }
-  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' | 'avalanche' }
+  | { type: 'melee_swing'; x: number; z: number; dirX: number; dirZ: number; range: number; arc: number; element: Element; visual?: 'cleave' | 'void' | 'avalanche' | 'blind' }
   /** Lightning jumping from one point to another: a chain hop or an Overload arc. */
   | { type: 'arc'; x0: number; z0: number; x1: number; z1: number }
   /** A companion's blow: the eagle's talons or the angel's sword, from x, z toward dirX, dirZ. */
   | { type: 'minion_strike'; kind: 'eagle' | 'angel'; x: number; z: number; dirX: number; dirZ: number }
   /** A single-target hit drawn on the target standing at x, z: a big weapon from above, or a holy shield raised over it. */
-  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody'; x: number; z: number; element: Element }
+  | { type: 'melee_impact'; visual: 'overhead' | 'holy_shield' | 'bloody' | 'holy'; x: number; z: number; element: Element }
+  /** Retribution's answer: a bolt of light out of the sky onto whatever struck the hero. */
+  | { type: 'holy_bolt'; x: number; z: number }
   | { type: 'aoe'; visual: string; x: number; z: number; radius: number; element: Element }
   | { type: 'projectile_hit'; x: number; z: number; element: Element; shape: ProjectileShape; splash: number }
   | { type: 'zone_start'; zone: Zone }
@@ -247,4 +257,4 @@ export type SimEvent =
   | { type: 'open'; panel: InteractableKind }
   | { type: 'area'; area: 'town' | 'arena'; zone?: string; /** A picked monster level past the zone's own. */ level?: number }
   | { type: 'kick'; k: number }
-  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' | 'shattered' };
+  | { type: 'status'; id: number; status: 'frozen' | 'burning' | 'poisoned' | 'stunned' | 'cursed' | 'bleeding' | 'shattered' | 'blinded' | 'judged' };

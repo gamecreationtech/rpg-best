@@ -1,6 +1,7 @@
 import { COMBAT_RULES, PROC_CHANCE, STATUS_RULES } from '../data/status';
 import { LEVELING } from '../data/classes';
 import { PROCS } from '../data/procs';
+import { isUndead } from '../data/monsters';
 import { PX } from '../data/units';
 import type { Element } from '../data/stats';
 import { MS } from '../data/units';
@@ -45,6 +46,18 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   }
   const disabled = e.status.stun > 0 || e.status.freeze > 0;
   if (p.bonusVsDisabled && disabled) amount = Math.round(amount * p.bonusVsDisabled);
+  const undead = isUndead(e.def);
+  if (p.vsUndead && undead) amount = Math.round(amount * p.vsUndead);
+  // Consecrated Blade: the hero's own hits burn with holy fire, hotter still against the undead
+  if ((p.weaponHit || p.skillId) && !p.fromProc && !p.fromMinion) {
+    const hb = w.buffs.find((b) => b.mods.holyBlade)?.mods.holyBlade;
+    if (hb) {
+      amount = Math.round(amount * (1 + (hb.pct / 100) * (undead ? hb.vsUndead : 1)));
+      w.emit({ type: 'melee_impact', visual: 'holy', x: e.x, z: e.z, element: 'physical' });
+    }
+  }
+  // Judgement: a marked enemy takes more from everything
+  if (e.status.mark) amount = Math.round(amount * (1 + e.status.mark.dmgTakenPct / 100));
   // Element procs
   const proc = PROC_CHANCE[p.element];
   const roll = () => w.rng.next() * 100;
@@ -70,6 +83,10 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   if (p.freeze) applyFreeze(w, e, p.freeze * MS);
   if (p.slow) e.status.slow = Math.max(e.status.slow, p.slow * MS);
   if (p.knockback && !e.dummy) w.shove(e, p.knockback);
+  if (p.blind && e.status.blind < p.blind * MS) {
+    e.status.blind = p.blind * MS;
+    w.emit({ type: 'status', id: e.id, status: 'blinded' });
+  }
   const burnChance = (proc.burn ?? 0) + (p.element === 'fire' ? d.burnChance : 0);
   if (burnChance > 0 && roll() < burnChance) {
     e.status.burn = { ticks: STATUS_RULES.burnTicks, timer: 0, interval: STATUS_RULES.burnInterval * MS, damage: Math.max(1, Math.round((p.amount * STATUS_RULES.burnTickPct) / 100)) };
@@ -166,6 +183,11 @@ export function tickStatuses(w: World, e: Enemy, dt: number): void {
   s.chill = Math.max(0, s.chill - dt * 0.35);
   s.slow = Math.max(0, s.slow - dt);
   s.shock = Math.max(0, s.shock - dt);
+  s.blind = Math.max(0, s.blind - dt);
+  if (s.mark) {
+    s.mark.remaining -= dt;
+    if (s.mark.remaining <= 0) s.mark = null;
+  }
   const dots: [keyof Pick<EnemyStatusDots, 'burn' | 'poison' | 'bleed'>, Element][] = [['burn', 'fire'], ['poison', 'poison'], ['bleed', 'physical']];
   for (const [key, element] of dots) {
     const dot = s[key];
@@ -210,6 +232,12 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
   if (w.playerDead || w.invulnTimer > 0) return;
   const d = w.derived;
   const at = { x: w.px, z: w.pz, y: 2.1 };
+  // Divine Shield: the blow lands on the light, and Retribution still answers it
+  if (w.buffs.some((b) => b.mods.invulnerable)) {
+    w.emit({ type: 'damage', ...at, amount: 0, crit: false, element, target: 'player', kind: 'immune' });
+    retaliate(w, amount, source);
+    return;
+  }
   if (w.rng.next() * 100 < d.dodge) {
     w.emit({ type: 'damage', ...at, amount: 0, crit: false, element, target: 'player', kind: 'dodge' });
     return;
@@ -227,6 +255,8 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
     const res = Math.min(75, d.res[element] + inSanctuary);
     reduced = Math.max(1, Math.round(amount * (1 - res / 100)));
   }
+  // Weakened after Divine Shield: everything bites harder
+  for (const b of w.buffs) if (b.mods.dmgTakenPct) reduced = Math.round(reduced * (1 + b.mods.dmgTakenPct / 100));
   // Shields absorb in order: physical-only first, then general
   let remaining = reduced;
   const shields = w.buffs.filter((b) => b.shield > 0).sort((a, b) => (a.mods.shieldPhysicalOnly ? -1 : 1) - (b.mods.shieldPhysicalOnly ? -1 : 1));
@@ -248,14 +278,21 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
     w.emit({ type: 'player_hit' });
     w.emit({ type: 'sound', id: 'playerHurt' });
   }
-  // Retaliation buffs
-  if (source && source.alive && !source.dead) {
-    for (const b of w.buffs) {
-      if (b.mods.retaliationMult) {
-        hitEnemy(w, source, { amount: Math.max(1, Math.round(amount * b.mods.retaliationMult)), element: 'fire', canCrit: false, skillId: null, weaponHit: false });
-      }
-      if (b.mods.freezeAttackersMs) applyFreeze(w, source, b.mods.freezeAttackersMs * MS);
+  retaliate(w, amount, source);
+  if (w.player.hp <= 0) w.killPlayer();
+}
+
+/** What the attacker gets back: Fire Armor's flames, Frozen Armor's ice, Retribution's bolt of light. `amount` is the blow before armour. */
+function retaliate(w: World, amount: number, source: Enemy | null): void {
+  if (!source || !source.alive || source.dead) return;
+  for (const b of w.buffs) {
+    if (b.mods.retaliationMult) {
+      hitEnemy(w, source, { amount: Math.max(1, Math.round(amount * b.mods.retaliationMult)), element: 'fire', canCrit: false, skillId: null, weaponHit: false });
+    }
+    if (b.mods.freezeAttackersMs) applyFreeze(w, source, b.mods.freezeAttackersMs * MS);
+    if (b.mods.retribution) {
+      w.emit({ type: 'holy_bolt', x: source.x, z: source.z });
+      hitEnemy(w, source, { amount: Math.max(1, Math.round(amount * b.mods.retribution.mult)), element: 'physical', canCrit: false, skillId: null, weaponHit: false });
     }
   }
-  if (w.player.hp <= 0) w.killPlayer();
 }

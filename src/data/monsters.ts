@@ -17,6 +17,14 @@ export type MonsterLook =
   /** The necromancer's raised archers: the plague archer's bones with burning red eyes. */
   | 'bone_archer';
 
+/** Looks that count as undead for the Paladin's holy skills; the bone and plague archers join them by id. */
+const UNDEAD_LOOKS: ReadonlySet<MonsterLook> = new Set<MonsterLook>(['ghoul', 'skeleton', 'wraith', 'frostwraith', 'revenant', 'necromancer', 'bone_archer']);
+const UNDEAD_IDS: ReadonlySet<string> = new Set(['bone_archer', 'plague_archer']);
+
+export function isUndead(def: EnemyDef | null): boolean {
+  return !!def && (UNDEAD_LOOKS.has(def.look) || UNDEAD_IDS.has(def.id));
+}
+
 export interface EnemyDef {
   id: string;
   name: string;

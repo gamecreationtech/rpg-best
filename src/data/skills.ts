@@ -42,6 +42,16 @@ export interface BuffMods {
   deflect?: boolean;
   /** A single companion at the hero's side for the buff's duration: an eagle that dives on what the hero attacks, or a fallen angel that fights whatever is near. Strikes within `reach` px every `interval` ms. */
   companion?: { kind: 'eagle' | 'angel'; damageMult: number; interval: number; reach: number };
+  /** Consecrated Blade: every hit the hero lands deals `pct` percent more, and `vsUndead` times that bonus against the undead. */
+  holyBlade?: { pct: number; vsUndead: number };
+  /** Divine Shield: nothing hurts the hero while it lasts... */
+  invulnerable?: boolean;
+  /** ...and when it ends, a `Weakened` buff with `dmgTakenPct` for `duration` ms follows. */
+  afterWeakness?: { dmgTakenPct: number; duration: number };
+  /** Damage taken is raised by this percent (the weakness after Divine Shield). */
+  dmgTakenPct?: number;
+  /** Retribution: a bolt of light strikes whatever hits the hero for `mult` times the damage it dealt. */
+  retribution?: { mult: number };
 }
 
 export type SkillEffect =
@@ -58,9 +68,13 @@ export type SkillEffect =
        * wide red sweep instead of the thin swing line, `void` a purple one
        * with a splash of void all round the hero.
        */
-      visual?: 'overhead' | 'holy_shield' | 'bloody' | 'cleave' | 'void' | 'avalanche';
+      visual?: 'overhead' | 'holy_shield' | 'bloody' | 'cleave' | 'void' | 'avalanche' | 'blind';
       /** Arc only: everything hit is shoved this many px away from the hero (Avalanche). */
       knockback?: number;
+      /** Ms during which everything hit swings and shoots wide (Blind). */
+      blind?: number;
+      /** Multiplier against the undead (Blind). */
+      vsUndeadMult?: number;
       radius?: number;
       stun?: number;
       slow?: number;
@@ -174,7 +188,9 @@ export type SkillEffect =
       chargeSpeed?: number;
     }
   | { kind: 'beam'; drainMult: number; interval: number; duration: number; maxRange: number; extendedRange: number; farEffectiveness: number }
-  | { kind: 'curse'; maxRange: number; radius: number; duration: number; pctPerSec: number; executeBelowPct: number };
+  | { kind: 'curse'; maxRange: number; radius: number; duration: number; pctPerSec: number; executeBelowPct: number }
+  /** Judgement: one enemy takes `dmgTakenPct` percent more from every hit for `duration` ms. */
+  | { kind: 'mark'; maxRange: number; duration: number; dmgTakenPct: number };
 
 export interface SkillDef {
   id: string;
@@ -221,6 +237,11 @@ export const SKILLS: Record<string, SkillDef> = {
   leap: { id: 'leap', name: 'Leap', classId: K, tier: 'pledge', pledgeId: 'titan', description: 'Jump over walls and enemies. Invulnerable while airborne.', manaCost: 25, cooldown: 8000, rank5Cooldown: 5000, reqLevel: 5, element: 'physical', effect: { kind: 'mobility', mode: 'leap', maxRange: 300, duration: 520, invulnerable: true, throughWalls: true } },
   rite_of_blood: { id: 'rite_of_blood', name: 'Rite of Blood', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Double your damage, attack speed and movement for ten seconds. Every hit costs 2% of your life.', manaCost: 40, cooldown: 45000, rank5Cooldown: 32000, reqLevel: 15, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { atkSpdPct: 100, dmgPct: 100, moveSpdPct: 100, selfCostPct: 2 } } },
   summon_angel: { id: 'summon_angel', name: 'Summon Angel', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Call down a fallen angel to fight at your side for thirty seconds. It cuts down whatever you attack, and anything that comes near.', manaCost: 60, cooldown: 40000, rank5Cooldown: 25000, rankBonus: 0.25, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 30000, mods: { companion: { kind: 'angel', damageMult: 1.6, interval: 1000, reach: 40 } } } },
+  consecrated_blade: { id: 'consecrated_blade', name: 'Consecrated Blade', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Your blade burns with holy fire for ten seconds: every hit deals 30% more, and 60% more against the undead.', manaCost: 30, cooldown: 20000, rank5Cooldown: 13000, reqLevel: 5, element: 'physical', effect: { kind: 'buff', duration: 10000, mods: { holyBlade: { pct: 30, vsUndead: 2 } } } },
+  judgement: { id: 'judgement', name: 'Judgement', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Mark one enemy from afar. For six seconds a beam of light hangs over it and it takes 50% more damage from everything.', manaCost: 30, cooldown: 15000, rank5Cooldown: 10000, reqLevel: 10, element: 'physical', effect: { kind: 'mark', maxRange: 300, duration: 6000, dmgTakenPct: 50 } },
+  blind: { id: 'blind', name: 'Blind', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'A flash of light in a cone before you. Everything in it is thrown back and blinded for three seconds, so its blows and shots go wide. The undead take triple damage.', manaCost: 25, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.25, reqLevel: 15, element: 'physical', effect: { kind: 'melee', damageMult: 1.2, maxRange: 110, arc: 100, knockback: 60, blind: 3000, vsUndeadMult: 3, visual: 'blind' } },
+  divine_shield: { id: 'divine_shield', name: 'Divine Shield', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'Nothing can hurt you for three seconds. When the light fades you are weakened and take 20% more damage for three seconds.', manaCost: 50, cooldown: 45000, rank5Cooldown: 30000, reqLevel: 20, element: 'physical', effect: { kind: 'buff', duration: 3000, mods: { invulnerable: true, afterWeakness: { dmgTakenPct: 20, duration: 3000 } } } },
+  retribution: { id: 'retribution', name: 'Retribution', classId: K, tier: 'pledge', pledgeId: 'paladin', description: 'For eight seconds, whatever strikes you is struck back by a bolt of light for three times the damage it dealt.', manaCost: 40, cooldown: 30000, rank5Cooldown: 20000, reqLevel: 25, element: 'physical', effect: { kind: 'buff', duration: 8000, mods: { retribution: { mult: 3 } } } },
   hemorrhage: { id: 'hemorrhage', name: 'Hemorrhage', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'Open a wound that bleeds away a quarter of the target\'s life over twenty seconds.', manaCost: 25, cooldown: 18000, rank5Cooldown: 12000, rankBonus: 0.2, reqLevel: 10, element: 'physical', effect: { kind: 'melee', damageMult: 0, maxRange: 80, noInitialDamage: true, bleed: { pctOfMaxHp: 25, duration: 20000, interval: 500 }, visual: 'bloody' } },
   void_slash: { id: 'void_slash', name: 'Void Slash', classId: K, tier: 'pledge', pledgeId: 'nightlord', description: 'A slash that leaves a burning void trail. Scales with strength and intelligence.', manaCost: 30, cooldown: 10000, rank5Cooldown: 6500, rankBonus: 0.25, reqLevel: 5, element: 'physical', effect: { kind: 'melee', damageMult: 1.8, maxRange: 80, arc: 120, scalesWithInt: true, trail: { length: 300, duration: 5000, tickPct: 10 }, visual: 'void' } },
 

@@ -108,7 +108,7 @@ export interface Beam {
 }
 
 function emptyStatus(): Enemy['status'] {
-  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0 };
+  return { stun: 0, freeze: 0, slow: 0, shock: 0, burn: null, poison: null, bleed: null, curse: null, heldBy: -1, chill: 0, thaw: 0, blind: 0, mark: null };
 }
 
 /**
@@ -735,6 +735,8 @@ export class World {
     if (b.mods.skeletons) for (let i = 0; i < ARCHER_SLOTS; i++) this.minions[i]!.active = false;
     if (b.mods.titan) this.minions[TITAN_SLOT]!.active = false;
     if (b.mods.companion) this.minions[b.mods.companion.kind === 'eagle' ? EAGLE_SLOT : ANGEL_SLOT]!.active = false;
+    // Divine Shield's price: the weakness that follows the light
+    if (b.mods.afterWeakness) this.addBuff('weakened', 'Weakened', b.mods.afterWeakness.duration * MS, { dmgTakenPct: b.mods.afterWeakness.dmgTakenPct }, 0xff6a5a);
     if (b.mods.endSmoke) {
       this.addZone({ type: 'smoke', x: this.px, z: this.pz, radius: b.mods.endSmoke.radius * PX, duration: b.mods.endSmoke.slowDuration * MS, tickInterval: 0.2, slow: 0.4, damage: 0, element: 'physical', skillId: b.id });
     }
@@ -1916,6 +1918,11 @@ export class World {
       } else this.flow.direction(e.x, e.z, dir);
     };
     const strike = (): void => {
+      // Blinded, it swings at where it thinks the threat is
+      if (e.status.blind > 0) {
+        this.emit({ type: 'damage', x: tx, z: tz, y: 2.1, amount: 0, crit: false, element: def.element, target: 'player', kind: 'miss' });
+        return;
+      }
       if (titan) this.damageTitan(e.damage, def.element);
       else damagePlayer(this, e.damage, def.element, e, true);
     };
@@ -1938,8 +1945,15 @@ export class World {
           e.attackTimer = e.attackCooldown;
           this.emit({ type: 'enemy_attack', id: e.id });
           const safe = Math.max(dist, 0.001);
-          const dx = (tx - e.x) / safe;
-          const dz = (tz - e.z) / safe;
+          let dx = (tx - e.x) / safe;
+          let dz = (tz - e.z) / safe;
+          if (e.status.blind > 0) {
+            // Blinded, it shoots well wide of the mark
+            const off = (this.rng.next() < 0.5 ? -1 : 1) * (0.7 + this.rng.next() * 0.8);
+            const cos = Math.cos(off);
+            const sin = Math.sin(off);
+            [dx, dz] = [dx * cos - dz * sin, dx * sin + dz * cos];
+          }
           this.spawnProjectile({
             owner: 'enemy', shape: 'enemy_bolt', element: def.element, x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
             speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: def.element, canCrit: false, skillId: null, weaponHit: false },

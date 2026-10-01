@@ -6,7 +6,7 @@ import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { castSkill } from './skills/cast';
-import type { Enemy } from './types';
+import type { DamagePacket, Enemy } from './types';
 import { createPlayer } from './player';
 import { SIM_DT, World } from './world';
 
@@ -160,7 +160,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(68);
+    expect(Object.keys(SKILLS).length).toBe(73);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -1220,5 +1220,98 @@ describe('touch attack button', () => {
     run(w, 3);
     expect(near.hp < hp || near.dead).toBe(true); // holding does
     expect(w.px).toBeCloseTo(startX, 3);
+  });
+});
+
+describe('paladin', () => {
+  const setup = (): World => {
+    const w = new World(createPlayer('knight', 'paladin'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    for (const id of ['consecrated_blade', 'judgement', 'blind', 'divine_shield', 'retribution']) w.player.skillRanks[id] = 1;
+    return w;
+  };
+  const spawn = (w: World, id: string, dx: number, dz: number): Enemy => {
+    const e = w.spawnEnemy(MONSTERS[id]!, w.px + dx, w.pz + dz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    return e;
+  };
+  const plain = (): DamagePacket => ({ amount: 100, element: 'physical', canCrit: false, skillId: 'x', weaponHit: true });
+
+  it('consecrated blade adds holy damage to every hit, twice as much against the undead', () => {
+    const w = setup();
+    const ghoul = spawn(w, 'ghoul', 0, 2);
+    const rat = spawn(w, 'plague_rat', 1, 2);
+    expect(castSkill(w, 'consecrated_blade', null).ok).toBe(true);
+    expect(hitEnemy(w, rat, plain())).toBe(130);
+    expect(hitEnemy(w, ghoul, plain())).toBe(160);
+  });
+
+  it('judgement marks one enemy so it takes half again from everything', () => {
+    const w = setup();
+    const e = spawn(w, 'ghoul', 0, 4);
+    expect(castSkill(w, 'judgement', { x: e.x, z: e.z }).ok).toBe(true);
+    expect(e.status.mark).not.toBeNull();
+    expect(hitEnemy(w, e, plain())).toBe(150);
+    run(w, 7);
+    expect(e.status.mark).toBeNull();
+  });
+
+  it('blind throws the cone back and blinded monsters swing wide', () => {
+    const w = setup();
+    w.derived.dodge = 0;
+    const e = spawn(w, 'plague_rat', 0, 1.2);
+    const before = e.z;
+    expect(castSkill(w, 'blind', { x: w.px, z: w.pz + 3 }).ok).toBe(true);
+    expect(e.status.blind).toBeGreaterThan(0);
+    expect(e.z).toBeGreaterThan(before + 1);
+    // Back in reach and swinging for two seconds: nothing lands
+    e.z = w.pz + 0.9;
+    const hp = w.player.hp;
+    run(w, 2);
+    expect(w.player.hp).toBe(hp);
+    expect(w.events.some((ev) => ev.type === 'damage' && ev.kind === 'miss')).toBe(true);
+  });
+
+  it('blind hits the undead three times as hard', () => {
+    const w = setup();
+    const ghoul = spawn(w, 'ghoul', -0.6, 1.5);
+    const rat = spawn(w, 'plague_rat', 0.6, 1.5);
+    expect(castSkill(w, 'blind', { x: w.px, z: w.pz + 3 }).ok).toBe(true);
+    const g = 100000 - ghoul.hp;
+    const r = 100000 - rat.hp;
+    expect(r).toBeGreaterThan(0);
+    expect(g).toBeGreaterThanOrEqual(r * 2.9);
+  });
+
+  it('divine shield makes the hero untouchable, then weak', () => {
+    const w = setup();
+    w.derived.dodge = 0;
+    expect(castSkill(w, 'divine_shield', null).ok).toBe(true);
+    const hp = w.player.hp;
+    damagePlayer(w, 500, 'fire', null, false);
+    expect(w.player.hp).toBe(hp);
+    expect(w.events.some((ev) => ev.type === 'damage' && ev.kind === 'immune')).toBe(true);
+    run(w, 3.2);
+    expect(w.buffs.some((b) => b.id === 'divine_shield')).toBe(false);
+    const weak = w.buffs.find((b) => b.id === 'weakened');
+    expect(weak).toBeDefined();
+    damagePlayer(w, 100, 'fire', null, false);
+    const res = w.derived.res.fire;
+    expect(hp - w.player.hp).toBe(Math.round(Math.round(100 * (1 - res / 100)) * 1.2));
+  });
+
+  it('retribution strikes back with light at whatever hits the hero', () => {
+    const w = setup();
+    w.derived.dodge = 0;
+    w.derived.block = 0;
+    const e = spawn(w, 'plague_rat', 0, 2);
+    expect(castSkill(w, 'retribution', null).ok).toBe(true);
+    damagePlayer(w, 40, 'physical', e, true);
+    expect(100000 - e.hp).toBe(120);
+    expect(w.events.some((ev) => ev.type === 'holy_bolt')).toBe(true);
   });
 });

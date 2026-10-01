@@ -132,6 +132,8 @@ export function castSkill(w: World, id: string, aim: Aim | null): CastResult {
       return castBeam(w, def, eff);
     case 'curse':
       return castCurse(w, def, eff, aim);
+    case 'mark':
+      return castMark(w, def, eff, aim);
   }
 }
 
@@ -153,9 +155,9 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
 
   const strike = () => {
     if (eff.arc) {
-      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element, visual: eff.visual === 'cleave' || eff.visual === 'void' || eff.visual === 'avalanche' ? eff.visual : undefined });
+      w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: eff.arc, element: def.element, visual: eff.visual === 'cleave' || eff.visual === 'void' || eff.visual === 'avalanche' || eff.visual === 'blind' ? eff.visual : undefined });
       const hits = w.enemiesInArc(w.px, w.pz, dir.x, dir.z, range, eff.arc);
-      for (const e of hits) hitEnemy(w, e, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct, knockback: eff.knockback ? eff.knockback * PX : undefined }, eff.scalesWithInt));
+      for (const e of hits) hitEnemy(w, e, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct, knockback: eff.knockback ? eff.knockback * PX : undefined, blind: eff.blind, vsUndead: eff.vsUndeadMult }, eff.scalesWithInt));
     } else if (target && target.alive && !target.dead) {
       if (eff.visual === 'overhead' || eff.visual === 'holy_shield' || eff.visual === 'bloody') w.emit({ type: 'melee_impact', visual: eff.visual, x: target.x, z: target.z, element: def.element });
       else w.emit({ type: 'melee_swing', x: w.px, z: w.pz, dirX: dir.x, dirZ: dir.z, range, arc: 60, element: def.element });
@@ -450,5 +452,20 @@ function castCurse(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'c
     e.status.curse = { remaining: eff.duration * MS, pctPerSec: eff.pctPerSec, executeBelow: eff.executeBelowPct };
     w.emit({ type: 'status', id: e.id, status: 'cursed' });
   }
+  return { ok: true };
+}
+
+/** Judgement: the enemy nearest the aim point, within reach, is marked. */
+function castMark(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'mark' }>, aim: Aim | null): CastResult {
+  const at = aimPoint(w, aim, eff.maxRange, 0.5);
+  const target = at.enemy ?? w.nearestEnemy(at.x, at.z, 2);
+  if (!target) {
+    if (w.nearestEnemy(w.px, w.pz, 16)) return { ok: false, reason: 'Out of range', approach: true };
+    return { ok: false, reason: 'No target' };
+  }
+  const dir = facing(w, { x: target.x, z: target.z }, null);
+  pay(w, def, dir, target.x, target.z);
+  target.status.mark = { remaining: eff.duration * MS, dmgTakenPct: eff.dmgTakenPct };
+  w.emit({ type: 'status', id: target.id, status: 'judged' });
   return { ok: true };
 }

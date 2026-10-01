@@ -4,7 +4,7 @@ import type { Light } from './compositor';
 type Layer = 'floor' | 'air';
 
 interface Fx {
-  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'wave' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'light';
+  kind: 'ring' | 'disc' | 'anim' | 'sprite' | 'wave' | 'slash' | 'sweep' | 'smash' | 'shield' | 'gash' | 'cracks' | 'strike' | 'link' | 'light' | 'pillar';
   layer: Layer;
   x: number;
   y: number;
@@ -144,6 +144,12 @@ export class Effects2D {
   strike(x: number, z: number, color: number): void {
     const fx = this.push({ kind: 'strike', layer: 'air', x, z, life: 0.28, css: css(color), css2: '#ffffff' });
     this.withLight(fx, color, 2.5, 90);
+  }
+
+  /** A column of light out of the sky onto a point: `halfWidth` px wide at its brightest, thinning as it fades. */
+  pillar(x: number, z: number, color: number, life = 0.35, halfWidth = 5): void {
+    const fx = this.push({ kind: 'pillar', layer: 'air', x, y: 0.2, z, life, r0: halfWidth, css: css(color), css2: '#ffffff' });
+    this.withLight(fx, color, 2.4, 80);
   }
 
   /** A jagged line between two points for a short while. */
@@ -331,6 +337,22 @@ export class Effects2D {
           const ex = Math.round(cam.frameX(fx.tx, fx.tz));
           const ey = Math.round(cam.frameY(fx.tx, fx.ty, fx.tz));
           jagged(ctx, px, py, ex, ey, fx.css, fx.css2, Math.floor(fx.t * 40) + fx.seed, 5);
+          break;
+        }
+        case 'pillar': {
+          // Three nested columns, widest faintest, all thinning as the light fades
+          const fade = 1 - k;
+          const hw = Math.max(1, Math.round(fx.r0 * (0.5 + 0.5 * fade)));
+          const top = py - 150;
+          ctx.fillStyle = fx.css;
+          ctx.globalAlpha = 0.22 * fade;
+          ctx.fillRect(px - hw * 2, top, hw * 4, py - top);
+          ctx.globalAlpha = 0.55 * fade;
+          ctx.fillRect(px - hw, top, hw * 2, py - top);
+          ctx.fillStyle = fx.css2;
+          ctx.globalAlpha = fade;
+          ctx.fillRect(px - Math.max(1, hw >> 1), top, Math.max(1, hw >> 1) * 2, py - top);
+          ctx.globalAlpha = 1;
           break;
         }
         case 'light':
