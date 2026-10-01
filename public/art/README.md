@@ -23,5 +23,5 @@ optional: if it is missing, the code-drawn version is used.
 - The icon is the same for every rarity; the rarity shows on the frame and
   the name.
 - Drawings waiting for an item that does not exist yet sit here under a
-  descriptive name (`leather_boots.png`, `winged_totem.png`,
-  `leather_cap.png`) and are not loaded until an id is given to them.
+  descriptive name (`winged_totem.png`) and are not loaded until an id is
+  given to them.
