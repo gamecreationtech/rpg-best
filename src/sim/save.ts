@@ -48,18 +48,21 @@ export function deserialize(data: SaveData): PlayerState {
   const src = data.player;
   const equipment = new Equipment();
   let maxUid = 0;
-  const seen = (i: Item | null | undefined) => {
-    if (!i) return;
+  // An item whose base was removed from the game (the warpike, the fire elemental sword) is dropped from the save
+  const known = (i: Item | null | undefined): i is Item => !!i && ALL_BASES.some((b) => b.id === i.baseId);
+  const seen = (i: Item) => {
     maxUid = Math.max(maxUid, i.uid);
     // Items saved under an older name ("Wooden Sword", "Iron Shield of Haste") take their base's current name
-    const base = ALL_BASES.find((b) => b.id === i.baseId);
-    if (base) i.name = i.affixes.length ? `${base.name} ${i.affixes[0]}` : base.name;
+    const base = ALL_BASES.find((b) => b.id === i.baseId)!;
+    i.name = i.affixes.length ? `${base.name} ${i.affixes[0]}` : base.name;
   };
   for (const k of EQUIP_KEYS) {
     const it = src.equipment[k] ?? null;
-    equipment.slots[k] = it;
-    seen(it);
+    equipment.slots[k] = known(it) ? it : null;
+    if (known(it)) seen(it);
   }
+  src.inventory = src.inventory.filter(known);
+  src.stash = src.stash.map((page) => page.filter(known));
   src.inventory.forEach(seen);
   src.stash.forEach((page) => page.forEach(seen));
   resetItemUids(maxUid + 1);

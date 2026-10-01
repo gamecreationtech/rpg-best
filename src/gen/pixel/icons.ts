@@ -312,13 +312,6 @@ function drawWeapon(b: PixelBuffer, type: WeaponType, r: Ramp, steel: Ramp, wood
       b.set(o + 5, o + 9, r[1]);
       b.set(o + 6, o + 8, r[1]);
       break;
-    case 'warpike':
-      diag(o + 1, o + 13, o + 9, o + 5, wood[1], 2);
-      diag(o + 13, o + 1, o + 8, o + 6, steel[2], 2);
-      b.rect(o + 6, o + 6, 2, 1, steel[1]);
-      b.rect(o + 9, o + 8, 1, 2, steel[1]);
-      b.set(o + 9, o + 5, r[1]);
-      break;
   }
 }
 

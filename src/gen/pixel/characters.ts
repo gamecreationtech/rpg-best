@@ -573,16 +573,6 @@ const WEAPONS: Record<WeaponType, WeaponDrawer> = {
     const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
     d.buf.rect(tx, ty - 2, 1, 3, base(d, 'steel'));
   },
-  warpike: (d, hx, hy, raise, facing) => {
-    // Longest pole with a long leaf tip and a crossbar below it
-    const len = px(d.H * 0.85);
-    pole(d, hx, hy, raise, facing, len, 'wood');
-    const [tx, ty] = poleTip(d, hx, hy, raise, facing, len);
-    const s = base(d, 'steel');
-    d.buf.rect(tx, ty - 5, 1, 6, s);
-    d.buf.rect(tx - 1, ty - 3, 3, 2, s);
-    d.buf.rect(tx - 2, ty + 1, 5, 1, s);
-  },
 };
 
 /** A straight shaft from the hand; up when idle, overhead when raised, swung forward on the follow-through. */

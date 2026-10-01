@@ -21,7 +21,7 @@ export const EQUIP_SLOTS: { id: EquipSlot; label: string; count: number }[] = [
   { id: 'charm', label: 'Charm', count: 1 },
 ];
 
-export type WeaponType = 'sword' | 'dagger' | 'axe' | 'mace' | 'spear' | 'bow' | 'crossbow' | 'wand' | 'staff' | 'blowgun' | 'bardiche' | 'spellbook' | 'warpike' | 'warfork' | 'javelin';
+export type WeaponType = 'sword' | 'dagger' | 'axe' | 'mace' | 'spear' | 'bow' | 'crossbow' | 'wand' | 'staff' | 'blowgun' | 'bardiche' | 'spellbook' | 'warfork' | 'javelin';
 
 export type Rarity = 'common' | 'magic' | 'rare' | 'mythic' | 'set' | 'divine';
 
@@ -103,7 +103,6 @@ export const WEAPON_BASES: BaseItem[] = [
   { id: 'blowgun', name: 'Blowgun', slot: 'weapon', size: [1, 4], stats: { dex: 3 }, weapon: { type: 'blowgun', dmgMin: 3, dmgMax: 7, atkSpd: 1.9, ranged: true, magic: false, twoHanded: true, range: 300 } },
   { id: 'bardiche', name: 'Bardiche', slot: 'weapon', size: [2, 4], stats: { str: 2 }, weapon: { type: 'bardiche', dmgMin: 18, dmgMax: 30, atkSpd: 0.7, ranged: false, magic: false, twoHanded: true, range: 45 } },
   { id: 'spellbook', name: 'Spellbook', slot: 'weapon', size: [2, 2], stats: { int: 2, mana: 10 }, weapon: { type: 'spellbook', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: true, magic: true, twoHanded: false, range: 200 } },
-  { id: 'warpike', name: 'Warpike', slot: 'weapon', size: [1, 4], stats: { str: 1, dex: 1 }, weapon: { type: 'warpike', dmgMin: 12, dmgMax: 20, atkSpd: 1.0, ranged: false, magic: false, twoHanded: true, range: 45 } },
   { id: 'warfork', name: 'Warfork', slot: 'weapon', size: [1, 3], stats: { str: 1, dex: 1 }, weapon: { type: 'warfork', dmgMin: 8, dmgMax: 14, atkSpd: 1.2, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'javelin', name: 'Javelin', slot: 'weapon', size: [1, 3], stats: { dex: 2 }, weapon: { type: 'javelin', dmgMin: 9, dmgMax: 15, atkSpd: 1.1, ranged: true, magic: false, twoHanded: false, range: 100 } },
 ];
@@ -138,7 +137,6 @@ export const ACCESSORY_BASES: BaseItem[] = [
 export const SPECIAL_BASES: BaseItem[] = [
   { id: 'totem_of_swiftness', name: 'Totem of Swiftness', slot: 'totem', size: [1, 2], stats: { moveSpeed: 200 }, rarity: 'divine' },
   { id: 'rangers_relic', name: "Ranger's Relic", slot: 'relic', size: [1, 2], stats: { range: 100, projSpeed: 100 }, rarity: 'divine' },
-  { id: 'fire_elemental_sword', name: 'Fire Elemental Sword', slot: 'weapon', size: [1, 3], stats: { critChance: 15, critDamage: 200, burnChance: 100 }, rarity: 'divine', weapon: { type: 'sword', dmgMin: 18, dmgMax: 30, atkSpd: 1.4, ranged: false, magic: false, twoHanded: false, range: 30 } },
   { id: 'vital_charm', name: 'Vital Charm', slot: 'charm', size: [1, 1], stats: { life: 500, mana: 500 }, rarity: 'divine' },
   { id: 'weak_amulet', name: 'Weak Amulet', slot: 'amulet', size: [1, 1], stats: {}, rolls: { critChance: [10, 20], critDamage: [30, 50] }, proc: { id: 'cry_of_the_weak', chance: 50 }, rarity: 'divine', reqLevel: 100 },
 ];
