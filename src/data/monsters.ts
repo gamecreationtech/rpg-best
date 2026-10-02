@@ -140,6 +140,8 @@ export const MONSTERS: Record<string, EnemyDef> = {
 export const MONSTER_RULES = {
   /** Monsters ignore the hero beyond this many px until hit. */
   aggroRange: 300,
+  /** Share of a zone's `maxAlive` already on the ground, spread over the map, when the hero arrives (producer's call, 2026-10-02). Unit tests set it to 0. */
+  firstWave: 1,
   /** Hitting a monster also wakes every monster within this many px of it. */
   alertRange: 100,
   hpPerLevel: 0.12,

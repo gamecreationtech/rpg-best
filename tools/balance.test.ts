@@ -15,6 +15,7 @@ import { ZONES } from '../src/data/zones';
 import { baseItem } from '../src/data/items';
 import { makeItem } from '../src/sim/items/item';
 import { allocateStat, createPlayer } from '../src/sim/player';
+import type { Enemy } from '../src/sim/types';
 import { SIM_DT, World } from '../src/sim/world';
 
 function run(w: World, seconds: number): void {
@@ -46,8 +47,15 @@ it('every class levels at a sane pace in every zone', () => {
       const secs = 240;
       let t = 0;
       let deaths = 0;
+      // The map is peopled on arrival, so the nearest monster can flip between packs on either side of a wall every
+      // half second; a player commits to one pack and walks to it, and gives up on one it cannot get closer to
+      let chase: Enemy | null = null;
+      const avoid = new Set<number>();
+      let lastX = w.px;
+      let lastZ = w.pz;
+      let stuck = 0;
       for (; t < secs; t += 0.5) {
-        const alive = w.enemies.filter((e) => e.alive && !e.dead && e.def);
+        const alive = w.enemies.filter((e) => e.alive && !e.dead && e.def && !avoid.has(e.id));
         alive.sort((a, b) => Math.hypot(a.x - w.px, a.z - w.pz) - Math.hypot(b.x - w.px, b.z - w.pz));
         const near = alive[0];
         // Ranged heroes step back from a melee monster at their feet, as a player would
@@ -62,10 +70,25 @@ it('every class levels at a sane pace in every zone', () => {
           if (near) w.setTarget(near.id);
           run(w, 0.25);
         } else {
-          if (near && (w.targetId < 0 || w.enemies[w.targetId]!.dead)) {
-            if (w.dist(near.x, near.z) < 12) w.setTarget(near.id);
-            else w.moveTo(near.x, near.z); // walk toward the next pack like a player clicking the ground
+          if (w.targetId < 0 || w.enemies[w.targetId]!.dead) {
+            if (!chase || !chase.alive || chase.dead || avoid.has(chase.id)) chase = near ?? null;
+            if (chase) {
+              if (w.dist(chase.x, chase.z) < 12) {
+                w.setTarget(chase.id);
+                chase = null;
+              } else {
+                w.moveTo(chase.x, chase.z); // walk toward the next pack like a player clicking the ground
+                stuck = Math.hypot(w.px - lastX, w.pz - lastZ) < 0.3 ? stuck + 0.5 : 0;
+                if (stuck >= 3) {
+                  avoid.add(chase.id);
+                  chase = null;
+                  stuck = 0;
+                }
+              }
+            }
           }
+          lastX = w.px;
+          lastZ = w.pz;
           run(w, 0.5);
         }
         if (w.player.hp < w.derived.maxHp * 0.4) w.useConsumable('hp_potion');

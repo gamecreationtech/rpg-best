@@ -12,5 +12,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    // Unit tests start every zone empty; the balance harness (its own config) keeps the first wave
+    setupFiles: ['src/test/setup.ts'],
   },
 });

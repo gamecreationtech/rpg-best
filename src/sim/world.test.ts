@@ -217,6 +217,33 @@ describe('world', () => {
   });
 });
 
+describe('first wave', () => {
+  it('a zone is already peopled when the hero arrives, spread over the map and none at the hero\'s feet', () => {
+    MONSTER_RULES.firstWave = 1;
+    try {
+      const w = new World(createPlayer('knight', null), 5);
+      w.travel('arena', 'proving_grounds');
+      const alive = w.enemies.filter((e) => e.alive && !e.dead && e.def);
+      expect(alive.length).toBeGreaterThanOrEqual(ZONES[0]!.maxAlive * 0.8);
+      for (const e of alive) {
+        expect(Math.hypot(e.x - w.px, e.z - w.pz)).toBeGreaterThanOrEqual(10);
+        expect(e.aggro).toBe(false);
+      }
+      // Spread out, not all clustered round the start
+      const far = alive.filter((e) => Math.hypot(e.x - w.px, e.z - w.pz) > 30).length;
+      expect(far).toBeGreaterThan(0);
+    } finally {
+      MONSTER_RULES.firstWave = 0;
+    }
+  });
+
+  it('unit tests start with an empty zone', () => {
+    const w = new World(createPlayer('knight', null), 5);
+    w.travel('arena', 'proving_grounds');
+    expect(w.enemies.some((e) => e.alive && e.def)).toBe(false);
+  });
+});
+
 describe('leveling pace', () => {
   it('a fresh knight swinging its sword usually reaches level 2 in the Proving Grounds within five minutes', () => {
     // A crude fighter: basic attacks on the nearest monster and a potion under 40% life, no skills and no kiting.

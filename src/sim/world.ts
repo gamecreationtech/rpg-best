@@ -265,7 +265,20 @@ export class World {
     this.interactables.length = 0;
     this.interactables.push({ id: 1, kind: 'town_portal', x: this.arena.spawn.x - 2, z: this.arena.spawn.z, radius: 50 * PX, active: true });
     this.spawnTimer = 0.5;
+    this.populate();
     this.emit({ type: 'area', area: 'arena', zone: this.zoneId, level: this.zoneLevel || undefined });
+  }
+
+  /** The first wave is already on the ground when the hero arrives: packs spread over the whole map, none within ten tiles of the hero. */
+  private populate(): void {
+    const want = Math.round(this.zone.maxAlive * MONSTER_RULES.firstWave);
+    for (let guard = 0; guard < want * 3 && this.aliveMonsters() < want; guard++) this.spawnPack(false);
+  }
+
+  private aliveMonsters(): number {
+    let n = 0;
+    for (const e of this.enemies) if (e.alive && !e.dead && e.def) n++;
+    return n;
   }
 
   private clearArea(): void {
@@ -2566,10 +2579,15 @@ export class World {
     if (this.area !== 'arena' || !this.arena || this.playerDead) return;
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
+    this.spawnTimer = this.zone.spawnInterval;
+    if (this.aliveMonsters() >= this.zone.maxAlive) return;
+    this.spawnPack(true);
+  }
+
+  /** One pack from the zone's roster: near the hero (12 to 26 tiles out) for the running spawner, or anywhere on the map at least 10 tiles away for the first wave. */
+  private spawnPack(near: boolean): void {
+    if (!this.arena) return;
     const zone = this.zone;
-    this.spawnTimer = zone.spawnInterval;
-    const alive = this.enemies.filter((e) => e.alive && !e.dead && e.def).length;
-    if (alive >= zone.maxAlive) return;
     // Weighted pick from the zone's roster
     const ids = Object.keys(zone.spawns).filter((id) => MONSTERS[id]);
     const total = ids.reduce((a, id) => a + zone.spawns[id]!, 0);
@@ -2582,12 +2600,20 @@ export class World {
         break;
       }
     }
-    // A reachable tile 12 to 26 units away
+    // A reachable tile 12 to 26 units away, or anywhere at least 10 away
     for (let tries = 0; tries < 30; tries++) {
-      const a = this.rng.range(0, Math.PI * 2);
-      const r = this.rng.range(12, 26);
-      const x = this.px + Math.cos(a) * r;
-      const z = this.pz + Math.sin(a) * r;
+      let x: number;
+      let z: number;
+      if (near) {
+        const a = this.rng.range(0, Math.PI * 2);
+        const r = this.rng.range(12, 26);
+        x = this.px + Math.cos(a) * r;
+        z = this.pz + Math.sin(a) * r;
+      } else {
+        x = this.rng.range(2, this.map.cols - 2);
+        z = this.rng.range(2, this.map.rows - 2);
+        if (Math.hypot(x - this.px, z - this.pz) < 10) continue;
+      }
       const c = Math.floor(x);
       const rr = Math.floor(z);
       if (c < 2 || rr < 2 || c >= this.map.cols - 2 || rr >= this.map.rows - 2) continue;
