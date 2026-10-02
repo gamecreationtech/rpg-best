@@ -8,7 +8,7 @@ import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { castSkill } from './skills/cast';
 import type { DamagePacket, Enemy } from './types';
-import { createPlayer } from './player';
+import { createPlayer, unlockUltimate } from './player';
 import { SIM_DT, World } from './world';
 
 function run(w: World, seconds: number): void {
@@ -187,7 +187,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(83);
+    expect(Object.keys(SKILLS).length).toBe(84);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -650,6 +650,29 @@ describe('wintercaller', () => {
 });
 
 describe('companions', () => {
+  it('the ultimate calls a flight of three eagles that all dive', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    w.player.skillRanks.summon_eagle = 5;
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, 'summon_eagle')).toBe(true);
+    expect(castSkill(w, 'summon_eagle_ult', null).ok).toBe(true);
+    const eagles = w.minions.filter((m) => m.kind === 'eagle' && m.active);
+    expect(eagles.length).toBe(3);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px, w.pz + 2);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    hitEnemy(w, e, { amount: 1, element: 'physical', canCrit: false, skillId: null, weaponHit: true });
+    run(w, 4);
+    expect(w.events.filter((ev) => ev.type === 'minion_strike' && ev.kind === 'eagle').length).toBeGreaterThanOrEqual(3);
+    // Three birds, three places: never all on one spot
+    const spots = new Set(eagles.map((m) => `${m.x.toFixed(1)},${m.z.toFixed(1)}`));
+    expect(spots.size).toBeGreaterThan(1);
+  });
+
   it('the eagle flies at the rogue\'s side and dives on what the rogue hits', () => {
     const w = new World(createPlayer('rogue', null), 7);
     w.travel('arena');

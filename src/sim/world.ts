@@ -35,8 +35,10 @@ const PET_SPEED = 5.5;
 const ARCHER_SLOTS = 6;
 const TITAN_SLOT = ARCHER_SLOTS;
 const EAGLE_SLOT = ARCHER_SLOTS + 1;
-const ANGEL_SLOT = ARCHER_SLOTS + 2;
-const MINION_POOL = ARCHER_SLOTS + 3;
+/** Three eagle slots: the ultimate calls a flight of three. */
+const EAGLE_SLOTS = 3;
+const ANGEL_SLOT = EAGLE_SLOT + EAGLE_SLOTS;
+const MINION_POOL = ANGEL_SLOT + 1;
 const COMPANION_SPEED = 7.5;
 const MINION_SPEED = 6;
 const MINION_HEEL = 1.7;
@@ -442,7 +444,7 @@ export class World {
     this.markDirty();
     if (mods.skeletons) this.raiseSkeletons(mods.skeletons.count, mods.skeletons.interval * MS);
     if (mods.titan) this.raiseTitan(mods.titan.hpMult);
-    if (mods.companion) this.callCompanion(mods.companion.kind);
+    if (mods.companion) this.callCompanion(mods.companion.kind, mods.companion.count ?? 1);
     this.emit({ type: 'buff_start', id, color });
     return buff;
   }
@@ -507,21 +509,32 @@ export class World {
   private tickMinions(dt: number): void {
     this.tickArchers(dt);
     this.tickTitan(dt);
-    this.tickCompanion(dt, EAGLE_SLOT, 'eagle');
-    this.tickCompanion(dt, ANGEL_SLOT, 'angel');
+    for (let i = 0; i < EAGLE_SLOTS; i++) this.tickCompanion(dt, EAGLE_SLOT + i, 'eagle', i);
+    this.tickCompanion(dt, ANGEL_SLOT, 'angel', 0);
   }
 
   /** The eagle or the angel arrives at the hero's side: the eagle on the left, the angel on the right. */
-  private callCompanion(kind: 'eagle' | 'angel'): void {
-    const m = this.minions[kind === 'eagle' ? EAGLE_SLOT : ANGEL_SLOT]!;
+  private callCompanion(kind: 'eagle' | 'angel', count = 1): void {
+    const n = kind === 'eagle' ? Math.min(count, EAGLE_SLOTS) : 1;
+    for (let i = 0; i < n; i++) {
+      const m = this.minions[kind === 'eagle' ? EAGLE_SLOT + i : ANGEL_SLOT]!;
+      const home = this.companionHome(kind, i);
+      m.active = true;
+      m.x = home.x;
+      m.z = home.z;
+      m.yaw = this.pyaw;
+      m.moving = false;
+      m.timer = i * 0.3;
+      m.shoot = 0;
+    }
+  }
+
+  /** Where a companion rests: the eagle on the hero's left, the angel on the right; a flight of eagles fans out, one ahead and one behind. */
+  private companionHome(kind: 'eagle' | 'angel', index: number): { x: number; z: number } {
     const side = kind === 'eagle' ? 1 : -1;
-    m.active = true;
-    m.x = this.px + Math.cos(this.pyaw) * side * 1.2;
-    m.z = this.pz - Math.sin(this.pyaw) * side * 1.2;
-    m.yaw = this.pyaw;
-    m.moving = false;
-    m.timer = 0;
-    m.shoot = 0;
+    const lane = index === 1 ? 0.8 : index === 2 ? -0.8 : 0;
+    const lateral = 1.2 + index * 0.35;
+    return { x: this.px + Math.cos(this.pyaw) * side * lateral - Math.sin(this.pyaw) * (0.3 - lane), z: this.pz - Math.sin(this.pyaw) * side * lateral - Math.cos(this.pyaw) * (0.3 - lane) };
   }
 
   /**
@@ -529,10 +542,10 @@ export class World {
    * hero attacks; the angel takes that too, or else the nearest monster that
    * has noticed the hero. In reach, it strikes every interval.
    */
-  private tickCompanion(dt: number, slot: number, kind: 'eagle' | 'angel'): void {
+  private tickCompanion(dt: number, slot: number, kind: 'eagle' | 'angel', index: number): void {
     const m = this.minions[slot]!;
     const buff = this.buffs.find((b) => b.mods.companion?.kind === kind);
-    if (!buff) {
+    if (!buff || index >= (buff.mods.companion!.count ?? 1)) {
       m.active = false;
       return;
     }
@@ -540,10 +553,10 @@ export class World {
     m.moving = false;
     m.timer += dt;
     m.shoot = Math.max(0, m.shoot - dt);
-    const side = kind === 'eagle' ? 1 : -1;
+    const home = this.companionHome(kind, index);
     if (this.dist(m.x, m.z) > 14) {
-      m.x = this.px + Math.cos(this.pyaw) * side * 1.2;
-      m.z = this.pz - Math.sin(this.pyaw) * side * 1.2;
+      m.x = home.x;
+      m.z = home.z;
     }
     const last = this.enemies[this.lastHitId];
     let target: Enemy | null = last && last.alive && !last.dead ? last : null;
@@ -559,13 +572,15 @@ export class World {
       }
     }
     const reach = cfg.reach * PX;
-    let gx = this.px + Math.cos(this.pyaw) * side * 1.2 - Math.sin(this.pyaw) * 0.3;
-    let gz = this.pz - Math.sin(this.pyaw) * side * 1.2 - Math.cos(this.pyaw) * 0.3;
+    let gx = home.x;
+    let gz = home.z;
     let stop = 0.35;
     if (target && this.dist(target.x, target.z) < 9) {
       const td = Math.hypot(target.x - m.x, target.z - m.z);
-      gx = target.x;
-      gz = target.z;
+      // A flight spreads round its prey instead of piling onto one spot
+      const spread = (index * Math.PI * 2) / 3;
+      gx = target.x + (index ? Math.sin(spread) * 0.3 : 0);
+      gz = target.z + (index ? Math.cos(spread) * 0.3 : 0);
       stop = reach + target.radius - 0.15;
       m.yaw = Math.atan2(target.x - m.x, target.z - m.z);
       if (td <= reach + target.radius + 0.25 && m.timer >= cfg.interval * MS) {
@@ -743,7 +758,7 @@ export class World {
     this.emit({ type: 'buff_end', id: b.id });
     if (b.mods.skeletons) for (let i = 0; i < ARCHER_SLOTS; i++) this.minions[i]!.active = false;
     if (b.mods.titan) this.minions[TITAN_SLOT]!.active = false;
-    if (b.mods.companion) this.minions[b.mods.companion.kind === 'eagle' ? EAGLE_SLOT : ANGEL_SLOT]!.active = false;
+    if (b.mods.companion) for (const m of this.minions) if (m.kind === b.mods.companion.kind) m.active = false;
     // Divine Shield's price: the weakness that follows the light
     if (b.mods.afterWeakness) this.addBuff('weakened', 'Weakened', b.mods.afterWeakness.duration * MS, { dmgTakenPct: b.mods.afterWeakness.dmgTakenPct }, 0xff6a5a);
     if (b.mods.endSmoke) {
@@ -1221,7 +1236,7 @@ export class World {
   /** The development menu's crab: trots behind the hero and fetches loot within PET_REACH. Never saved. */
   readonly pet = { active: false, x: 0, z: 0, yaw: 0, moving: false, targetDrop: -1 };
   /** Summoned skeleton archers; `active` ones follow the hero. */
-  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, (_, i) => ({ active: false, kind: i === TITAN_SLOT ? 'titan' : i === EAGLE_SLOT ? 'eagle' : i === ANGEL_SLOT ? 'angel' : 'archer', x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0, hp: 0, maxHp: 0, radius: i === TITAN_SLOT ? TITAN_RADIUS : 0.3 }));
+  readonly minions: Minion[] = Array.from({ length: MINION_POOL }, (_, i) => ({ active: false, kind: i === TITAN_SLOT ? 'titan' : i >= EAGLE_SLOT && i < EAGLE_SLOT + EAGLE_SLOTS ? 'eagle' : i === ANGEL_SLOT ? 'angel' : 'archer', x: 0, z: 0, yaw: 0, moving: false, timer: 0, shoot: 0, hp: 0, maxHp: 0, radius: i === TITAN_SLOT ? TITAN_RADIUS : 0.3 }));
 
   /** The titan, if one stands. */
   get titan(): Minion | null {

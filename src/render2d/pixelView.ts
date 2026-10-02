@@ -628,10 +628,11 @@ export class PixelView {
         break;
       }
       case 'buff_start': {
-        if (ev.id === 'summon_eagle' || ev.id === 'summon_angel') {
-          const m = w.minions.find((q) => q.active && q.kind === (ev.id === 'summon_eagle' ? 'eagle' : 'angel'));
-          if (m) {
-            if (ev.id === 'summon_eagle') pt.burst(m.x, 1.8, m.z, 12, 1.5, 0xe8e0d0, 0.6, { drag: 1.5, priority: 0.6 });
+        if (ev.id === 'summon_eagle' || ev.id === 'summon_eagle_ult' || ev.id === 'summon_angel') {
+          const kind = ev.id === 'summon_angel' ? 'angel' : 'eagle';
+          for (const m of w.minions) {
+            if (!m.active || m.kind !== kind) continue;
+            if (kind === 'eagle') pt.burst(m.x, 1.8, m.z, 12, 1.5, 0xe8e0d0, 0.6, { drag: 1.5, priority: 0.6 });
             else {
               // The angel comes down in a column of light
               this.effects.ring(m.x, m.z, 0.2, 1.4, 0xffe8a0, 0.5, 2, 1.5);
@@ -783,13 +784,13 @@ export class PixelView {
         break;
       }
       case 'buff_end':
-        if (ev.id === 'summon_eagle' || ev.id === 'summon_angel') {
-          const m = w.minions.find((q) => q.kind === (ev.id === 'summon_eagle' ? 'eagle' : 'angel'));
-          if (m) pt.burst(m.x, ev.id === 'summon_eagle' ? 1.8 : 1, m.z, 16, 1.2, ev.id === 'summon_eagle' ? 0xe8e0d0 : 0xfff0b0, 0.8, { drag: 1, up: 0.5, priority: 0.6 });
+        if (ev.id === 'summon_eagle' || ev.id === 'summon_eagle_ult' || ev.id === 'summon_angel') {
+          const kind = ev.id === 'summon_angel' ? 'angel' : 'eagle';
+          for (const m of w.minions) if (m.active && m.kind === kind) pt.burst(m.x, kind === 'eagle' ? 1.8 : 1, m.z, 16, 1.2, kind === 'eagle' ? 0xe8e0d0 : 0xfff0b0, 0.8, { drag: 1, up: 0.5, priority: 0.6 });
         }
         if (ev.id === 'meat_shield') {
           // It comes apart: a heap of flesh and bone dust where it stood
-          const t = w.minions[w.minions.length - 1]!;
+          const t = w.minions.find((q) => q.kind === 'titan')!;
           pt.burst(t.x, 1.2, t.z, 40, 2, 0x82705e, 1.0, { gravity: 6, drag: 1, priority: 0.7, size: 3 });
           pt.burst(t.x, 1.5, t.z, 20, 1.5, 0xd6ceb6, 1.0, { gravity: 5, drag: 1, priority: 0.6, size: 2 });
           this.effects.disc(t.x, t.z, 1.2, 0x3a2a30, 2.5, 0.5);
