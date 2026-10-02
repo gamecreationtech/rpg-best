@@ -11,7 +11,7 @@ import { formatStat, type StatKey } from '../../data/stats';
 import { fitItemIcon } from './itemGrid';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import type { Item } from '../../sim/items/item';
-import { ATTACK_SLOT, allocateStat, attackDamageRange, canEquipItem, canLearnPassive, canLearnSkill, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
+import { ATTACK_SLOT, allocateStat, attackDamageRange, canEquipItem, canLearnPassive, canLearnSkill, canUnlearnPassive, canUnlockUltimate, learnPassive, learnSkill, revokeUltimate, setPiecesWorn, unlearnPassive, unlearnSkill, unlockUltimate, unlockedSlots } from '../../sim/player';
 import type { World } from '../../sim/world';
 import { clear, h, hex } from '../dom';
 
@@ -836,11 +836,17 @@ export class HeroMenu {
       h('div', { class: 'px-tree' }, h('div', { class: 'px-group-head' }, pxText(title, { color })), ...defs.map((d) => {
         const rank = p.passiveRanks[d.id] ?? 0;
         const can = canLearnPassive(p, d.id);
+        const back = canUnlearnPassive(p, d.id);
         const req = d.requires ? defs.find((x) => x.id === d.requires)?.name : null;
+        const changed = () => { w.markDirty(); w.recomputeStats(); rerender(); };
+        // A minus takes a rank back (refunding the point) as long as nothing learned builds on it; a plus adds one
         return h('div', { class: 'px-inset px-passive' + (rank ? ' learned' : '') },
           h('div', { class: 'px-col' }, h('div', { class: 'px-row' }, pxText(d.name, { color: rank ? TEXT : MUTED }), pxText(`${rank}/${d.maxRank}`, { color: MUTED })), pxText(`${d.effects.map((e) => formatStat(e.stat, e.perRank)).join(', ')} per rank${req ? `, needs ${req}` : ''}`, { color: MUTED, scale: 1 })),
           h('span', { class: 'grow' }),
-          pbtn('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else { w.markDirty(); w.recomputeStats(); } rerender(); }, can.ok ? 'gold' : 'dim'),
+          h('div', { class: 'px-row tight' },
+            rank > 0 ? pbtn('\u2212', () => { if (!unlearnPassive(p, d.id)) this.host.message(back.reason ?? 'Cannot take back', 0xff8080); else changed(); }, back.ok ? 'red' : 'dim') : null,
+            pbtn('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else changed(); }, can.ok ? 'gold' : 'dim'),
+          ),
         );
       }));
     const pledgeTree = pledge

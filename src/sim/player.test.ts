@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELING, powerCurve, xpForLevel, xpPerMinuteAt } from '../data/classes';
-import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlearnSkill, unlockUltimate, unlockedSlots } from './player';
+import { addXp, canUnlockUltimate, createPlayer, deriveStats, learnPassive, learnSkill, resolveSlotSkill, unlearnPassive, unlearnSkill, unlockUltimate, unlockedSlots } from './player';
 import { skillsFor } from '../data/skills';
 import { SETS } from '../data/sets';
 import { baseItem } from '../data/items';
@@ -179,6 +179,23 @@ describe('player', () => {
     const other = createPlayer('sorcerer', 'stormsinger');
     other.skillPoints = 1;
     expect(learnPassive(other, 'win_freeze')).toBe(false);
+  });
+
+  it('a passive rank comes back with its point', () => {
+    const p = createPlayer('sorcerer', 'wintercaller');
+    p.skillPoints = 3;
+    expect(learnPassive(p, 'win_freeze')).toBe(true);
+    expect(learnPassive(p, 'win_freeze')).toBe(true);
+    expect(learnPassive(p, 'win_slow')).toBe(true);
+    expect(unlearnPassive(p, 'win_slow')).toBe(true);
+    expect(p.skillPoints).toBe(1);
+    expect(p.passiveRanks.win_slow).toBeUndefined();
+    expect(unlearnPassive(p, 'win_freeze')).toBe(true);
+    expect(p.passiveRanks.win_freeze).toBe(1);
+    expect(unlearnPassive(p, 'win_freeze')).toBe(true);
+    expect(p.passiveRanks.win_freeze).toBeUndefined();
+    expect(p.skillPoints).toBe(3);
+    expect(unlearnPassive(p, 'win_freeze')).toBe(false);
   });
 
   it('passives add up: life, a point on every attribute, and ranks cap', () => {

@@ -494,6 +494,24 @@ export function learnPassive(p: PlayerState, id: string): boolean {
   return true;
 }
 
+/** A rank can come back as long as nothing learned still builds on the passive. */
+export function canUnlearnPassive(p: PlayerState, id: string): { ok: boolean; reason?: string } {
+  if ((p.passiveRanks[id] ?? 0) <= 0) return { ok: false, reason: 'Not learned' };
+  const dependant = passivesFor(p.classId, p.pledgeId).find((d) => d.requires === id && (p.passiveRanks[d.id] ?? 0) > 0);
+  if (dependant) return { ok: false, reason: `${dependant.name} builds on it` };
+  return { ok: true };
+}
+
+/** Takes one rank back and refunds the point. */
+export function unlearnPassive(p: PlayerState, id: string): boolean {
+  if (!canUnlearnPassive(p, id).ok) return false;
+  p.skillPoints++;
+  const rank = p.passiveRanks[id]! - 1;
+  if (rank <= 0) delete p.passiveRanks[id];
+  else p.passiveRanks[id] = rank;
+  return true;
+}
+
 export function addProfessionXp(p: PlayerState, id: ProfessionId, amount: number): boolean {
   const pr = p.professions[id];
   pr.xp += amount;
