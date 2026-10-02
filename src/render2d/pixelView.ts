@@ -1552,7 +1552,7 @@ export class PixelView {
     const heroY = this.heroHeight();
     const rite = w.buffs.some((b) => b.id === 'rite_of_blood');
     const sneaking = w.invisible && !w.playerDead;
-    this.pushPuppet(this.hero, w.px, heroY, w.pz, sneaking ? 0.5 : 1, rite ? '#7a0a2a' : sneaking ? '#101828' : null, rite ? '#ff2040' : null);
+    this.pushPuppet(this.hero, w.px, heroY, w.pz, sneaking ? 0.5 : 1, rite ? '#7a0a2a' : sneaking ? '#101828' : null, rite ? '#ff2040' : null, true);
     const shades = w.buffs.find((b) => b.mods.shades)?.mods.shades;
     if (shades && !w.playerDead) this.drawShades(heroY, shades.count);
     if (sneaking && Math.random() < 0.5) {
@@ -1887,6 +1887,8 @@ export class PixelView {
     ca[2] += (amb[2] - ca[2]) * 0.15;
     this.compositor.lights.length = 0;
     for (const l of this.lights) this.compositor.lights.push(l);
+    this.compositor.mask = this.heroMask;
+    this.heroMask = null;
     this.compositor.present(this.frame, cam.scale, cam.offsetX, cam.offsetY);
   }
 
@@ -2902,7 +2904,9 @@ export class PixelView {
     this.lights.push({ x: fx, y: baseY - 30, radius: 60, intensity: 0.6, r: 0.6, g: 0.85, b: 1 });
   }
 
-  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null): void {
+  private heroMask: { frame: HTMLCanvasElement; x: number; y: number; flip: boolean } | null = null;
+
+  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null, isHero = false): void {
     const cam = this.view;
     const ctx = this.ctx;
     // Facing left: the sheet's own left-facing drawing when it has one, else the side mirrored
@@ -2915,6 +2919,8 @@ export class PixelView {
     const flip = p.facing === 'side' && p.faceLeft && !ownLeft;
     const flash = p.flash > 0;
     const dying = p.dying;
+    // The hero's sprite is handed to the lighting pass so the character is lit smoothly, without the floor's dither
+    if (isHero && dying < 0) this.heroMask = { frame, x: fx - anim.originX, y: fy - anim.originY, flip };
     this.items.push({
       depth: cam.depth(x, z),
       draw: () => {

@@ -114,7 +114,11 @@ What that means for each kind of asset:
   The ultimate's `summon.count` raises three of them `spread` px apart across
   the line of fire, each aiming at the mark; `lesser` makes the zone's radius
   0.5 and the renderer draws the same frames shrunk by two (`shrunk`), never
-  by a fraction.
+  by a fraction. The lighting pass dithers its brightness bands over the
+  whole frame except the hero: `PixelView` hands the hero's current sprite
+  and frame position to the compositor as a mask (`Compositor.mask`, a
+  second texture), and the shader lights those pixels smoothly, so a drawn
+  character shows no checker (producer's call, 2026-10-02).
   The Wintercaller's five: Ice Lance is a piercing `lance` projectile with
   `bonusVsDisabled`; Frostbite a `frostbite` zone (drain, slow, chill to a
   freeze) drawn as hoarfrost with glitter; Frost Step a teleport that leaves a
