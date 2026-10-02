@@ -8,7 +8,8 @@ import { describeItem, type Item } from '../../sim/items/item';
 import { clear, h, hex } from '../dom';
 
 export interface GridCallbacks {
-  onItemTap: (item: Item, grid: Inventory) => void;
+  /** `rect` is where the tapped block sits on screen, so a card can pop up beside it. */
+  onItemTap: (item: Item, grid: Inventory, rect: DOMRect) => void;
   onCellTap: (col: number, row: number, grid: Inventory) => void;
   /** A small tag in the corner of each block (the merchant's price). */
   label?: (item: Item) => string;
@@ -44,7 +45,7 @@ export class ItemGrid {
       const col = Math.floor((e.clientX - rect.left) / this.cell);
       const row = Math.floor((e.clientY - rect.top) / this.cell);
       const item = this.grid.itemAt(col, row);
-      if (item) this.cb.onItemTap(item, this.grid);
+      if (item) this.cb.onItemTap(item, this.grid, new DOMRect(rect.left + item.col * this.cell, rect.top + item.row * this.cell, item.size[0] * this.cell, item.size[1] * this.cell));
       else this.cb.onCellTap(col, row, this.grid);
     };
     if (this.cb.onItemHover) {

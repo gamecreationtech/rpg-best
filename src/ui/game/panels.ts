@@ -55,6 +55,8 @@ export class Panels {
   private readonly hero: HeroMenu;
   private selected: Item | null = null;
   private selectedFrom: 'bag' | 'equip' | 'stash' | 'vendor' | null = null;
+  /** Touch: where the item just tapped sits on screen, so its card pops up beside it on the next render. */
+  private popAt: DOMRect | null = null;
   /** The merchant's two shelves: the wares, or what the hero sold. */
   private vendorPage: 'sale' | 'buyback' = 'sale';
   private stashPage = 0;
@@ -147,9 +149,9 @@ export class Panels {
 
   // ---------------------------------------------------------------- shared bits
 
-  private bagGrid(w: World, onItem: (item: Item) => void, onCell?: (col: number, row: number) => void, onHover?: (item: Item | null, x: number, y: number) => void): HTMLElement {
+  private bagGrid(w: World, onItem: (item: Item, at: DOMRect) => void, onCell?: (col: number, row: number) => void, onHover?: (item: Item | null, x: number, y: number) => void): HTMLElement {
     const grid = new ItemGrid(w.player.inventory, {
-      onItemTap: (item) => onItem(item),
+      onItemTap: (item, _grid, at) => onItem(item, at),
       onCellTap: (col, row) => onCell?.(col, row),
       onItemHover: onHover,
     });
@@ -159,10 +161,10 @@ export class Panels {
     return h('div', { class: 'grid-wrap' }, h('div', { class: 'section-label' }, `Bag  (${w.player.inventory.freeCells} cells free)`), grid.root);
   }
 
-  private equipList(w: World, onItem: (item: Item, key: EquipKey) => void): HTMLElement {
+  private equipList(w: World, onItem: (item: Item, key: EquipKey, at: DOMRect) => void): HTMLElement {
     const rows = EQUIP_KEYS.map((key) => {
       const item = w.player.equipment.get(key);
-      const b = button('', () => item && onItem(item, key), 'equip-row' + (item && item === this.selected ? ' selected' : ''));
+      const b = button('', () => item && onItem(item, key, b.getBoundingClientRect()), 'equip-row' + (item && item === this.selected ? ' selected' : ''));
       b.append(h('span', { class: 'equip-key' }, keyLabel(key)));
       if (item) {
         b.append(itemIcon(item, 18), h('span', { class: 'equip-name', style: `color:${hex(RARITIES[item.rarity].color)}` }, item.name));
@@ -174,10 +176,10 @@ export class Panels {
     return h('div', { class: 'equip-list' }, h('div', { class: 'section-label' }, 'Equipped'), ...rows);
   }
 
-  /** The tapped item with its stats and the actions for it; pinned at the top on touch so it is always in view. */
+  /** The tapped item with its stats and the actions for it. On touch the card pops up on the item instead (`popCard`), so only the hint stays here. */
   private selectedCard(w: World, actions: HTMLElement[], hint = 'Tap an item to see its stats.'): HTMLElement | null {
-    const cls = 'selected-card' + (this.touch ? ' sticky' : '');
-    if (!this.selected) return h('div', { class: cls }, h('div', { class: 'item-card dim' }, hint));
+    const cls = 'selected-card';
+    if (!this.selected || this.touch) return h('div', { class: cls }, h('div', { class: 'item-card dim' }, hint));
     const compare = this.selectedFrom !== 'equip' ? w.player.equipment.get(w.player.equipment.targetKey(this.selected)) : null;
     const card = itemCard(this.selected, compare && compare !== this.selected ? compare : null, this.selected.setId ? setPiecesWorn(w.player, this.selected.setId) : 0, w.player.level);
     const usable = canEquipItem(w.player, this.selected);
@@ -185,10 +187,18 @@ export class Panels {
     return h('div', { class: cls }, card, h('div', { class: 'actions' }, ...actions));
   }
 
-  private select(item: Item, from: 'bag' | 'equip' | 'stash' | 'vendor'): void {
+  private select(item: Item, from: 'bag' | 'equip' | 'stash' | 'vendor', at: DOMRect | null = null): void {
     this.selected = item;
     this.selectedFrom = from;
+    this.popAt = at;
     this.render();
+  }
+
+  /** Touch: after a render, the card for the item just tapped pops up where it was tapped, with its actions and an X. */
+  private popCard(w: World, actions: HTMLElement[], extra?: { text: string; color: string }): void {
+    if (!this.touch || !this.selected || !this.popAt) return;
+    this.hero.showPopup(w, this.selected, this.selectedFrom === 'equip' ? 'equip' : 'bag', this.popAt, actions, extra);
+    this.popAt = null;
   }
 
   // ---------------------------------------------------------------- stash
@@ -234,7 +244,7 @@ export class Panels {
     };
     // The wares on a shelf grid like the bag, each with its price in the corner; what the class cannot use is faded
     const shelf = new ItemGrid(onBuyback ? w.buyback : w.vendorShelf, {
-      onItemTap: (item) => (this.touch ? this.select(item, 'vendor') : buy(item)),
+      onItemTap: (item, _grid, at) => (this.touch ? this.select(item, 'vendor', at) : buy(item)),
       onCellTap: () => {},
       label: (item) => `${priceOf(item)}g`,
       dim: (item) => !canEquipItem(w.player, item).ok,
@@ -270,9 +280,11 @@ export class Panels {
     this.body.append(
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Items sell for 40% of their value; the buyback shelf gives them back for twice that.`),
       h('div', { class: 'actions' }, bulk('common', 'Common'), bulk('magic', 'Magic'), bulk('rare', 'Rare'), bulk('mythic', 'Mythic'), bulk('all', 'All')),
-      this.touch ? this.selectedCard(w, actions, 'Tap something on the shelf or in your bag to see its stats, then buy or sell it here.')! : h('div', { class: 'dim pad' }, 'Hover an item for its stats and price. Click it to buy or sell.'),
-      ...this.halves('For sale', stock, this.bagGrid(w, (item) => (this.touch ? this.select(item, 'bag') : sell(item)), undefined, hover('bag'))),
+      this.touch ? this.selectedCard(w, actions, 'Tap something on the shelf or in your bag for its stats and price.')! : h('div', { class: 'dim pad' }, 'Hover an item for its stats and price. Click it to buy or sell.'),
+      ...this.halves('For sale', stock, this.bagGrid(w, (item, at) => (this.touch ? this.select(item, 'bag', at) : sell(item)), undefined, hover('bag'))),
     );
+    const sel = this.selected;
+    if (sel) this.popCard(w, actions, this.selectedFrom === 'vendor' ? { text: `${onBuyback ? 'Buy back' : 'Buy'} for ${priceOf(sel)} gold`, color: w.player.gold >= priceOf(sel) ? GOLD : '#ff8080' } : { text: `Sells for ${sellPrice(sel)} gold`, color: GOLD });
   }
 
   /** A small box over the panel asking before gold changes hands, with the item's card on top when one thing is at stake. */
@@ -370,9 +382,10 @@ export class Panels {
       h('div', { class: 'dim pad' }, `${w.player.gold} gold. Pick an item from your bag or your equipment, then choose an operation.`),
       this.selectedCard(w, [], 'Tap a worn item or one in your bag to see its stats, then choose an operation.')!,
       ...(this.touch
-        ? [ops, ...this.halves('Equipped', this.equipList(w, (item) => this.select(item, 'equip')), this.bagGrid(w, (item) => this.select(item, 'bag')))]
+        ? [ops, ...this.halves('Equipped', this.equipList(w, (item, _key, at) => this.select(item, 'equip', at)), this.bagGrid(w, (item, at) => this.select(item, 'bag', at)))]
         : [h('div', { class: 'two-col' }, h('div', {}, this.equipList(w, (item) => this.select(item, 'equip')), ops), this.bagGrid(w, (item) => this.select(item, 'bag')))]),
     );
+    this.popCard(w, []);
   }
 
   // ---------------------------------------------------------------- professions

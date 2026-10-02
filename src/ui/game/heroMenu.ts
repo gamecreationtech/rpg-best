@@ -224,7 +224,8 @@ export class HeroMenu {
 
   private renderInventory(w: World, content: HTMLElement): void {
     const p = w.player;
-    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const body = content.parentElement!.parentElement!;
+    const rerender = () => this.render(body);
     // The worn gear on the left as a paper doll with the trinkets under a rule at its foot; the bag
     // gets the whole right side. On touch the selected item's panel sits under the doll.
     // With a mouse the stat sheet takes a column on the left, the gear the middle and the bag the rest; the doll scales to
@@ -244,7 +245,7 @@ export class HeroMenu {
     rule.style.gridRow = '5';
     doll.append(rule);
     const left = h('div', { class: 'px-col gear-left' }, label('Equipped'), doll);
-    if (!this.mouse) left.append(label('Item'), this.itemPanel(w, rerender));
+    if (!this.mouse) left.append(pxText('Tap an item for its stats. Tap an empty cell to move it there.', { color: MUTED, maxChars: 44 }));
     const sortBtn = (text: string, mode: 'rarity' | 'type') => {
       const b = pbtn(text, () => { p.inventory.sort(mode); w.markDirty(); this.reset(); rerender(); }, p.inventory.items.length ? 'btn' : 'dim');
       b.classList.add('tiny-wide');
@@ -263,7 +264,8 @@ export class HeroMenu {
 
   /** Touch devices: the stat sheet on its own tab, one scrolling column. */
   private renderStats(w: World, content: HTMLElement): void {
-    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const body = content.parentElement!.parentElement!;
+    const rerender = () => this.render(body);
     content.append(h('div', { class: 'px-inventory' }, h('div', { class: 'px-col stats-col full' }, this.statSheet(w, rerender))));
   }
 
@@ -293,6 +295,10 @@ export class HeroMenu {
         } else {
           this.selected = item;
           this.selectedFrom = 'equip';
+          const at = el.getBoundingClientRect();
+          rerender();
+          this.showPopup(w, item, 'equip', at, this.itemActions(w, item, 'equip', rerender));
+          return;
         }
         rerender();
       };
@@ -409,6 +415,11 @@ export class HeroMenu {
       } else {
         this.selected = d.item;
         this.selectedFrom = 'bag';
+        const rect = inner.getBoundingClientRect();
+        const at = new DOMRect(rect.left + d.item.col * cell, rect.top + d.item.row * cell, d.item.size[0] * cell, d.item.size[1] * cell);
+        rerender();
+        this.showPopup(w, d.item, 'bag', at, this.itemActions(w, d.item, 'bag', rerender));
+        return;
       }
       rerender();
     });
@@ -534,20 +545,65 @@ export class HeroMenu {
     this.tip?.remove();
     this.tip = null;
     this.tipItem = null;
+    this.hidePopup();
   }
 
-  /** Touch users: the selected item's card with its actions. */
-  private itemPanel(w: World, rerender: () => void): HTMLElement {
-    const sel = this.selected;
-    const box = h('div', { class: 'px-inset px-itembox' });
-    if (!sel) {
-      box.append(pxText('Tap an item to see it. Tap an empty cell to move it there.', { color: MUTED, maxChars: 44 }));
-      return box;
+  private pop: HTMLDivElement | null = null;
+  private popClose: ((e: PointerEvent) => void) | null = null;
+
+  /**
+   * Touch users: the item's card popped up beside the tapped item, as the mouse's hover card, with its
+   * actions and an X. A tap anywhere else closes it. Public so the shop and the crafting stations use it too.
+   */
+  showPopup(w: World, item: Item, from: 'bag' | 'equip', at: DOMRect, actions: HTMLElement[], extra?: { text: string; color: string }): void {
+    this.hidePopup();
+    const lines = this.itemLines(w, item, from);
+    if (extra) lines.push(h('div', { class: 'px-rule' }), h('div', { class: 'px-row tight' }, pxText(extra.text, { color: extra.color })));
+    const x = pbtn('X', () => this.hidePopup(), 'btn');
+    x.classList.add('pop-x');
+    const pop = h('div', { class: 'px-inset px-tip px-pop' }, x, ...lines, actions.length ? h('div', { class: 'px-row actions' }, ...actions) : null);
+    pop.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.body.appendChild(pop);
+    this.pop = pop;
+    // Beside the item when there is room, else below or above it, and always on screen
+    const r = pop.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let left: number;
+    let top: number;
+    if (at.right + 8 + r.width <= vw - 4) {
+      left = at.right + 8;
+      top = at.top + at.height / 2 - r.height / 2;
+    } else if (at.left - 8 - r.width >= 4) {
+      left = at.left - 8 - r.width;
+      top = at.top + at.height / 2 - r.height / 2;
+    } else {
+      left = at.left + at.width / 2 - r.width / 2;
+      top = at.bottom + 8 + r.height <= vh - 4 ? at.bottom + 8 : at.top - 8 - r.height;
     }
-    box.append(...this.itemLines(w, sel, this.selectedFrom === 'equip' ? 'equip' : 'bag'));
-    const actions = h('div', { class: 'px-row actions' });
-    if (this.selectedFrom === 'bag') {
-      actions.append(
+    pop.style.left = `${Math.round(Math.max(4, Math.min(left, vw - r.width - 4)))}px`;
+    pop.style.top = `${Math.round(Math.max(4, Math.min(top, vh - r.height - 4)))}px`;
+    // Any tap outside the card closes it; listened for in the capture phase so the grids' own handlers cannot swallow it
+    const close = (e: PointerEvent) => {
+      if (pop.contains(e.target as Node)) return;
+      this.hidePopup();
+    };
+    this.popClose = close;
+    setTimeout(() => { if (this.popClose === close) document.addEventListener('pointerdown', close, true); }, 0);
+  }
+
+  hidePopup(): void {
+    if (this.popClose) document.removeEventListener('pointerdown', this.popClose, true);
+    this.popClose = null;
+    this.pop?.remove();
+    this.pop = null;
+  }
+
+  /** The things a touch user can do with an item: equip or drop one from the bag, take off a worn one. */
+  private itemActions(w: World, sel: Item, from: 'bag' | 'equip', rerender: () => void): HTMLElement[] {
+    const actions: HTMLElement[] = [];
+    if (from === 'bag') {
+      actions.push(
         pbtn('Equip', () => {
           const r = w.equipItem(sel);
           if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
@@ -556,25 +612,24 @@ export class HeroMenu {
         }, 'gold'),
       );
       if (sel.slot === 'ring') {
-        actions.append(pbtn('Equip as Ring 2', () => {
+        actions.push(pbtn('Equip as Ring 2', () => {
           const r = w.equipItem(sel, 'ring2');
           if (!r.ok) this.host.message(r.reason ?? 'Cannot equip', 0xff8080);
           this.reset();
           rerender();
         }));
       }
-      actions.append(pbtn('Drop', () => { w.dropItem(sel); this.reset(); rerender(); }, 'red'));
+      actions.push(pbtn('Drop', () => { w.dropItem(sel); this.reset(); rerender(); }, 'red'));
     } else {
       const key = EQUIP_KEYS.find((k) => w.player.equipment.get(k) === sel)!;
-      actions.append(pbtn('Unequip', () => {
+      actions.push(pbtn('Unequip', () => {
         const r = w.unequipItem(key);
         if (!r.ok) this.host.message(r.reason ?? 'Cannot unequip', 0xff8080);
         this.reset();
         rerender();
       }, 'gold'));
     }
-    box.append(actions);
-    return box;
+    return actions;
   }
 
   private statSheet(w: World, rerender: () => void): HTMLElement {
@@ -668,7 +723,8 @@ export class HeroMenu {
 
   private renderSkills(w: World, content: HTMLElement): void {
     const p = w.player;
-    const rerender = () => this.render(content.parentElement!.parentElement!);
+    const body = content.parentElement!.parentElement!;
+    const rerender = () => this.render(body);
     const list = skillsFor(p.classId, p.pledgeId).filter((s) => s.tier !== 'ultimate').sort((a, b) => (a.reqLevel ?? 1) - (b.reqLevel ?? 1));
     const slotsUnlocked = unlockedSlots(p.level);
     const keys = ['LMB', 'Q', 'E', 'R', 'T', 'RMB'];

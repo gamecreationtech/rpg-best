@@ -530,6 +530,14 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .px-window.touch .doll-slot.belt { width: 56px; height: 40px; }
 .px-window.touch .doll-slot .mt { font-size: 8px; }
 .px-tip { position: fixed; z-index: 10001; pointer-events: none; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; min-width: 300px; max-width: 460px; }
+/* Touch: the same card popped up on the tapped item, with an X and the item's actions; it scrolls if the phone is short */
+.px-pop { pointer-events: auto; min-width: 240px; max-width: min(380px, calc(100vw - 8px)); max-height: calc(100vh - 8px); overflow-y: auto; padding-right: 48px; }
+.px-pop .pop-x { position: absolute; top: 4px; right: 4px; min-height: 26px; min-width: 0; padding: 1px 6px; }
+.px-pop .mt { font-size: 11px; line-height: 1.25; }
+.px-pop .px-row.tight { flex-wrap: nowrap; white-space: nowrap; gap: 4px; }
+.px-pop .px-rule { margin: 2px 0; }
+.px-pop .actions { margin-top: 4px; gap: 6px; flex-wrap: wrap; }
+.px-pop .actions .pxb { min-height: 28px; padding: 1px 8px; }
 .px-grid-inner.dragging { cursor: grabbing; }
 /* Dragging in the bag: the item lifts, a faded copy follows the pointer, the landing cells light up */
 .px-item.lifted { opacity: 0.3; }
