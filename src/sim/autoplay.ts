@@ -25,6 +25,8 @@ export class Autoplay {
   private lastZ = 0;
   private stuck = 0;
   private kite = 0;
+  /** Seconds before the next step back; stepping back is a dodge, not a way of life */
+  private kiteRest = 0;
   private roam: { x: number; z: number } | null = null;
   private deadFor = 0;
   private townFor = 0;
@@ -76,6 +78,7 @@ export class Autoplay {
       if (this.kite <= 0) w.setMoveInput(0, 0);
       return null;
     }
+    this.kiteRest = Math.max(0, this.kiteRest - dt);
     this.think -= dt;
     if (this.think > 0) return null;
     this.think = 0.25;
@@ -85,15 +88,22 @@ export class Autoplay {
     this.potions(w);
 
     const alive = w.enemies.filter((e) => e.alive && !e.dead && e.def && !this.avoid.has(e.id));
-    // A ranged hero steps away from a monster in its face, as a player would
-    if (w.derived.isRanged) {
-      const threat = alive.find((e) => e.def!.ai === 'melee' && w.dist(e.x, e.z) < 1.4);
-      if (threat) {
-        const dx = w.px - threat.x;
-        const dz = w.pz - threat.z;
+    // A ranged hero steps away from a monster in its face, as a player would: one short step, away from the
+    // whole crowd, then it shoots again. Hemmed in by three or more, or when the last step went nowhere, it
+    // stands and shoots instead of shuffling about
+    if (w.derived.isRanged && this.kiteRest <= 0) {
+      const threats = alive.filter((e) => e.def!.ai === 'melee' && w.dist(e.x, e.z) < 1.4);
+      if (threats.length > 0 && threats.length < 3) {
+        let dx = 0;
+        let dz = 0;
+        for (const e of threats) {
+          dx += w.px - e.x;
+          dz += w.pz - e.z;
+        }
         const len = Math.hypot(dx, dz) || 1;
         w.setMoveInput(dx / len, dz / len);
-        this.kite = 0.25;
+        this.kite = 0.3;
+        this.kiteRest = this.moved < 0.3 ? 3 : 1.5;
         return null;
       }
     }

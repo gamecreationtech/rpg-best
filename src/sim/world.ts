@@ -30,7 +30,9 @@ const PLAYER_RADIUS = 0.38;
 const PICKUP_RADIUS = 0.9;
 /** The dev-menu pet fetches loot this far from the hero, in tiles (300 px). */
 const PET_REACH = 300 * PX;
-const PET_SPEED = 5.5;
+const PET_SPEED = 8;
+/** How close the crab has to get to a drop to take it, in tiles; it snatches from a short reach. */
+const PET_GRAB = 0.6;
 /** Summons: archer slots and one titan slot, how fast they walk, and how far from the hero they stand. */
 const ARCHER_SLOTS = 6;
 const TITAN_SLOT = ARCHER_SLOTS;
@@ -1308,7 +1310,7 @@ export class World {
     let target: Drop | null = null;
     let bestD = Infinity;
     for (const d of this.drops) {
-      if (!d.alive || d.age < 0.6 || this.petIgnore.has(d.id) || !this.dropVisible(d)) continue;
+      if (!d.alive || d.age < 0.2 || this.petIgnore.has(d.id) || !this.dropVisible(d)) continue;
       if (this.dist(d.x, d.z) > PET_REACH) continue;
       const dd = (d.x - pet.x) ** 2 + (d.z - pet.z) ** 2;
       if (dd < bestD) {
@@ -1323,7 +1325,7 @@ export class World {
     if (target) {
       gx = target.x;
       gz = target.z;
-      stop = 0.25;
+      stop = PET_GRAB;
     } else {
       // Heel: a step behind and beside the hero
       gx = this.px - Math.sin(this.pyaw) * 0.9 + 0.3;
