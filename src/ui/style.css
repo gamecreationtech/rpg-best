@@ -493,6 +493,9 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 @media (max-width: 640px) { .px-inventory { flex-direction: column; } .gear-left { align-items: center; } }
 /* Touch: a compact item card that fits a phone, smaller gear slots, and the inventory scrolls */
 .px-window.touch .px-content.fixed { overflow-y: auto; }
+/* Touch: the stat sheet is a tab of its own that flows and scrolls with the page; a flex-grown column would collapse to nothing here */
+.px-window.touch .stats-col { flex: 0 0 auto; }
+.px-window.touch .stats-col .px-stats { flex: none; overflow: visible; }
 .px-window.touch .px-itembox { gap: 3px; padding: 6px 8px; min-height: 0; }
 .px-window.touch .px-itembox .mt { font-size: 11px; line-height: 1.25; }
 .px-window.touch .px-itembox .px-row.tight { flex-wrap: nowrap; white-space: nowrap; gap: 4px; }

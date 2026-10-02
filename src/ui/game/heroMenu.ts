@@ -379,7 +379,8 @@ export class HeroMenu {
     });
     inner.addEventListener('pointercancel', () => { endDrag(); drag = null; });
     inner.addEventListener('pointermove', (e) => {
-      if (drag && (drag.moved || Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6)) {
+      // A finger wobbles more than a mouse: a touch has to travel further before it counts as a drag
+      if (drag && (drag.moved || Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > (e.pointerType === 'mouse' ? 6 : 12))) {
         drag.moved = true;
         this.hideTip();
         inner.classList.add('dragging');
@@ -399,8 +400,9 @@ export class HeroMenu {
       const d = drag;
       endDrag();
       drag = null;
-      if (d.moved) {
-        if ((d.col !== d.item.col || d.row !== d.item.row) && !inv.place(d.item, d.col, d.row)) this.host.message('Does not fit there', 0xff8080);
+      // A drag that ends on the item's own cell was a tap after all
+      if (d.moved && (d.col !== d.item.col || d.row !== d.item.row)) {
+        if (!inv.place(d.item, d.col, d.row)) this.host.message('Does not fit there', 0xff8080);
         rerender();
         return;
       }
