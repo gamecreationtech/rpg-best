@@ -91,12 +91,14 @@ export class Game {
       tapEnemy: (sx, sy) => {
         const e = this.view!.pickEnemy(sx, sy);
         if (!e) return false;
+        this.setAutoplay(false);
         this.world!.setTarget(e.id);
         return true;
       },
       tapInteractable: (sx, sy) => {
         const id = this.view!.pickInteractable(sx, sy);
         if (id < 0) return false;
+        this.setAutoplay(false);
         this.world!.interact(id);
         return true;
       },
@@ -129,6 +131,7 @@ export class Game {
       },
       toggleDev: () => this.dev?.toggle(),
       interactNearby: () => {
+        this.setAutoplay(false);
         if (this.world && !this.world.interactNearby()) this.hud?.message('Nothing to use here');
       },
     });
@@ -198,7 +201,7 @@ export class Game {
     this.seed = seed;
     this.teardown();
     this.world = new World(player, seed);
-    this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => this.world?.pickup(id));
+    this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => { this.setAutoplay(false); this.world?.pickup(id); });
     this.world.setLootFilter(hiddenLoot(this.settings));
     this.view.zoom = this.settings.zoom;
     if (this.settings.pet) this.world.togglePet(true);
@@ -283,12 +286,15 @@ export class Game {
       castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
       usePotion: (id) => this.usePotion(id),
       attackHeld: (on) => {
+        if (on) this.setAutoplay(false);
         if (this.world) this.world.attackHeld = on;
       },
       attackOnce: () => {
+        this.setAutoplay(false);
         if (this.world && !this.panels?.isOpen) this.world.attackOnce();
       },
       interactNearby: () => {
+        this.setAutoplay(false);
         if (this.world && !this.panels?.isOpen) this.world.interactNearby();
       },
     }, touch);
@@ -309,6 +315,8 @@ export class Game {
 
   private openPanel(kind: PanelKind): void {
     if (!this.panels || !this.world || this.world.playerDead) return;
+    // Any menu is the player taking over; the settings switch is the only way back on
+    this.setAutoplay(false);
     this.world.stop();
     this.panels.open(kind);
     this.hud?.root.classList.add('hidden');
@@ -329,6 +337,7 @@ export class Game {
   }
 
   private usePotion(id: ConsumableId): void {
+    this.setAutoplay(false);
     if (!this.world || this.panels?.isOpen) return;
     this.world.useConsumable(id);
   }
@@ -345,19 +354,18 @@ export class Game {
     if (on === !!this.autoplay) return;
     this.autoplay = on ? new Autoplay() : null;
     this.hud?.setAutoplay(on);
-    this.hud?.message(on ? 'Autoplay on: the hero fights on its own. Move or cast to take over.' : 'Autoplay off', 0xffd860);
+    this.hud?.message(on ? 'Autoplay on: the hero fights on its own. Touch anything to take over.' : 'Autoplay off', 0xffd860);
     if (!on) this.world?.setMoveInput(0, 0);
   }
 
-  /** The autoplay driver's decisions for one simulation step, and the two things it leaves to the app. */
+  /** The autoplay driver's decisions for one simulation step. A death ends it: the player respawns by hand. */
   private driveAutoplay(): void {
     if (!this.autoplay || !this.world) return;
-    const ask = this.autoplay.step(this.world, SIM_DT);
-    if (ask === 'respawn' && this.world.playerDead) this.respawn();
-    else if (ask === 'return') {
-      const home = this.autoplay.home;
-      if (home) this.world.travel('arena', home.zoneId, home.level || undefined);
+    if (this.world.playerDead) {
+      this.setAutoplay(false);
+      return;
     }
+    this.autoplay.step(this.world, SIM_DT);
   }
 
   private async autosave(): Promise<void> {

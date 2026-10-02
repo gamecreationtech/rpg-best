@@ -16,17 +16,11 @@ describe('autoplay', () => {
       w.player.hp = w.derived.maxHp;
       w.travel('arena', 'proving_grounds');
       const bot = new Autoplay();
-      let respawns = 0;
-      for (let t = 0; t < 120; t += SIM_DT) {
-        const ask = bot.step(w, SIM_DT);
-        if (ask === 'respawn') {
-          respawns++;
-          w.respawn();
-          break;
-        }
+      for (let t = 0; t < 120 && !w.playerDead; t += SIM_DT) {
+        bot.step(w, SIM_DT);
         w.step(SIM_DT);
       }
-      expect(respawns).toBe(0);
+      expect(w.playerDead).toBe(false);
       expect(w.player.kills).toBeGreaterThanOrEqual(10);
       expect(w.events.some((ev) => ev.type === 'cast' && ev.skillId === 'heavy_strike')).toBe(true);
       // It walked: not still standing where it arrived
@@ -56,23 +50,5 @@ describe('autoplay', () => {
     const shots = w.events.filter((ev) => ev.type === 'player_attack').length;
     expect(shots).toBeGreaterThanOrEqual(8);
     expect(w.playerDead).toBe(false);
-  });
-
-  it('asks the app to respawn three seconds after a death and to go home from town', () => {
-    const w = new World(createPlayer('rogue', null), 3);
-    w.travel('arena', 'proving_grounds');
-    const bot = new Autoplay();
-    bot.step(w, SIM_DT);
-    w.player.hp = 0;
-    w.playerDead = true;
-    let ask: ReturnType<Autoplay['step']> = null;
-    for (let t = 0; t < 3.5 && !ask; t += SIM_DT) ask = bot.step(w, SIM_DT);
-    expect(ask).toBe('respawn');
-    w.respawn();
-    expect(w.area).toBe('town');
-    ask = null;
-    for (let t = 0; t < 2.5 && !ask; t += SIM_DT) ask = bot.step(w, SIM_DT);
-    expect(ask).toBe('return');
-    expect(bot.home?.zoneId).toBe('proving_grounds');
   });
 });

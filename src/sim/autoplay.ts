@@ -4,17 +4,13 @@ import { ATTACK_SLOT, resolveSlotSkill } from './player';
 import { castSkill } from './skills/cast';
 import type { World } from './world';
 
-/** What the driver asks the app to do on its behalf: things that live outside the simulation. */
-export type AutoplayRequest = 'respawn' | 'return' | null;
-
 /**
  * Plays the hero the way a patient player would, through the same commands the
  * input layer uses: walks to the nearest pack, fights it with every learned
  * skill that is ready, drinks potions when low, steps back from a monster at
  * a ranged hero's feet, gathers the loot once the ground is clear, and roams
  * on when nothing is left in sight. Pure: it touches only the world. The app
- * turns it on from the settings and handles the two things it cannot do
- * itself, respawning after a death and going back to the zone it died in.
+ * turns it on from the settings and off again at any touch or a death.
  */
 export class Autoplay {
   private readonly rng = new Rng(1337);
@@ -28,10 +24,7 @@ export class Autoplay {
   /** Seconds before the next step back; stepping back is a dodge, not a way of life */
   private kiteRest = 0;
   private roam: { x: number; z: number } | null = null;
-  private deadFor = 0;
-  private townFor = 0;
   private lastZone: string | null = null;
-  private lastZoneLevel = 0;
   private slotNext = 1;
   private readonly badSlot = new Map<number, number>();
 
@@ -41,46 +34,24 @@ export class Autoplay {
     this.stuck = 0;
     this.kite = 0;
     this.roam = null;
-    this.deadFor = 0;
-    this.townFor = 0;
     this.badSlot.clear();
   }
 
-  /** One simulation step's worth of decisions. Call before `world.step`. */
-  step(w: World, dt: number): AutoplayRequest {
-    if (w.playerDead) {
-      this.deadFor += dt;
-      if (this.deadFor >= 3) {
-        this.deadFor = 0;
-        return 'respawn';
-      }
-      return null;
-    }
-    this.deadFor = 0;
-    if (w.pledgePending) return null;
-    if (w.area !== 'arena') {
-      // Back in town after a death: pick the fight up again where it was
-      this.townFor += dt;
-      if (this.lastZone && this.townFor >= 2) {
-        this.townFor = 0;
-        return 'return';
-      }
-      return null;
-    }
-    this.townFor = 0;
+  /** One simulation step's worth of decisions. Call before `world.step`; nothing to do while dead, pledging or in town. */
+  step(w: World, dt: number): void {
+    if (w.playerDead || w.pledgePending || w.area !== 'arena') return;
     if (this.lastZone !== w.zoneId) {
       this.reset();
       this.lastZone = w.zoneId;
     }
-    this.lastZoneLevel = w.zoneLevel;
     if (this.kite > 0) {
       this.kite -= dt;
       if (this.kite <= 0) w.setMoveInput(0, 0);
-      return null;
+      return;
     }
     this.kiteRest = Math.max(0, this.kiteRest - dt);
     this.think -= dt;
-    if (this.think > 0) return null;
+    if (this.think > 0) return;
     this.think = 0.25;
     this.moved = Math.hypot(w.px - this.lastX, w.pz - this.lastZ);
     this.lastX = w.px;
@@ -104,7 +75,7 @@ export class Autoplay {
         w.setMoveInput(dx / len, dz / len);
         this.kite = 0.3;
         this.kiteRest = this.moved < 0.3 ? 3 : 1.5;
-        return null;
+        return;
       }
     }
     let target = w.enemies[this.chase];
@@ -134,21 +105,15 @@ export class Autoplay {
         });
       }
       this.roam = null;
-      return null;
+      return;
     }
     // Nothing to fight: gather what dropped, then wander off to find more
-    if (this.loot(w)) return null;
+    if (this.loot(w)) return;
     if (!this.roam || w.dist(this.roam.x, this.roam.z) < 2) this.roam = this.somewhere(w);
     if (this.roam) {
       w.moveTo(this.roam.x, this.roam.z);
       this.watchProgress(() => { this.roam = null; });
     }
-    return null;
-  }
-
-  /** The zone to go back to after a death, and the level it was played at. */
-  get home(): { zoneId: string; level: number } | null {
-    return this.lastZone ? { zoneId: this.lastZone, level: this.lastZoneLevel } : null;
   }
 
   private moved = 0;

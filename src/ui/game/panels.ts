@@ -434,7 +434,7 @@ export class Panels {
       h('div', { class: 'dim small' }, 'How much the pixels are enlarged. Automatic fits the screen; phones usually land on 1x, and 1.5x brings the hero closer.'),
       h('div', { class: 'section-label' }, 'Autoplay'),
       h('div', { class: 'actions' }, button(this.host.autoplay() ? 'Autoplay: on' : 'Autoplay: off', () => { this.host.setAutoplay(!this.host.autoplay()); this.render(); }, 'btn small' + (this.host.autoplay() ? ' on' : ''))),
-      h('div', { class: 'dim small' }, 'The hero plays itself: roams the zone, fights every pack with its skills, drinks potions when low, picks up the loot, and comes back after a death. Moving or casting yourself switches it off.'),
+      h('div', { class: 'dim small' }, 'The hero plays itself: roams the zone, fights every pack with its skills, drinks potions when low and picks up the loot. Touching anything, moving, a menu or a death switches it off.'),
       h('div', { class: 'section-label' }, 'Pet'),
       h('div', { class: 'actions' }, button(s.pet ? 'Crab: on' : 'Crab: off', () => { s.pet = !s.pet; this.host.applySettings(); this.render(); }, 'btn small' + (s.pet ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'A small crab follows you and fetches gold and items that drop within 300 px.'),
