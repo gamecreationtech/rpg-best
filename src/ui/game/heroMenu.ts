@@ -766,7 +766,7 @@ export class HeroMenu {
         const can = canLearnPassive(p, d.id);
         const req = d.requires ? defs.find((x) => x.id === d.requires)?.name : null;
         return h('div', { class: 'px-inset px-passive' + (rank ? ' learned' : '') },
-          h('div', { class: 'px-col' }, h('div', { class: 'px-row' }, pxText(d.name, { color: rank ? TEXT : MUTED }), pxText(`${rank}/${d.maxRank}`, { color: MUTED })), pxText(`+${d.perRank} ${d.stat} per rank${req ? `, needs ${req}` : ''}`, { color: MUTED, scale: 1 })),
+          h('div', { class: 'px-col' }, h('div', { class: 'px-row' }, pxText(d.name, { color: rank ? TEXT : MUTED }), pxText(`${rank}/${d.maxRank}`, { color: MUTED })), pxText(`${d.effects.map((e) => formatStat(e.stat, e.perRank)).join(', ')} per rank${req ? `, needs ${req}` : ''}`, { color: MUTED, scale: 1 })),
           h('span', { class: 'grow' }),
           pbtn('+', () => { if (!learnPassive(p, d.id)) this.host.message(can.reason ?? 'Cannot learn', 0xff8080); else { w.markDirty(); w.recomputeStats(); } rerender(); }, can.ok ? 'gold' : 'dim'),
         );

@@ -65,7 +65,7 @@ Every feature must serve at least one of these. If it does not, cut it.
   points a level, shared by skills and passives, and five attribute points per level; there is no
   automatic stat growth, the five points are the only growth and are spent by
   the player. The level cap is 100.
-- **Passives:** a general tree plus one tree per class and a small one per pledge, with prerequisites, paid with the same points as skills.
+- **Passives:** a standard tree plus one tree per class and a small one per pledge, no prerequisites, paid with the same points as skills.
 - **Stats:** Strength, Dexterity, Intelligence, Endurance (the stat key stays `vit` in code). Full formulas are in
   `docs/design/systems-reference.md` and the export they came from.
 

@@ -21,9 +21,11 @@ export function skillDamage(w: World, skillId: string, damageMult: number, scale
   const def = w.skillDef(skillId);
   const rank = w.skillRank(skillId);
   const rankMult = 1 + rank * (def.rankBonus ?? 0.2);
+  // The sworn pledge's own skills grow with its damage passive
+  const pledgeMult = def.pledgeId && def.pledgeId === w.player.pledgeId ? 1 + w.derived.pledgeDmgPct / 100 : 1;
   let base = baseDamage(w, w.derived.isMagicWeapon);
   if (scalesWithInt && !w.derived.isMagicWeapon) base += w.derived.int * 0.5 * w.derived.power + w.derived.spellDmg;
-  return Math.max(1, Math.round(base * damageMult * rankMult * w.derived.dmgMult));
+  return Math.max(1, Math.round(base * damageMult * rankMult * pledgeMult * w.derived.dmgMult));
 }
 
 /** Percent of a hit that armour removes for a hero of this level. */
@@ -104,6 +106,12 @@ export function hitEnemy(w: World, e: Enemy, p: DamagePacket): number {
   if (proc.slow && roll() < proc.slow) e.status.slow = Math.max(e.status.slow, STATUS_RULES.slowDuration * MS);
   if (proc.freeze && roll() < proc.freeze) applyFreeze(w, e, STATUS_RULES.freezeDuration * MS);
   if (proc.shock && roll() < proc.shock) e.status.shock = Math.max(e.status.shock, STATUS_RULES.shockDuration * MS);
+  // The passives' own chances, on the hero's own blows
+  if (!p.fromProc && !p.fromMinion) {
+    if (d.shockChance > 0 && roll() < d.shockChance) e.status.shock = Math.max(e.status.shock, STATUS_RULES.shockDuration * MS);
+    if (d.freezeChance > 0 && roll() < d.freezeChance) applyFreeze(w, e, STATUS_RULES.freezeDuration * MS);
+    if (d.slowChance > 0 && roll() < d.slowChance) e.status.slow = Math.max(e.status.slow, STATUS_RULES.slowDuration * MS);
+  }
   if (p.bleed) {
     e.status.bleed = { ticks: p.bleed.ticks, timer: 0, interval: p.bleed.interval * MS, damage: p.bleed.damage };
     w.emit({ type: 'status', id: e.id, status: 'bleeding' });
@@ -295,6 +303,14 @@ export function damagePlayer(w: World, amount: number, element: Element, source:
       // The shield's parting shot lands where the hero stands
       if (w.dropSkill(b.mods.onShieldBreak, w.px, w.pz)) w.emit({ type: 'message', text: `${b.name} shatters!`, color: 0xff9a40 });
     }
+  }
+  // The energy shield soaks what the buff shields let through, then needs a quiet moment to recharge
+  w.shieldRest = 4;
+  if (remaining > 0 && w.energyShield > 0) {
+    const absorbed = Math.min(w.energyShield, remaining);
+    w.energyShield -= absorbed;
+    remaining -= absorbed;
+    w.emit({ type: 'damage', ...at, amount: absorbed, crit: false, element, target: 'player', kind: 'absorb' });
   }
   if (remaining > 0) {
     w.player.hp -= remaining;

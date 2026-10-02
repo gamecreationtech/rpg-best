@@ -162,6 +162,9 @@ export class World {
   cooldowns: Record<string, number> = {};
   pStatus: { stun: number; freeze: number; slow: number; poison: DotState | null; burn: DotState | null; bleed: DotState | null } = { stun: 0, freeze: 0, slow: 0, poison: null, burn: null, bleed: null };
   invulnTimer = 0;
+  /** The energy shield passive: a pool worth a share of max life that refills after four seconds untouched. */
+  energyShield = 0;
+  shieldRest = 0;
   playerDead = false;
   /** True from the pledge level until a pledge is sworn: the hero is rooted and cannot be hurt. */
   pledgePending = false;
@@ -471,7 +474,7 @@ export class World {
     t.moving = false;
     t.timer = 0;
     t.shoot = 0;
-    t.maxHp = Math.round(this.derived.maxHp * hpMult);
+    t.maxHp = Math.round(this.derived.maxHp * hpMult * (1 + this.derived.summonLifePct / 100));
     t.hp = t.maxHp;
   }
 
@@ -1358,6 +1361,12 @@ export class World {
     this.attackTimer = Math.max(0, this.attackTimer - dt);
     this.castTimer = Math.max(0, this.castTimer - dt);
     this.invulnTimer = Math.max(0, this.invulnTimer - dt);
+    const shieldMax = (this.derived.maxHp * this.derived.energyShieldPct) / 100;
+    if (shieldMax <= 0) this.energyShield = 0;
+    else {
+      this.shieldRest = Math.max(0, this.shieldRest - dt);
+      this.energyShield = this.shieldRest > 0 ? Math.min(this.energyShield, shieldMax) : Math.min(shieldMax, this.energyShield + shieldMax * 0.25 * dt);
+    }
     this.pStatus.stun = Math.max(0, this.pStatus.stun - dt);
     this.pStatus.freeze = Math.max(0, this.pStatus.freeze - dt);
     this.pStatus.slow = Math.max(0, this.pStatus.slow - dt);

@@ -1,3 +1,4 @@
+import { passivesFor } from '../data/passives';
 import { CONSUMABLES } from '../data/consumables';
 import { xpForLevel } from '../data/classes';
 import type { ClassId } from '../data/classes';
@@ -79,6 +80,13 @@ export function deserialize(data: SaveData): PlayerState {
   // Skills and passives share one pool now: whatever passive points an older save held join it
   p.skillPoints += p.passivePoints ?? 0;
   p.passivePoints = 0;
+  // Passives that no longer exist (the 2026-10-02 rework) give their points back
+  const livePassives = new Set(passivesFor(p.classId, p.pledgeId).map((d) => d.id));
+  for (const id of Object.keys(p.passiveRanks)) {
+    if (livePassives.has(id)) continue;
+    p.skillPoints += p.passiveRanks[id] ?? 0;
+    delete p.passiveRanks[id];
+  }
   // The curve can change between builds; the level is what counts, so the need is recomputed
   p.xpToNext = xpForLevel(p.level);
   p.xp = Math.min(p.xp, p.xpToNext - 1);

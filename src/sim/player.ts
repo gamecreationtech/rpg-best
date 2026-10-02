@@ -102,6 +102,18 @@ export interface DerivedStats {
   /** Bonus melee reach or projectile range in px. */
   range: number;
   projSpeedPct: number;
+  /** Extra projectiles on every projectile skill. */
+  split: number;
+  /** Percent more damage on the sworn pledge's skills. */
+  pledgeDmgPct: number;
+  /** Share of max life held as a recharging energy shield. */
+  energyShieldPct: number;
+  /** Percent more life on summoned things that have life (the titan). */
+  summonLifePct: number;
+  /** Chances on the hero's own hits. */
+  shockChance: number;
+  freezeChance: number;
+  slowChance: number;
   res: { fire: number; cold: number; lightning: number; poison: number };
   isMagicWeapon: boolean;
   isRanged: boolean;
@@ -186,7 +198,7 @@ export function gearStats(p: PlayerState): StatMap {
   }
   for (const def of passivesFor(p.classId, p.pledgeId)) {
     const rank = p.passiveRanks[def.id] ?? 0;
-    if (rank > 0) addStats(total, { [def.stat]: def.perRank } as StatMap, rank);
+    if (rank > 0) for (const e of def.effects) addStats(total, { [e.stat]: e.perRank } as StatMap, rank);
   }
   return total;
 }
@@ -206,17 +218,18 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
   const base = totalBaseStats(p);
   const gear = gearStats(p);
   const g = (k: StatKey) => (gear[k] ?? 0) + (extra?.[k] ?? 0);
-  const str = base.str + g('str');
-  const dex = base.dex + g('dex');
-  const int = base.int + g('int');
-  const vit = base.vit + g('vit');
+  const all = g('allStats');
+  const str = base.str + g('str') + all;
+  const dex = base.dex + g('dex') + all;
+  const int = base.int + g('int') + all;
+  const vit = base.vit + g('vit') + all;
   const weapon = p.equipment.get('weapon');
   const w = weapon?.weapon;
   const pow = powerCurve(p.level);
 
   let armor = vit * COMBAT_RULES.armorPerVit * pow + g('armor');
   let allRes = g('allResists');
-  let atkSpdPct = 0;
+  let atkSpdPct = g('atkSpdPct');
   let dmgPct = 0;
   let moveSpdPct = 0;
   let meleeRangeOverride = 0;
@@ -279,6 +292,13 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     burnChance: g('burnChance'),
     range: g('range'),
     projSpeedPct: g('projSpeed'),
+    split: g('split'),
+    pledgeDmgPct: g('pledgeDmgPct'),
+    energyShieldPct: g('energyShieldPct'),
+    summonLifePct: g('summonLifePct'),
+    shockChance: g('shockChance'),
+    freezeChance: g('freezeChance'),
+    slowChance: g('slowChance'),
     res: { fire: res('fireRes'), cold: res('coldRes'), lightning: res('lightningRes'), poison: res('poisonRes') },
     isMagicWeapon: !!w?.magic,
     isRanged: !!w?.ranged,

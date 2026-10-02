@@ -18,7 +18,9 @@ export type StatKey =
   | 'lifeOnHit' | 'manaOnHit' | 'lifeSteal' | 'hpRegen' | 'manaRegen'
   | 'fasterCast' | 'cdr' | 'magicFind' | 'goldFind' | 'itemFind'
   | 'fireRes' | 'coldRes' | 'lightningRes' | 'poisonRes' | 'allResists'
-  | 'burnChance' | 'poisonChance';
+  | 'burnChance' | 'poisonChance'
+  /** Passive-only stats (producer's list, 2026-10-02): a point on every attribute, attack speed as a percent, extra projectiles, pledge-skill damage, an energy shield as a share of life, summon life, and chances to shock, freeze or slow on hit. */
+  | 'allStats' | 'atkSpdPct' | 'split' | 'pledgeDmgPct' | 'energyShieldPct' | 'summonLifePct' | 'shockChance' | 'freezeChance' | 'slowChance';
 
 export interface StatDef {
   name: string;
@@ -62,6 +64,15 @@ export const STAT_DEFS: Record<StatKey, StatDef> = {
   allResists: { name: 'All Resistances', format: 'pct' },
   burnChance: { name: 'Burn Chance', format: 'pct' },
   poisonChance: { name: 'Poison Chance', format: 'pct' },
+  allStats: { name: 'to All Attributes', format: 'flat' },
+  atkSpdPct: { name: 'Attack Speed', format: 'pct' },
+  split: { name: 'Projectile Split', format: 'flat' },
+  pledgeDmgPct: { name: 'Pledge Skill Damage', format: 'pct' },
+  energyShieldPct: { name: 'of Life as Energy Shield', format: 'pct' },
+  summonLifePct: { name: 'Summon Life', format: 'pct' },
+  shockChance: { name: 'Shock Chance', format: 'pct' },
+  freezeChance: { name: 'Freeze Chance', format: 'pct' },
+  slowChance: { name: 'Slow Chance', format: 'pct' },
 };
 
 export type StatMap = Partial<Record<StatKey, number>>;

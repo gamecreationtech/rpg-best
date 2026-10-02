@@ -238,6 +238,7 @@ export class Hud {
     this.hpText.textContent = `${Math.ceil(p.hp)} / ${d.maxHp}`;
     let shield = 0;
     for (const b of w.buffs) shield += b.shield;
+    shield += w.energyShield;
     this.shieldBar.style.width = `${Math.min(100, (shield / d.maxHp) * 100)}%`;
     this.mpText.textContent = `${Math.floor(p.mana)} / ${d.maxMana}`;
     this.goldText.textContent = `${p.gold} gold`;

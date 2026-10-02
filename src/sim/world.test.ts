@@ -1510,3 +1510,37 @@ describe('nightlord', () => {
     expect(e.hp).toBeLessThan(100000);
   });
 });
+
+describe('passive mechanics', () => {
+  it('energy shield fills to its share of life, soaks a hit and refills after a quiet spell', () => {
+    const w = new World(createPlayer('sorcerer', null), 7);
+    w.travel('arena');
+    w.derived.dodge = 0;
+    w.player.passiveRanks.sor_shield = 4;
+    w.recomputeStats();
+    run(w, 6);
+    const max = (w.derived.maxHp * 20) / 100;
+    expect(w.energyShield).toBeCloseTo(max, 3);
+    const hp = w.player.hp;
+    damagePlayer(w, 10, 'fire', null, false);
+    expect(w.player.hp).toBe(hp);
+    expect(w.energyShield).toBeLessThan(max);
+    run(w, 2);
+    expect(w.energyShield).toBeLessThan(max);
+    run(w, 8);
+    expect(w.energyShield).toBeCloseTo(max, 3);
+  });
+
+  it('split shot adds projectiles to every projectile skill', () => {
+    const w = new World(createPlayer('rogue', 'quiverbound'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    w.player.skillRanks.poison_shot = 1;
+    w.player.equipment.equip(makeStarterItem('wooden_bow'), 30);
+    w.player.passiveRanks.quiv_split = 2;
+    w.recomputeStats();
+    expect(castSkill(w, 'poison_shot', { x: w.px, z: w.pz + 5 }).ok).toBe(true);
+    expect(w.projectiles.filter((p) => p.alive && p.owner === 'player').length).toBe(3);
+  });
+});

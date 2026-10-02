@@ -211,8 +211,10 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
   const at = aimPoint(w, aim, range, 1);
   const dir = facing(w, at, null);
   pay(w, def, dir, at.x, at.z);
-  const count = eff.count ?? 1;
-  const spread = ((eff.spreadAngle ?? 0) * Math.PI) / 180;
+  // Split Shot adds projectiles to every projectile skill; a single shot opens into a narrow fan
+  const split = w.derived.split;
+  const count = (eff.count ?? 1) + split;
+  const spread = ((eff.spreadAngle ?? (split > 0 ? 8 * split : 0)) * Math.PI) / 180;
   const homing = !!eff.homing || (eff.shape === 'arrow' && w.buffs.some((b) => b.mods.homingArrows));
   const baseAngle = Math.atan2(dir.x, dir.z);
   const loose = (fromX: number, fromZ: number, y?: number): void => {

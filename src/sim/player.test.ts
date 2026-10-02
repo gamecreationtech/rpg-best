@@ -167,25 +167,30 @@ describe('player', () => {
   it('pledge passives open with the pledge and spend the same points as skills', () => {
     const p = createPlayer('sorcerer', 'wintercaller');
     p.skillPoints = 2;
-    expect(learnPassive(p, 'deep_cold_w')).toBe(false);
-    expect(learnPassive(p, 'frozen_heart_w')).toBe(true);
+    expect(learnPassive(p, 'win_freeze')).toBe(true);
     expect(p.skillPoints).toBe(1);
-    expect(learnPassive(p, 'deep_cold_w')).toBe(true);
+    expect(learnPassive(p, 'win_slow')).toBe(true);
     expect(p.skillPoints).toBe(0);
-    expect(learnPassive(p, 'rime_skin_w')).toBe(false);
+    expect(learnPassive(p, 'win_cdr')).toBe(false);
+    expect(deriveStats(p, [], {}).freezeChance).toBe(10);
     const other = createPlayer('sorcerer', 'stormsinger');
     other.skillPoints = 1;
-    expect(learnPassive(other, 'frozen_heart_w')).toBe(false);
+    expect(learnPassive(other, 'win_freeze')).toBe(false);
   });
 
-  it('passives respect prerequisites', () => {
+  it('passives add up: life, a point on every attribute, and ranks cap', () => {
     const p = createPlayer('knight', 'titan');
-    p.skillPoints = 3;
-    expect(learnPassive(p, 'thick_skin')).toBe(false);
-    expect(learnPassive(p, 'iron_constitution')).toBe(true);
-    expect(learnPassive(p, 'thick_skin')).toBe(true);
+    p.skillPoints = 9;
+    expect(learnPassive(p, 'std_life')).toBe(true);
+    expect(learnPassive(p, 'std_life')).toBe(true);
+    expect(learnPassive(p, 'kn_life')).toBe(true);
+    expect(learnPassive(p, 'std_allstats')).toBe(true);
+    const base = deriveStats(createPlayer('knight', 'titan'), [], {});
     const d = deriveStats(p, [], {});
-    expect(d.maxHp).toBe(200 + 50);
-    expect(d.armor).toBe(10 + 5 + 12); // vit + shield + thick skin
+    expect(d.maxHp).toBe(base.maxHp + 25 * 2 + 25 + 2 * 10); // two Vitality, one Iron Constitution, two endurance from Well Rounded
+    expect(d.str).toBe(base.str + 2);
+    for (let i = 0; i < 4; i++) learnPassive(p, 'kn_block');
+    expect(p.passiveRanks.kn_block).toBe(4);
+    expect(learnPassive(p, 'kn_block')).toBe(false);
   });
 });
