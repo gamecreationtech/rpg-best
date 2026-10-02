@@ -16,6 +16,19 @@ function run(w: World, seconds: number): void {
   for (let i = 0; i < steps; i++) w.step(SIM_DT);
 }
 
+/** A spot `r` tiles from the hero on open ground with a clear line to it and room around it, searching round the compass. */
+function freeSpot(w: World, r: number, room = 0.8): { x: number; z: number } {
+  for (let k = 0; k < 32; k++) {
+    const a = (k / 32) * Math.PI * 2;
+    const x = w.px + Math.sin(a) * r;
+    const z = w.pz + Math.cos(a) * r;
+    if (w.map.blockedAt(x, z) || w.map.lineBlocked(w.px, w.pz, x, z)) continue;
+    if (w.map.blockedAt(x + room, z) || w.map.blockedAt(x - room, z) || w.map.blockedAt(x, z + room) || w.map.blockedAt(x, z - room)) continue;
+    return { x, z };
+  }
+  throw new Error(`no open ground ${r} tiles out`);
+}
+
 describe('world', () => {
   it('starts in town with dummies and interactables', () => {
     const w = new World(createPlayer('knight', 'paladin'), 1);
@@ -187,7 +200,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(92);
+    expect(Object.keys(SKILLS).length).toBe(94);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -317,22 +330,24 @@ describe('ranged monsters stay answerable', () => {
   });
 });
 
-describe('hidden skills', () => {
-  it('Holy Smite stays off the list until the dev toggle shows it', () => {
-    const ids = () => skillsFor('knight', 'paladin').map((s) => s.id);
-    expect(ids()).not.toContain('holy_smite');
-    SKILL_RULES.showHidden = true;
-    expect(ids()).toContain('holy_smite');
-    SKILL_RULES.showHidden = false;
+describe('holy smite', () => {
+  it('the spinning star is the thrown star\'s ultimate, not a listed skill', () => {
+    const ids = skillsFor('knight', 'paladin').map((s) => s.id);
+    expect(ids).toContain('hammer_of_gods');
+    expect(SKILLS.hammer_of_gods!.upgradesTo).toBe('hammer_of_gods_ult');
+    expect(SKILLS.hammer_of_gods_ult!.tier).toBe('ultimate');
+    expect(SKILLS.hammer_of_gods_ult!.hidden).toBeUndefined();
+    expect(Object.values(SKILLS).some((d) => d.hidden)).toBe(false);
+    expect(SKILL_RULES.showHidden).toBe(false);
   });
 
-  it('Holy Smite circles the hero for three seconds and strikes what it passes', () => {
+  it('the ultimate circles the hero for three seconds and strikes what it passes', () => {
     const w = new World(createPlayer('knight', 'paladin'), 141);
     w.travel('arena');
-    w.player.level = 10;
+    w.player.level = 25;
     w.player.skillPoints = 5;
-    w.player.skillRanks.holy_smite = 1;
-    w.player.slots[1] = 'holy_smite';
+    w.player.skillRanks.hammer_of_gods_ult = 1;
+    w.player.slots[1] = 'hammer_of_gods_ult';
     const near = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 1.9, w.pz); // on the 60 px ring
     const far = w.spawnEnemy(MONSTERS.ice_golem!, w.px + 6, w.pz);
     const inside = w.spawnEnemy(MONSTERS.blood_bat!, w.px - 0.3, w.pz); // a bat hugging the hero, well inside the ring
@@ -344,7 +359,7 @@ describe('hidden skills', () => {
     near.maxHp = near.hp = 100000;
     const farHp = far.hp;
     w.castSlot(1);
-    expect(w.buffs.some((b) => b.id === 'holy_smite')).toBe(true);
+    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_ult')).toBe(true);
     run(w, 1);
     const afterOne = near.hp;
     expect(afterOne).toBeLessThan(100000);
@@ -353,19 +368,19 @@ describe('hidden skills', () => {
     expect(far.hp).toBe(farHp);
     // The star is a hit box on its path, not a field: a monster inside the ring is never touched
     expect(inside.hp).toBe(insideHp);
-    expect(w.buffs.some((b) => b.id === 'holy_smite')).toBe(false);
+    expect(w.buffs.some((b) => b.id === 'hammer_of_gods_ult')).toBe(false);
   });
 
   it('recasting adds up to three rings, and the outermost goes when the oldest timer ends', () => {
     const w = new World(createPlayer('knight', 'paladin'), 142);
     w.travel('arena');
-    w.player.level = 10;
-    w.player.skillRanks.holy_smite = 1;
-    w.player.slots[1] = 'holy_smite';
+    w.player.level = 25;
+    w.player.skillRanks.hammer_of_gods_ult = 1;
+    w.player.slots[1] = 'hammer_of_gods_ult';
     w.devStats.cdr = 90;
     w.recomputeStats();
     expect(w.derived.cdr).toBe(90);
-    const rings = () => w.buffs.find((b) => b.id === 'holy_smite')?.data.rings ?? 0;
+    const rings = () => w.buffs.find((b) => b.id === 'hammer_of_gods_ult')?.data.rings ?? 0;
     w.castSlot(1);
     run(w, 1);
     w.cooldowns = {};
@@ -375,7 +390,7 @@ describe('hidden skills', () => {
     w.castSlot(1);
     expect(rings()).toBe(3);
     w.cooldowns = {};
-    expect(castSkill(w, 'holy_smite', null).ok).toBe(false); // three is the limit
+    expect(castSkill(w, 'hammer_of_gods_ult', null).ok).toBe(false); // three is the limit
     run(w, 1.05); // the first ring's three seconds are up
     expect(rings()).toBe(2);
     run(w, 1);
@@ -934,6 +949,132 @@ describe('quiverbound ultimates', () => {
     run(w, 1.5);
     expect(w.events.filter((ev) => ev.type === 'enemy_hit' && ev.id === e.id).length).toBeGreaterThanOrEqual(3);
     expect(e.status.bleed).not.toBeNull();
+  });
+});
+
+describe('eagles on guard', () => {
+  it('the flight circles the hero and dives on whatever strikes the hero', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    w.player.skillRanks.summon_eagle = 5;
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, 'summon_eagle')).toBe(true);
+    expect(castSkill(w, 'summon_eagle_ult', null).ok).toBe(true);
+    const eagle = w.minions.find((m) => m.kind === 'eagle' && m.active)!;
+    // Circling: the eagle's bearing from the hero keeps turning
+    const bearing = () => Math.atan2(eagle.x - w.px, eagle.z - w.pz);
+    const b0 = bearing();
+    run(w, 1);
+    const b1 = bearing();
+    run(w, 1);
+    const b2 = bearing();
+    expect(Math.abs(b1 - b0)).toBeGreaterThan(0.5);
+    expect(Math.abs(b2 - b1)).toBeGreaterThan(0.5);
+    // A monster hits the hero without the hero ever attacking: the eagles answer it
+    const foe = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    foe.speed = 0;
+    foe.hp = 100000;
+    foe.maxHp = 100000;
+    run(w, SIM_DT);
+    damagePlayer(w, 1, 'physical', foe, true);
+    expect(w.lastAttackerId).toBe(foe.id);
+    run(w, 4);
+    expect(w.events.some((ev) => ev.type === 'minion_strike' && ev.kind === 'eagle')).toBe(true);
+    expect(foe.hp).toBeLessThan(100000);
+  });
+
+  it('an enemy shot that lands marks its archer as the attacker', () => {
+    const w = new World(createPlayer('rogue', null), 7);
+    w.travel('arena');
+    const archer = w.spawnEnemy(MONSTERS.bone_archer!, w.px + 4, w.pz);
+    archer.aggro = true;
+    run(w, 6);
+    expect(w.events.some((ev) => ev.type === 'player_hit')).toBe(true);
+    expect(w.lastAttackerId).toBe(archer.id);
+  });
+});
+
+describe('impale', () => {
+  it('vaults to the aimed spot with no monster in reach and skewers everything there', () => {
+    const w = new World(createPlayer('rogue', 'impaler'), 7);
+    w.travel('arena');
+    w.player.level = 25;
+    w.player.mana = 1000;
+    w.player.skillRanks.impale = 1;
+    // Nothing within Impale's 200 px reach; two monsters stand at the aimed spot further out
+    const spot = freeSpot(w, 5);
+    const e1 = w.spawnEnemy(MONSTERS.ghoul!, spot.x, spot.z);
+    const e2 = w.spawnEnemy(MONSTERS.ghoul!, spot.x + 0.5, spot.z + 0.4);
+    for (const e of [e1, e2]) {
+      e.speed = 0;
+      e.hp = 100000;
+      e.maxHp = 100000;
+    }
+    run(w, SIM_DT);
+    expect(castSkill(w, 'impale', spot).ok).toBe(true);
+    expect(w.leap).not.toBeNull();
+    run(w, 0.5);
+    // The hero comes down on the spot, shoved less than a body's width aside by the monsters standing there
+    const landed = w.events.find((ev) => ev.type === 'impale');
+    expect(landed).toBeDefined();
+    if (landed?.type === 'impale') expect(Math.hypot(landed.x - spot.x, landed.z - spot.z)).toBeLessThan(1);
+    expect(e1.hp).toBeLessThan(100000);
+    expect(e2.hp).toBeLessThan(100000);
+  });
+});
+
+describe('titan ultimates', () => {
+  const titanWorld = () => {
+    const w = new World(createPlayer('knight', 'titan'), 7);
+    w.travel('arena');
+    w.player.level = 30;
+    w.player.mana = 1000;
+    return w;
+  };
+  const ult = (w: World, base: string) => {
+    w.player.skillRanks[base] = 5;
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, base)).toBe(true);
+  };
+
+  it("quicksand's ultimate drags everything in it to the heart", () => {
+    const w = titanWorld();
+    ult(w, 'quicksand');
+    const spot = freeSpot(w, 5, 2.5);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, (w.px + spot.x) / 2, (w.pz + spot.z) / 2);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    run(w, SIM_DT);
+    expect(castSkill(w, 'quicksand_ult', spot).ok).toBe(true);
+    const zone = w.zones.find((z) => z.type === 'quicksand')!;
+    expect(zone.pull).toBeGreaterThan(0);
+    const before = Math.hypot(e.x - zone.x, e.z - zone.z);
+    run(w, 2);
+    expect(Math.hypot(e.x - zone.x, e.z - zone.z)).toBeLessThan(before - 1);
+  });
+
+  it("earthquake's ultimate shakes every monster on the map, however far", () => {
+    const w = titanWorld();
+    ult(w, 'earthquake');
+    const near = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    const far = w.spawnEnemy(MONSTERS.ghoul!, w.px + 40, w.pz + 40);
+    for (const e of [near, far]) {
+      e.speed = 0;
+      e.hp = 100000;
+      e.maxHp = 100000;
+    }
+    run(w, SIM_DT);
+    expect(castSkill(w, 'earthquake_ult', null).ok).toBe(true);
+    run(w, 1.1);
+    expect(near.hp).toBeLessThan(100000);
+    expect(far.hp).toBeLessThan(100000);
+  });
+
+  it('boulder toss crushes a 160 px circle', () => {
+    expect(SKILLS.boulder_toss!.effect.kind === 'aoe' && SKILLS.boulder_toss!.effect.radius).toBe(160);
   });
 });
 

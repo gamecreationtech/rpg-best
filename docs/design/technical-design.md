@@ -53,8 +53,21 @@ What that means for each kind of asset:
   burning eyes, a dark red skin and outline, black smoke and a red light.
   Sanctuary is a still double rim of gold and white, a breathing glow, gold
   glitter blinking all over the floor and eight candles round the edge. Holy Smite (the
-  thrown one, formerly Hammer of Gods) and Holy Smite (spin) share the star
-  sprite. A leap arcs higher the further it goes and trails dust. Boulder
+  thrown one, formerly Hammer of Gods) and its ultimate, the spinning star
+  that was the hidden Holy Smite (spin), share the star sprite. A leap arcs
+  higher the further it goes and trails dust; Impale's landing (`impale`
+  event) throws two rings of `spikes` animations up across the landing
+  circle with cracks and a dust ring. Spear Wall stands a row of real
+  spears, a leaf-bladed and a barbed `spears` sprite in turn, each a
+  depth-sorted sprite driven up out of the ground as the wall is planted
+  and sinking back at the end, over a dark seam of broken earth. Reckless
+  Charge is escorted by five `javelin` sprites strung out behind and beside
+  the hero, rotated to the charge, with air streaking past.
+  Consecrated Blade's `holy` impact drops the `holySword` sprite, taller
+  than the hero, out of the sky onto the target, where it stands a moment
+  in a blaze of light. Blind is a flash and no swing: a hard white flash at
+  the hand, the cone lit by discs on the floor, rays fanning across it and
+  motes thrown to its edge. Boulder
   Toss keeps its rock out of sight for the first third of the delay, then drops
   it in a true accelerating fall onto the target ring, with a shadow that
   grows as it nears; on landing the rock lies there a moment
@@ -127,8 +140,8 @@ What that means for each kind of asset:
   and a `holy` impact on every hit; Judgement a `mark` effect setting
   `EnemyStatus.mark`, drawn as a beam from the top of the frame onto the
   monster with a pool of light under it; Blind an arc melee with `knockback`,
-  `blind` and `vsUndeadMult`, drawn as a white-gold wedge with sparks across
-  the cone, blinded monsters tinted white with stars round the head while
+  `blind` and `vsUndeadMult`, drawn as a flash of light across the cone
+  (see above), blinded monsters tinted white with stars round the head while
   their strikes emit `miss` damage events and their bolts fly wide; Divine
   Shield a buff with `invulnerable` (`damagePlayer` emits `immune` and still
   lets retaliation answer) that ends by adding a `Weakened` buff with
@@ -145,14 +158,17 @@ What that means for each kind of asset:
   air by the renderer (`launches`); Quicksand a `quicksand` zone that slows
   what stands in it and raises `EnemyStatus.sink`, scaling its tick by
   `1 + sink`, drawn as a sandy pit with turning arcs and sand sliding in,
-  monsters inside drawn lower with the sand closing over their feet; Rockfall
+  monsters inside drawn lower with the sand closing over their feet (its
+  ultimate adds `pull`, dragging everything to the heart, with the sand
+  racing in); Rockfall
   a `rockfall` zone that drops a small `boulder` zone on a random spot every
   tick, each landing as a `rock` aoe visual with a `stones` sprite and a
   crater; Earthquake an `earthquake` zone following the hero that shocks
   (no swinging or shooting), stumbles and hurts everything in sight every
   second, `wallMult` against monsters `circleBlocked` next to a wall, drawn
   as a constant shake, cracks spreading across the floor, grit falling from
-  above and a dust wave on every heave.
+  above and a dust wave on every heave; its ultimate sets `wholeMap` and
+  reaches every monster on the map.
   The Nightlord's five: Shadow Step is a teleport with `arrivalRadius`, every
   monster round the landing struck and a `shadow_burst` aoe visual (black
   disc, purple ring, wisps); Shade Army a buff with `shades`, `hitEnemy`

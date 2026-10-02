@@ -564,10 +564,10 @@ export class PixelView {
           this.view.kick(0.15);
         }
         if (z.type === 'earthquake') {
-          // The first heave: the ground splits under the hero and the screen jolts
-          this.effects.cracks(z.x, z.z, 40, 0x9a8a70, 1.4, 10);
+          // The first heave: the ground splits under the hero and the screen jolts, harder when the whole map goes
+          this.effects.cracks(z.x, z.z, z.wholeMap ? 60 : 40, 0x9a8a70, 1.4, z.wholeMap ? 14 : 10);
           pt.burst(z.x, 0.1, z.z, 30, 3, 0x8a7a68, 0.8, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
-          this.view.kick(0.4);
+          this.view.kick(z.wholeMap ? 0.6 : 0.4);
         }
         if (z.type === 'fire_prison') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xff7a2a, 0.4, 2, 1.5);
         if (z.type === 'sanctuary') this.effects.ring(z.x, z.z, 0.3, z.radius, 0xffe87a, 0.6, 2, 1.2);
@@ -734,6 +734,9 @@ export class PixelView {
       case 'leap':
         this.stomp(ev.fromX, ev.fromZ, 0.8, 0x6a6058);
         pt.burst(ev.fromX, 0.2, ev.fromZ, 10, 1.2, 0x8a7a68, 0.6, { up: 2.5, gravity: 4, priority: 0.5, size: 2 });
+        break;
+      case 'impale':
+        this.impaleLanding(ev.x, ev.z, ev.radius);
         break;
       case 'teleport': {
         const color = w.player.pledgeId ? PLEDGES[w.player.pledgeId]!.color : 0x9fd0ff;
@@ -1768,10 +1771,12 @@ export class PixelView {
           this.particles.spawn(w.px + Math.cos(a) * r, 4 + Math.random() * 2, w.pz + Math.sin(a) * r, 0, -4, 0, 0.8, 0x8a7a68, { gravity: 6, priority: 0.3, size: Math.random() < 0.3 ? 2 : 1 });
         }
       } else if (z.type === 'quicksand') {
-        if (Math.random() < 0.7) {
+        // Sand sliding in from the rim; the ultimate's pull sends it racing to the heart
+        if (Math.random() < (z.pull > 0 ? 1 : 0.7)) {
           const a = Math.random() * Math.PI * 2;
           const r = z.radius * (0.7 + Math.random() * 0.3);
-          this.particles.spawn(z.x + Math.cos(a) * r, 0.05, z.z + Math.sin(a) * r, -Math.cos(a) * 0.9, 0, -Math.sin(a) * 0.9, 1.2, 0xc8a870, { drag: 0.3, priority: 0.3 });
+          const v = 0.9 + z.pull;
+          this.particles.spawn(z.x + Math.cos(a) * r, 0.05, z.z + Math.sin(a) * r, -Math.cos(a) * v, 0, -Math.sin(a) * v, 1.2, 0xc8a870, { drag: 0.3, priority: 0.3 });
         }
       } else if (z.type === 'void_rift') {
         // Darkness at the heart of it, a purple rim, and wisps pulled in from all round
@@ -1797,6 +1802,7 @@ export class PixelView {
       if (w.buffs.some((b) => b.mods.deflect)) this.drawWindBarrier(heroY);
       if (w.buffs.some((b) => b.mods.overload)) this.drawOverload(heroY);
       if (w.buffs.some((b) => b.mods.holyBlade)) this.drawHolyBlade(heroY);
+      if (w.charge) this.drawChargeJavelins(heroY);
       if (w.buffs.some((b) => b.mods.invulnerable)) this.drawArmorBubble(heroY, 'holy');
       if (w.buffs.some((b) => b.mods.retribution)) this.drawRetribution(heroY);
     }
@@ -1957,15 +1963,34 @@ export class PixelView {
           this.drawVoidRift(ctx, z, ellipse);
           break;
         case 'spear_wall': {
-          ctx.fillStyle = '#d8d0c0';
+          // A row of real spears, leaf-bladed and barbed in turn, driven up out of the ground as the wall is planted and sinking back at the end.
+          // Each is a depth-sorted sprite, so monsters pass in front of and behind it
+          const age = z.duration - z.remaining;
+          let rise = Math.min(1, age / 0.18);
+          if (z.remaining < 0.3) rise = Math.max(0, z.remaining / 0.3);
           const px = -z.dz;
           const pz = z.dx;
           for (let k = 0; k < z.count; k++) {
             const t = z.count > 1 ? k / (z.count - 1) - 0.5 : 0;
             const x = z.x + px * z.length * t;
             const zz = z.z + pz * z.length * t;
-            ctx.fillRect(Math.round(cam.frameX(x, zz)), Math.round(cam.frameY(x, 0, zz)) - 14, 2, 14);
+            const frame = this.fx.spears[k % 2]!;
+            const shown = Math.max(1, Math.round(frame.height * rise));
+            const fx = Math.round(cam.frameX(x, zz));
+            const fy = Math.round(cam.frameY(x, 0, zz));
+            this.items.push({ depth: cam.depth(x, zz), draw: () => ctx.drawImage(frame, 0, 0, frame.width, shown, fx - (frame.width >> 1), fy + 1 - shown, frame.width, shown) });
+            // Earth thrown up while it rises
+            if (rise < 1 && age < 0.3 && Math.random() < 0.5) this.particles.spawn(x + (Math.random() - 0.5) * 0.3, 0.1, zz + (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 1.5, 2 + Math.random(), (Math.random() - 0.5) * 1.5, 0.4, 0x8a7a68, { gravity: 7, priority: 0.4, size: 2 });
           }
+          // The seam of broken ground the spears stand in
+          ctx.strokeStyle = '#2a2420';
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.6 * Math.min(1, rise + 0.3);
+          ctx.beginPath();
+          ctx.moveTo(Math.round(cam.frameX(z.x - px * z.length * 0.5, z.z - pz * z.length * 0.5)), Math.round(cam.frameY(z.x - px * z.length * 0.5, 0, z.z - pz * z.length * 0.5)) + 1);
+          ctx.lineTo(Math.round(cam.frameX(z.x + px * z.length * 0.5, z.z + pz * z.length * 0.5)), Math.round(cam.frameY(z.x + px * z.length * 0.5, 0, z.z + pz * z.length * 0.5)) + 1);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
           break;
         }
         case 'void_trail': {
@@ -2418,25 +2443,102 @@ export class PixelView {
 
   /** Blind: a flash of holy light fanning out before the hero: a white-gold wedge, a hard flash and sparks thrown across the cone. */
   private blindFlash(x: number, z: number, dirX: number, dirZ: number, range: number, arc: number): void {
-    this.effects.sweep(x, z, dirX, dirZ, range, arc, 0xfff6d0, 0.3);
-    this.effects.sweep(x, z, dirX, dirZ, range * 0.6, arc, 0xffffff, 0.18);
-    this.effects.flash(x + dirX * range * 0.45, 0.8, z + dirZ * range * 0.45, 0xfff0b0, 3.5, 110, 0.3);
+    // No swing: a blinding burst of light. A hard white flash at the hero's hand, the whole cone lit for a blink,
+    // rays fanning out across it, and motes of light thrown to its edge
     const half = (arc * Math.PI) / 360;
     const base = Math.atan2(dirX, dirZ);
-    for (let i = 0; i < 26; i++) {
+    this.effects.flash(x + dirX * 0.6, 1.2, z + dirZ * 0.6, 0xffffff, 6, 190, 0.2);
+    this.effects.flash(x + dirX * range * 0.5, 0.8, z + dirZ * range * 0.5, 0xfff0b0, 3, 150, 0.4);
+    for (let i = 0; i <= 10; i++) {
+      const a = base - half + (2 * half * i) / 10;
+      const sx = Math.sin(a);
+      const sz = Math.cos(a);
+      const len = range * (0.8 + Math.random() * 0.3);
+      this.effects.link(x + sx * 0.4, 1.2, z + sz * 0.4, x + sx * len, 1.0 + Math.random() * 0.8, z + sz * len, i % 2 ? 0xffffff : 0xfff0b0, 0.2 + Math.random() * 0.1);
+    }
+    for (let t = 0.3; t <= 1.0; t += 0.175) {
+      this.effects.disc(x + dirX * range * t, z + dirZ * range * t, range * t * Math.tan(half) * 0.9, 0xfff0b0, 0.28, 0.3);
+    }
+    for (let i = 0; i < 30; i++) {
       const a = base + (Math.random() - 0.5) * 2 * half;
       const sx = Math.sin(a);
       const sz = Math.cos(a);
-      const d = 0.3 + Math.random() * range * 0.9;
-      this.particles.spawn(x + sx * d, 0.4 + Math.random() * 1.4, z + sz * d, sx * 3, 1.5, sz * 3, 0.35, Math.random() < 0.5 ? 0xffffff : 0xffe8a0, { drag: 3, priority: 0.7, size: Math.random() < 0.4 ? 2 : 1 });
+      this.particles.spawn(x + sx * 0.5, 0.6 + Math.random() * 1.2, z + sz * 0.5, sx * (6 + Math.random() * 4), 0.5, sz * (6 + Math.random() * 4), 0.3, Math.random() < 0.6 ? 0xffffff : 0xffe8a0, { drag: 4, priority: 0.7, size: Math.random() < 0.4 ? 2 : 1 });
     }
-    this.view.kick(0.08);
+    this.view.kick(0.05);
   }
 
-  /** Consecrated Blade landing: a few gold sparks off the target. */
+  /** Impale's landing: the hero comes down and stone spikes burst up across the whole landing circle, with the ground cracking and dust thrown out. */
+  private impaleLanding(x: number, z: number, radius: number): void {
+    const frames = this.fx.spikes;
+    const cycle = [frames[0]!, frames[1]!, frames[2]!, frames[2]!, frames[2]!, frames[1]!, frames[0]!];
+    this.effects.cracks(x, z, 26, 0x9a8a70, 0.9, 9);
+    this.effects.ring(x, z, 0.2, radius, 0xc8b8a0, 0.35, 2);
+    this.particles.burst(x, 0.1, z, 18, 2.5 * radius, 0x8a7a68, 0.6, { up: 2, gravity: 6, priority: 0.7, size: 2 });
+    const rings: [number, number][] = [[radius * 0.4, 5], [radius * 0.85, 10]];
+    for (const [r, n] of rings) {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + (r < radius * 0.5 ? 0.3 : 0);
+        const sx = x + Math.sin(a) * r;
+        const sz = z + Math.cos(a) * r;
+        const delay = (r / radius) * 0.08 + Math.random() * 0.04;
+        this.effects.anim(cycle, sx, 0, sz, 5, 17, 0.7, 'air', undefined, delay);
+        this.particles.burst(sx, 0.1, sz, 4, 1.2, 0x8a7a68, 0.4, { up: 2.5, gravity: 7, priority: 0.5, size: 2, delay });
+      }
+    }
+    this.view.kick(0.22);
+  }
+
+  /** Reckless Charge: a flight of javelins racing along with the hero, strung out behind and to either side, with the air streaking past. */
+  private drawChargeJavelins(heroY: number): void {
+    const w = this.world;
+    const c = w.charge!;
+    const cam = this.view;
+    const ctx = this.ctx;
+    const frame = this.fx.javelin;
+    // Screen angle of the charge, as the orbiting daggers find theirs
+    const angle = Math.atan2((c.dirX + c.dirZ) / 2, c.dirX - c.dirZ);
+    const sideX = -c.dirZ;
+    const sideZ = c.dirX;
+    for (let i = 0; i < 5; i++) {
+      const lag = 0.5 + i * 0.35;
+      const side = (i % 2 ? 1 : -1) * (0.4 + i * 0.1);
+      const jx = w.px - c.dirX * lag + sideX * side;
+      const jz = w.pz - c.dirZ * lag + sideZ * side;
+      const y = heroY + 1.0 + Math.sin(this.time * 18 + i * 1.3) * 0.2;
+      const fx = Math.round(cam.frameX(jx, jz));
+      const fy = Math.round(cam.frameY(jx, y, jz));
+      this.items.push({
+        depth: cam.depth(jx, jz) + 0.002,
+        draw: () => {
+          ctx.save();
+          ctx.translate(fx, fy);
+          ctx.rotate(angle);
+          ctx.drawImage(frame, -(frame.width >> 1), -(frame.height >> 1));
+          ctx.restore();
+        },
+      });
+    }
+    // Air streaking past, and dust kicked up behind
+    for (let i = 0; i < 3; i++) {
+      const side = (Math.random() - 0.5) * 2;
+      this.particles.spawn(w.px + c.dirX * 0.8 + sideX * side, heroY + 0.4 + Math.random() * 1.4, w.pz + c.dirZ * 0.8 + sideZ * side, -c.dirX * 7, 0, -c.dirZ * 7, 0.25, 0xd8d0c0, { drag: 1, priority: 0.4, alpha: 0.6 });
+    }
+    if (Math.random() < 0.8) this.particles.spawn(w.px - c.dirX * 0.4, 0.1, w.pz - c.dirZ * 0.4, -c.dirX * 1.5 + (Math.random() - 0.5), 1.5, -c.dirZ * 1.5 + (Math.random() - 0.5), 0.5, 0x8a7a68, { gravity: 5, priority: 0.4, size: 2 });
+  }
+
+  /** Consecrated Blade landing: a holy sword taller than the hero drops out of the sky onto the target, stands a moment in a blaze of light, and fades. */
   private holyHit(x: number, z: number): void {
-    this.particles.burst(x, 1.0, z, 5, 1.4, 0xffe8a0, 0.3, { up: 1, drag: 2, priority: 0.3 });
-    this.effects.flash(x, 1, z, 0xffe8a0, 0.8, 26, 0.12);
+    const sword = this.fx.holySword;
+    const ox = sword.width >> 1;
+    const oy = sword.height;
+    this.effects.sprite(sword, x, 3.0, z, ox, oy, 0.14, 'air', -2.8 * Y_PX, { color: 0xffe8a0, intensity: 1.2, radius: 44 }, true);
+    this.effects.sprite(sword, x, 0.2, z, ox, oy, 0.45, 'air', 0, { color: 0xffe8a0, intensity: 1.0, radius: 48 }, false, 0.14);
+    this.effects.ring(x, z, 0.1, 0.9, 0xffe8a0, 0.3, 2, 1, 0.14);
+    this.effects.flash(x, 1.2, z, 0xffffff, 1.6, 40, 0.15);
+    this.particles.burst(x, 0.3, z, 12, 1.6, 0xfff0b0, 0.45, { up: 2.5, gravity: 4, priority: 0.6, size: 2, delay: 0.14 });
+    this.particles.burst(x, 1.0, z, 6, 1.4, 0xffe8a0, 0.3, { up: 1, drag: 2, priority: 0.3, delay: 0.14 });
+    this.view.kick(0.06);
   }
 
   /** Retribution's answer: a pillar of light out of the sky onto the attacker, a ring on the ground and sparks thrown up. */

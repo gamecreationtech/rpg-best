@@ -208,6 +208,12 @@ export interface EffectSprites {
   snowflakes: HTMLCanvasElement[];
   /** A big arrow seen point-down, the kind Arrow Storm rains from the sky. */
   bigArrow: HTMLCanvasElement;
+  /** Spear Wall's spears, standing upright: a leaf-bladed one and a barbed one, bottom-aligned. */
+  spears: HTMLCanvasElement[];
+  /** A javelin seen side on, point to the right, for Reckless Charge's escort. */
+  javelin: HTMLCanvasElement;
+  /** Consecrated Blade's holy sword, point-down and taller than the hero, that comes down on every hit. */
+  holySword: HTMLCanvasElement;
   /** The daemon Arrow of Beyond raises: bow drawn, then loosed. Faces right. */
   daemon: HTMLCanvasElement[];
   /** Meat Shield's titan: standing, fists raised, fists down. Faces right. */
@@ -398,7 +404,73 @@ export function effectSprites(pal: Palette, size: SpriteSize): EffectSprites {
   arrow.rect(3 * s, 20 * s, s, 2 * s, steelRamp[3]);
   arrow.rect(1 * s, 15 * s, s, 4 * s, [26, 20, 16]);
   arrow.rect(5 * s, 15 * s, s, 4 * s, [26, 20, 16]);
-  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, spikes, stones, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s), eagle: eagleFrames(s), angel: angelFrames(s) };
+  // Spear Wall's spears: a hero-tall ash shaft with a steel head. The first has a leaf blade, the second a barbed
+  // head with two side spikes, so the wall reads as a row of real spears and not a line of sticks
+  const outlineInk: Rgb = [26, 20, 16];
+  const spears: HTMLCanvasElement[] = [];
+  for (let v = 0; v < 2; v++) {
+    const W = 11 * s;
+    const H = 30 * s;
+    const b = new PixelBuffer(W, H);
+    const cx = 5 * s;
+    // Shaft, lit down the left
+    b.rect(cx, 9 * s, s, 21 * s, woodRamp[2]);
+    b.rect(cx + s, 10 * s, s, 20 * s, woodRamp[1]);
+    b.rect(cx, 9 * s, s, 3 * s, woodRamp[3]);
+    // Binding where the head meets the shaft
+    b.rect(cx - s, 8 * s, 3 * s, 2 * s, [58, 50, 68]);
+    // Head: a tapering blade, bright on the left edge
+    for (let row = 0; row < 8; row++) {
+      const half = Math.max(1, Math.round((row / 7) * 2));
+      const y = row * s;
+      b.rect(cx - (half - 1) * s, y, (half * 2 - 1) * s, s, steelRamp[2]);
+      b.rect(cx - (half - 1) * s, y, s, s, steelRamp[3]);
+      if (half > 1) b.rect(cx + (half - 1) * s, y, s, s, steelRamp[1]);
+    }
+    if (v === 1) {
+      // Barbs: two spikes jutting out either side of the socket
+      for (const side of [-1, 1]) {
+        b.rect(cx + side * 2 * s, 7 * s, s, s, steelRamp[2]);
+        b.rect(cx + side * 3 * s, 6 * s, s, s, steelRamp[2]);
+        b.rect(cx + side * 4 * s, 5 * s, s, s, steelRamp[3]);
+      }
+    }
+    b.outline(outlineInk);
+    spears.push(b.toCanvas());
+  }
+  // The javelin: a short ash shaft with a long steel point and a red tassel at the butt, seen side on, point right
+  const jav = new PixelBuffer(22 * s, 5 * s);
+  jav.rect(3 * s, 2 * s, 13 * s, s, woodRamp[2]);
+  jav.rect(3 * s, 2 * s, 4 * s, s, woodRamp[3]);
+  jav.rect(16 * s, 2 * s, 5 * s, s, steelRamp[2]);
+  jav.rect(16 * s, s, 3 * s, s, steelRamp[3]);
+  jav.rect(16 * s, 3 * s, 3 * s, s, steelRamp[1]);
+  jav.rect(21 * s, 2 * s, s, s, steelRamp[3]);
+  jav.rect(s, s, 2 * s, s, [170, 40, 40]);
+  jav.rect(0, 2 * s, 3 * s, s, [200, 60, 50]);
+  jav.rect(s, 3 * s, 2 * s, s, [170, 40, 40]);
+  jav.outline(outlineInk);
+  // The holy sword: a broad gold blade point-down, a white edge, a wide cross guard and a dark grip, taller than the hero
+  const gold = ramp(0xffd860, pal.contrast);
+  const sw = new PixelBuffer(15 * s, 38 * s);
+  const scx = 7 * s;
+  for (let row = 0; row < 26; row++) {
+    const half = row < 20 ? 2 : Math.max(0, 2 - Math.round(((row - 19) / 6) * 2));
+    const y = (10 + row) * s;
+    sw.rect(scx - half * s, y, (half * 2 + 1) * s, s, gold[2]);
+    sw.rect(scx, y, s, s, [255, 255, 255]);
+    if (half > 0) sw.rect(scx - half * s, y, s, s, gold[3]);
+    if (half > 0) sw.rect(scx + half * s, y, s, s, gold[1]);
+  }
+  sw.rect(scx, 35 * s, s, 2 * s, [255, 255, 255]);
+  // Guard, grip and pommel
+  sw.rect(scx - 6 * s, 8 * s, 13 * s, 2 * s, gold[2]);
+  sw.rect(scx - 6 * s, 8 * s, 13 * s, s, gold[3]);
+  sw.rect(scx - s, 2 * s, 3 * s, 6 * s, [58, 50, 68]);
+  sw.rect(scx, 2 * s, s, 6 * s, [90, 80, 100]);
+  sw.rect(scx - s, 0, 3 * s, 2 * s, gold[3]);
+  sw.outline(outlineInk);
+  return { fireball, explosion, frostRing, shadow: shadow.toCanvas(), boulder: boulderBuf.toCanvas(), rocks, spikes, stones, skull: skull.toCanvas(), flame, snowflakes, bigArrow: arrow.toCanvas(), spears, javelin: jav.toCanvas(), holySword: sw.toCanvas(), daemon: daemonFrames(s), titan: titanFrames(s), eagle: eagleFrames(s), angel: angelFrames(s) };
 }
 
 /** Head and horns of the daemon, placed pixel by pixel, 52 wide. See `DAEMON_INK` for what each mark means. */

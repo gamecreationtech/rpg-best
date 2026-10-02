@@ -69,6 +69,8 @@ export interface ProjectileSpec {
   homing?: boolean;
   ricochets?: number;
   ricochetBack?: boolean;
+  /** The monster loosing an enemy shot, so the hero's guards know whom to answer. */
+  sourceId?: number;
   returns?: boolean;
   throughWalls?: boolean;
   splashRadius?: number;
@@ -530,6 +532,12 @@ export class World {
     }
   }
 
+  /** Where an eagle on guard is right now: the flight circles the hero, evenly spaced, a turn every four seconds. */
+  private guardPost(index: number, count: number): { x: number; z: number } {
+    const a = this.time * 1.6 + (index * Math.PI * 2) / count;
+    return { x: this.px + Math.sin(a) * 1.8, z: this.pz + Math.cos(a) * 1.8 };
+  }
+
   /** Where a companion rests: the eagle on the hero's left, the angel on the right; a flight of eagles fans out, one ahead and one behind. */
   private companionHome(kind: 'eagle' | 'angel', index: number): { x: number; z: number } {
     const side = kind === 'eagle' ? 1 : -1;
@@ -541,7 +549,9 @@ export class World {
   /**
    * A companion keeps to the hero's side. The eagle goes only for what the
    * hero attacks; the angel takes that too, or else the nearest monster that
-   * has noticed the hero. In reach, it strikes every interval.
+   * has noticed the hero. In reach, it strikes every interval. Eagles on
+   * guard (the ultimate) circle the hero instead and answer whatever struck
+   * the hero in the last few seconds before anything else.
    */
   private tickCompanion(dt: number, slot: number, kind: 'eagle' | 'angel', index: number): void {
     const m = this.minions[slot]!;
@@ -554,13 +564,18 @@ export class World {
     m.moving = false;
     m.timer += dt;
     m.shoot = Math.max(0, m.shoot - dt);
-    const home = this.companionHome(kind, index);
+    const guard = kind === 'eagle' && !!cfg.guard;
+    const home = guard ? this.guardPost(index, cfg.count ?? 1) : this.companionHome(kind, index);
     if (this.dist(m.x, m.z) > 14) {
       m.x = home.x;
       m.z = home.z;
     }
     const last = this.enemies[this.lastHitId];
     let target: Enemy | null = last && last.alive && !last.dead ? last : null;
+    if (guard) {
+      const foe = this.enemies[this.lastAttackerId];
+      if (foe && foe.alive && !foe.dead && this.time - this.lastAttackedAt < 5 && this.dist(foe.x, foe.z) < 9) target = foe;
+    }
     if (!target && kind === 'angel') {
       let bestD = 7 * 7;
       for (const e of this.enemies) {
@@ -575,7 +590,7 @@ export class World {
     const reach = cfg.reach * PX;
     let gx = home.x;
     let gz = home.z;
-    let stop = 0.35;
+    let stop = guard ? 0.05 : 0.35;
     if (target && this.dist(target.x, target.z) < 9) {
       const td = Math.hypot(target.x - m.x, target.z - m.z);
       // A flight spreads round its prey instead of piling onto one spot
@@ -771,7 +786,7 @@ export class World {
     const zone: Zone = {
       id: this.nextZoneId++,
       dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0, aimedPct: 0,
-      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1, pull: 0,
+      triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1, pull: 0, wholeMap: false,
       ...spec,
     };
     if (zone.type === 'fire_prison' && zone.holds) {
@@ -806,6 +821,7 @@ export class World {
     p.ricochets = spec.ricochets ?? 0;
     p.ricochetDecay = spec.ricochetDecay ?? 1;
     p.ricochetBack = !!spec.ricochetBack;
+    p.sourceId = spec.sourceId ?? -1;
     p.rehit = spec.rehit ?? 0;
     p.rehitTimer = 0;
     p.returns = !!spec.returns;
@@ -1247,6 +1263,15 @@ export class World {
   }
   /** The enemy the hero last hit, which the skeletons shoot at; -1 for none. */
   lastHitId = -1;
+  /** The monster that last struck the hero and when, for the eagles on guard. */
+  lastAttackerId = -1;
+  lastAttackedAt = -100;
+
+  noteAttacker(e: Enemy | null | undefined): void {
+    if (!e || !e.alive || e.dead) return;
+    this.lastAttackerId = e.id;
+    this.lastAttackedAt = this.time;
+  }
   private readonly petIgnore = new Set<number>();
 
   togglePet(on?: boolean): void {
@@ -1463,6 +1488,21 @@ export class World {
           hitEnemy(this, e, { amount: dmg, element: 'physical', canCrit: true, skillId: def.id, weaponHit: false });
         }
       }
+    }
+  }
+
+  /** Everything in a zone is pulled toward its centre at `pull` tiles a second, sliding round walls (Void Rift, Quicksand's ultimate). */
+  private dragToward(z: Zone, dt: number): void {
+    for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+      if (e.dummy) continue;
+      const dx = z.x - e.x;
+      const dz = z.z - e.z;
+      const d = Math.hypot(dx, dz);
+      if (d < 0.3) continue;
+      const step = Math.min(d - 0.25, z.pull * dt);
+      this.map.slide(e.x, e.z, e.x + (dx / d) * step, e.z + (dz / d) * step, e.radius, this.slid);
+      e.x = this.slid.x;
+      e.z = this.slid.z;
     }
   }
 
@@ -2068,6 +2108,7 @@ export class World {
           this.spawnProjectile({
             owner: 'enemy', shape: 'enemy_bolt', element: def.element, x: e.x + dx * 0.5, z: e.z + dz * 0.5, dirX: dx, dirZ: dz,
             speed: 9, radius: 0.25, maxRange: e.attackRange + 2, packet: { amount: e.damage, element: def.element, canCrit: false, skillId: null, weaponHit: false },
+            sourceId: e.id,
           });
         }
       }
@@ -2113,7 +2154,7 @@ export class World {
   private blankProjectile(id: number): Projectile {
     return {
       id, alive: false, owner: 'player', shape: 'bolt', element: 'physical', x: 0, z: 0, y: 1, vx: 0, vz: 0, speed: 0, radius: 0.2, traveled: 0, maxRange: 1,
-      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0, ricochetDecay: 1, ricochetBack: false, rehit: 0, rehitTimer: 0,
+      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0, ricochetDecay: 1, ricochetBack: false, sourceId: -1, rehit: 0, rehitTimer: 0,
       returns: false, returning: false, throughWalls: false, splashRadius: 0, onHitZone: null, burstOnHit: null, skillId: null,
     };
   }
@@ -2240,6 +2281,7 @@ export class World {
         }
         const r = p.radius + PLAYER_RADIUS;
         if ((p.x - this.px) ** 2 + (p.z - this.pz) ** 2 <= r * r) {
+          this.noteAttacker(this.enemies[p.sourceId]);
           damagePlayer(this, p.packet.amount, p.packet.element, null, false);
           this.emit({ type: 'projectile_hit', x: p.x, z: p.z, element: p.element, shape: p.shape, splash: 0 });
           p.alive = false;
@@ -2421,7 +2463,8 @@ export class World {
           break;
         }
         case 'quicksand':
-          // Whatever stands in it sinks: slowed, and hurt more the deeper it is
+          // Whatever stands in it sinks: slowed, and hurt more the deeper it is; the ultimate drags it all to the heart
+          if (z.pull > 0) this.dragToward(z, dt);
           while (z.tickTimer >= z.tickInterval) {
             z.tickTimer -= z.tickInterval;
             for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
@@ -2452,17 +2495,7 @@ export class World {
           break;
         case 'void_rift': {
           // Everything near the rift is dragged toward it; what it holds is torn apart every tick
-          for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
-            if (e.dummy) continue;
-            const dx = z.x - e.x;
-            const dz = z.z - e.z;
-            const d = Math.hypot(dx, dz);
-            if (d < 0.3) continue;
-            const step = Math.min(d - 0.25, z.pull * dt);
-            this.map.slide(e.x, e.z, e.x + (dx / d) * step, e.z + (dz / d) * step, e.radius, this.slid);
-            e.x = this.slid.x;
-            e.z = this.slid.z;
-          }
+          this.dragToward(z, dt);
           while (z.tickTimer >= z.tickInterval) {
             z.tickTimer -= z.tickInterval;
             for (const e of this.enemiesWithin(z.x, z.z, z.aoeRadius)) hitEnemy(this, e, packetFor());
@@ -2470,11 +2503,12 @@ export class World {
           break;
         }
         case 'earthquake':
-          // Every second the ground heaves: everything in sight stumbles, cannot swing or shoot, and is crushed against any wall it stands by
+          // Every second the ground heaves: everything in sight stumbles, cannot swing or shoot, and is crushed against any wall it stands by; the ultimate reaches the whole map
           while (z.tickTimer >= z.tickInterval) {
             z.tickTimer -= z.tickInterval;
             this.emit({ type: 'zone_tick', id: z.id, x: z.x, z: z.z });
-            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
+            const shaken = z.wholeMap ? this.enemies.filter((e) => e.alive && !e.dead) : this.enemiesWithin(z.x, z.z, z.radius);
+            for (const e of shaken) {
               e.status.shock = Math.max(e.status.shock, z.tickInterval + 0.1);
               const crushed = !e.dummy && this.map.circleBlocked(e.x, e.z, e.radius + 0.5);
               if (crushed) this.emit({ type: 'zone_tick', id: z.id, x: e.x, z: e.z, enemyId: e.id });

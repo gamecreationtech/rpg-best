@@ -70,7 +70,7 @@ export class Screens {
         'div',
         { class: 'card', style: `--c:${hex(c.color)}` },
         h('div', { class: 'card-title' }, c.name),
-        h('div', { class: 'card-stats dim' }, `Pledges: ${pledgesFor(c.id).map((p) => p.name).join(', ')}`),
+        h('div', { class: 'card-stats dim' }, pledgesFor(c.id).map((p) => p.name).join(', ')),
         button('Choose ' + c.name, () => this.host.chooseClass(c.id), 'btn primary'),
       ),
     );

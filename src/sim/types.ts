@@ -152,6 +152,8 @@ export interface Projectile {
   ricochetDecay: number;
   /** Every hop returns to the enemy struck just before, so the shot shuttles between two. */
   ricochetBack: boolean;
+  /** The monster that loosed an enemy shot, -1 for none. */
+  sourceId: number;
   /** Seconds between repeat hits on the same enemy, 0 for once only; `rehitTimer` counts up to it. */
   rehit: number;
   rehitTimer: number;
@@ -208,8 +210,10 @@ export interface Zone {
   stun: number;
   knockback: number;
   wallMult: number;
-  /** Void Rift: tiles per second everything inside is dragged toward the centre. */
+  /** Void Rift, Quicksand's ultimate: tiles per second everything inside is dragged toward the centre. */
   pull: number;
+  /** Earthquake's ultimate: every monster on the map, walls or not. */
+  wholeMap: boolean;
 }
 
 export interface Drop {
@@ -264,6 +268,8 @@ export type SimEvent =
   | { type: 'buff_start'; id: string; color: number }
   | { type: 'buff_end'; id: string }
   | { type: 'leap'; fromX: number; fromZ: number; toX: number; toZ: number; duration: number }
+  /** Impale's landing: spikes burst up across the area the hero came down on. */
+  | { type: 'impale'; x: number; z: number; radius: number }
   | { type: 'teleport'; fromX: number; fromZ: number; toX: number; toZ: number }
   | { type: 'beam'; on: boolean; targetId: number }
   | { type: 'message'; text: string; color?: number }

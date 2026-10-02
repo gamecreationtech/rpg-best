@@ -145,14 +145,25 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
   const range = eff.maxRange * PX + w.derived.range * PX;
   let target = w.targetEnemy();
   if (!target || w.dist(target.x, target.z) > range + target.radius) target = w.nearestEnemy(w.px, w.pz, range + 0.6);
-  if (!eff.arc && !target) {
+  // A leap with no monster in reach is an area shot: the hero vaults to the aimed spot and skewers whatever is there (Impale)
+  let landing: { x: number; z: number } | null = null;
+  if (eff.leap && !target) {
+    const at = aimPoint(w, aim, eff.maxRange, 0.6);
+    const dx = at.x - w.px;
+    const dz = at.z - w.pz;
+    const d = Math.hypot(dx, dz);
+    const k = d > range ? range / d : 1;
+    landing = { x: w.px + dx * k, z: w.pz + dz * k };
+    if (w.map.blockedAt(landing.x, landing.z)) return { ok: false, reason: 'Blocked' };
+  }
+  if (!eff.arc && !target && !landing) {
     const far = w.nearestEnemy(w.px, w.pz, 14);
     if (far) return { ok: false, reason: 'Out of range', approach: true };
     return { ok: false, reason: 'No target' };
   }
-  const dir = facing(w, aim, target);
-  const tx = target?.x ?? w.px + dir.x * range;
-  const tz = target?.z ?? w.pz + dir.z * range;
+  const dir = facing(w, landing ?? aim, target);
+  const tx = target?.x ?? landing?.x ?? w.px + dir.x * range;
+  const tz = target?.z ?? landing?.z ?? w.pz + dir.z * range;
   pay(w, def, dir, tx, tz);
   if (eff.healOnCastPct) w.healPlayer(Math.round((w.derived.maxHp * eff.healOnCastPct) / 100), false);
   const mult = 1 + w.skillRank(def.id) * (def.rankBonus ?? 0.2);
@@ -181,7 +192,10 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
           if (e !== target) hitEnemy(w, e, packet(w, def, eff.damageMult, {}, eff.scalesWithInt));
         }
       }
+    } else if (eff.leap) {
+      for (const e of w.enemiesWithin(w.px, w.pz, eff.leap.landingRadius * PX)) hitEnemy(w, e, packet(w, def, eff.damageMult, {}, eff.scalesWithInt));
     }
+    if (eff.leap) w.emit({ type: 'impale', x: w.px, z: w.pz, radius: eff.leap.landingRadius * PX });
     if (eff.trail) {
       const dmg = skillDamage(w, def.id, eff.damageMult, eff.scalesWithInt);
       w.addZone({ type: 'void_trail', x: w.px, z: w.pz, dx: dir.x, dz: dir.z, length: eff.trail.length * PX, radius: 2.1, duration: eff.trail.duration * MS, tickInterval: 0.5, damage: Math.max(1, Math.round((dmg * eff.trail.tickPct) / 100 / 2)), element: def.element, skillId: def.id });
@@ -202,6 +216,8 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
     const lx = w.px + (target.x - w.px) * k;
     const lz = w.pz + (target.z - w.pz) * k;
     w.startLeap(lx, lz, (eff.leap ? eff.leap.duration : 250) * MS, !!eff.leap, strike);
+  } else if (landing && eff.leap) {
+    w.startLeap(landing.x, landing.z, eff.leap.duration * MS, true, strike);
   } else {
     strike();
   }
@@ -422,13 +438,13 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
       w.addZone({ ...common, type: 'frostbite', tickInterval: (eff.tickInterval ?? 500) * MS, slow: (eff.slow ?? 1000) * MS, pctPerSec: eff.pctPerSec ?? 2, freezeAfter: (eff.freezeAfter ?? 3000) * MS, freeze: 1.5 });
       break;
     case 'quicksand':
-      w.addZone({ ...common, type: 'quicksand', tickInterval: (eff.tickInterval ?? 500) * MS });
+      w.addZone({ ...common, type: 'quicksand', tickInterval: (eff.tickInterval ?? 500) * MS, pull: eff.pull ?? 0 });
       break;
     case 'rockfall':
       w.addZone({ ...common, type: 'rockfall', tickInterval: (eff.tickInterval ?? 400) * MS, aoeRadius: (eff.aoeRadius ?? 50) * PX });
       break;
     case 'earthquake':
-      w.addZone({ ...common, type: 'earthquake', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, wallMult: eff.wallMult ?? 1.5 });
+      w.addZone({ ...common, type: 'earthquake', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, wallMult: eff.wallMult ?? 1.5, wholeMap: !!eff.wholeMap });
       break;
     case 'void_rift':
       w.addZone({ ...common, type: 'void_rift', tickInterval: (eff.tickInterval ?? 500) * MS, aoeRadius: (eff.aoeRadius ?? 60) * PX, pull: eff.pull ?? 2.5 });

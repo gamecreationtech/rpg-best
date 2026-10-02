@@ -262,6 +262,7 @@ function dotDamage(w: World, e: Enemy, amount: number, element: Element, silent 
 /** Something hurts the player. Dodge, block, armour or resistance, shields, then life. */
 export function damagePlayer(w: World, amount: number, element: Element, source: Enemy | null, melee: boolean): void {
   if (w.playerDead || w.invulnTimer > 0) return;
+  w.noteAttacker(source);
   const d = w.derived;
   const at = { x: w.px, z: w.pz, y: 2.1 };
   // Divine Shield: the blow lands on the light, and Retribution still answers it
