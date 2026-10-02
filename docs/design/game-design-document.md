@@ -61,7 +61,7 @@ Every feature must serve at least one of these. If it does not, cut it.
   Wintercaller; Quiverbound, Impaler, Silverblade. The choice is a full-screen
   moment: the hero is held in place and cannot be hurt until it is made.
 - **Skills:** base skills per class, pledge skills, and ultimates that replace
-  a rank-5 base skill using an ultimate point, earned at levels 20, 40, 60, 80 and 100. Two skill
+  a rank-5 base or pledge skill using an ultimate point, earned at levels 20, 40, 60, 80 and 100. Two skill
   points a level, shared by skills and passives, and five attribute points per level; there is no
   automatic stat growth, the five points are the only growth and are spent by
   the player. The level cap is 100.

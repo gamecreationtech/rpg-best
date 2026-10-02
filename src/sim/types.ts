@@ -150,6 +150,8 @@ export interface Projectile {
   ricochets: number;
   /** Damage kept per ricochet hop. */
   ricochetDecay: number;
+  /** Every hop returns to the enemy struck just before, so the shot shuttles between two. */
+  ricochetBack: boolean;
   /** Seconds between repeat hits on the same enemy, 0 for once only; `rehitTimer` counts up to it. */
   rehit: number;
   rehitTimer: number;
@@ -186,6 +188,8 @@ export interface Zone {
   aoeRadius: number;
   targets: number;
   perWave: number;
+  /** Arrow Storm: percent of each volley aimed straight at an enemy in reach. */
+  aimedPct: number;
   triggered: boolean;
   followsPlayer: boolean;
   skillId: string | null;

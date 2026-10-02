@@ -7,7 +7,7 @@ import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { castSkill } from './skills/cast';
-import type { DamagePacket, Enemy } from './types';
+import type { DamagePacket, Enemy, SimEvent } from './types';
 import { createPlayer, unlockUltimate } from './player';
 import { SIM_DT, World } from './world';
 
@@ -187,7 +187,7 @@ describe('world', () => {
         expect(cast, `${s.id} did not cast`).toBe(true);
       }
     }
-    expect(Object.keys(SKILLS).length).toBe(84);
+    expect(Object.keys(SKILLS).length).toBe(92);
   });
 
   it('dies and respawns in town at full life', () => {
@@ -770,11 +770,12 @@ describe('arrow of beyond', () => {
 });
 
 describe('arrow storm', () => {
-  it('rains a volley on every enemy in sight every half second for ten seconds', () => {
+  const stormWorld = () => {
     const w = new World(createPlayer('rogue', 'quiverbound'), 7);
     w.travel('arena');
-    w.player.level = 20;
-    w.player.skillRanks.arrow_storm = 1;
+    w.player.level = 30;
+    w.player.mana = 1000;
+    w.player.skillRanks.arrow_storm = 5;
     const a = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
     const b = w.spawnEnemy(MONSTERS.ghoul!, w.px - 2, w.pz + 4);
     for (const e of [a, b]) {
@@ -782,14 +783,229 @@ describe('arrow storm', () => {
       e.hp = 100000;
       e.maxHp = 100000;
     }
+    return { w, a, b };
+  };
+
+  it('rains ten arrows at random around the hero every half second for ten seconds', () => {
+    const { w } = stormWorld();
     expect(castSkill(w, 'arrow_storm', null).ok).toBe(true);
     const zone = w.zones.find((z) => z.type === 'arrow_storm')!;
     expect(zone.remaining).toBeCloseTo(10, 1);
     run(w, 1.05);
-    const hits = w.events.filter((ev) => ev.type === 'zone_tick' && ev.id === zone.id).length;
-    expect(hits).toBeGreaterThanOrEqual(2);
+    const falls = w.events.filter((ev): ev is Extract<SimEvent, { type: 'zone_tick' }> => ev.type === 'zone_tick' && ev.id === zone.id);
+    expect(falls.length).toBe(20);
+    // Scattered over the whole reach, not stacked on the two monsters
+    const spots = new Set(falls.map((ev) => `${ev.x.toFixed(2)},${ev.z.toFixed(2)}`));
+    expect(spots.size).toBeGreaterThan(10);
+    for (const ev of falls) expect(Math.hypot(ev.x - w.px, ev.z - w.pz)).toBeLessThanOrEqual(zone.radius + 0.01);
+  });
+
+  it('the ultimate aims half of every volley straight at enemies in reach', () => {
+    const { w, a, b } = stormWorld();
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, 'arrow_storm')).toBe(true);
+    expect(castSkill(w, 'arrow_storm_ult', null).ok).toBe(true);
+    const zone = w.zones.find((z) => z.type === 'arrow_storm')!;
+    run(w, 1.05);
+    const falls = w.events.filter((ev): ev is Extract<SimEvent, { type: 'zone_tick' }> => ev.type === 'zone_tick' && ev.id === zone.id);
+    const onMonster = falls.filter((ev) => [a, b].some((e) => Math.hypot(ev.x - e.x, ev.z - e.z) < 0.01)).length;
+    expect(onMonster).toBeGreaterThanOrEqual(falls.length / 2);
     expect(a.hp).toBeLessThan(100000);
     expect(b.hp).toBeLessThan(100000);
+  });
+});
+
+describe('quiverbound ultimates', () => {
+  const bowWorld = () => {
+    const w = new World(createPlayer('rogue', 'quiverbound'), 7);
+    w.travel('arena');
+    w.player.level = 30;
+    w.player.mana = 1000;
+    w.player.equipment.equip(makeStarterItem('wooden_bow'), 30);
+    w.recomputeStats();
+    return w;
+  };
+  const ult = (w: World, base: string) => {
+    w.player.skillRanks[base] = 5;
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, base)).toBe(true);
+  };
+
+  it("autoaim's ultimate speeds arrows by half and adds a tenth to their damage", () => {
+    const w = bowWorld();
+    w.player.skillRanks.poison_shot = 1;
+    // Skill damage rolls the weapon's range, so compare many shots
+    const volley = (): { speed: number; damage: number; homing: boolean } => {
+      let damage = 0;
+      let speed = 0;
+      let homing = true;
+      for (let i = 0; i < 40; i++) {
+        w.attackTimer = 0;
+        w.player.mana = 1000;
+        expect(castSkill(w, 'poison_shot', { x: w.px, z: w.pz + 5 }).ok).toBe(true);
+        const p = w.projectiles.find((q) => q.alive)!;
+        damage += p.packet.amount;
+        speed = p.speed;
+        homing &&= p.homing;
+        p.alive = false;
+      }
+      return { speed, damage: damage / 40, homing };
+    };
+    const plain = volley();
+    expect(plain.homing).toBe(false);
+    ult(w, 'autoaim');
+    expect(castSkill(w, 'autoaim_ult', null).ok).toBe(true);
+    w.recomputeStats();
+    expect(w.derived.projSpeedPct).toBe(50);
+    expect(w.derived.projDmgPct).toBe(10);
+    const quick = volley();
+    expect(quick.homing).toBe(true);
+    expect(quick.speed).toBeCloseTo(plain.speed * 1.5, 3);
+    expect(quick.damage / plain.damage).toBeGreaterThan(1.04);
+    expect(quick.damage / plain.damage).toBeLessThan(1.16);
+  });
+
+  it("quickshot's ultimate adds an arrow to every shot and projectile skill", () => {
+    const w = bowWorld();
+    ult(w, 'quickshot');
+    expect(castSkill(w, 'quickshot_ult', null).ok).toBe(true);
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    e.speed = 0;
+    run(w, SIM_DT);
+    expect(w.attackOnce()).toBe(true);
+    expect(w.projectiles.filter((p) => p.alive && p.owner === 'player').length).toBe(2);
+    for (const p of w.projectiles) p.alive = false;
+    w.player.skillRanks.poison_shot = 1;
+    w.attackTimer = 0;
+    expect(castSkill(w, 'poison_shot', { x: e.x, z: e.z }).ok).toBe(true);
+    expect(w.projectiles.filter((p) => p.alive && p.owner === 'player').length).toBe(2);
+  });
+
+  it("ricochet's ultimate always bounces back to the enemy it struck before", () => {
+    const w = bowWorld();
+    ult(w, 'ricochet');
+    // Three monsters on open ground, each in sight of the others, so only the bounce rule decides where the arrow goes
+    const spots: { x: number; z: number }[] = [];
+    for (let r = 2; r <= 8 && spots.length < 3; r += 0.5) {
+      for (let k = 0; k < 16 && spots.length < 3; k++) {
+        const x = w.px + Math.cos((k / 16) * Math.PI * 2) * r;
+        const z = w.pz + Math.sin((k / 16) * Math.PI * 2) * r;
+        if (w.map.blockedAt(x, z) || w.map.lineBlocked(w.px, w.pz, x, z)) continue;
+        if (spots.some((o) => Math.hypot(o.x - x, o.z - z) < 2.5 || w.map.lineBlocked(o.x, o.z, x, z))) continue;
+        spots.push({ x, z });
+      }
+    }
+    expect(spots.length).toBe(3);
+    const [a, b, c] = spots.map((o) => w.spawnEnemy(MONSTERS.ghoul!, o.x, o.z)) as [Enemy, Enemy, Enemy];
+    for (const e of [a, b, c]) {
+      e.speed = 0;
+      e.hp = 100000;
+      e.maxHp = 100000;
+    }
+    run(w, SIM_DT);
+    expect(castSkill(w, 'ricochet_ult', { x: a.x, z: a.z }).ok).toBe(true);
+    run(w, 4);
+    const hits = (e: Enemy) => w.events.filter((ev) => ev.type === 'enemy_hit' && ev.id === e.id).length;
+    // Ten hits shared by the first two it struck, never a third
+    expect(hits(a) + hits(b)).toBe(10);
+    expect(Math.abs(hits(a) - hits(b))).toBeLessThanOrEqual(1);
+    expect(hits(c)).toBe(0);
+  });
+
+  it("arrow of beyond's ultimate raises three lesser daemons that each loose a great arrow", () => {
+    const w = bowWorld();
+    ult(w, 'arrow_of_beyond');
+    const e = w.spawnEnemy(MONSTERS.ghoul!, w.px + 4, w.pz);
+    e.speed = 0;
+    e.hp = 100000;
+    e.maxHp = 100000;
+    run(w, SIM_DT);
+    expect(castSkill(w, 'arrow_of_beyond_ult', { x: e.x, z: e.z }).ok).toBe(true);
+    const daemons = w.zones.filter((z) => z.type === 'summon');
+    expect(daemons.length).toBe(3);
+    for (const d of daemons) {
+      expect(d.radius).toBeLessThan(1);
+      expect(d.x).toBeLessThan(w.px);
+    }
+    expect(new Set(daemons.map((d) => d.z.toFixed(2))).size).toBe(3);
+    run(w, 0.75);
+    const arrows = w.projectiles.filter((p) => p.alive && p.shape === 'greatarrow');
+    expect(arrows.length).toBe(3);
+    run(w, 1.5);
+    expect(w.events.filter((ev) => ev.type === 'enemy_hit' && ev.id === e.id).length).toBeGreaterThanOrEqual(3);
+    expect(e.status.bleed).not.toBeNull();
+  });
+});
+
+describe('silverblade ultimates', () => {
+  const daggerWorld = () => {
+    const w = new World(createPlayer('rogue', 'silverblade'), 7);
+    w.travel('arena');
+    w.player.level = 30;
+    w.player.mana = 1000;
+    w.player.equipment.equip(makeStarterItem('starter_dagger'), 30);
+    w.recomputeStats();
+    return w;
+  };
+  const ult = (w: World, base: string) => {
+    w.player.skillRanks[base] = 5;
+    w.player.ultimatePoints = 1;
+    expect(unlockUltimate(w.player, base)).toBe(true);
+  };
+
+  it("cutthroat's ultimate stuns for a second and a kill hands the skill straight back", () => {
+    const w = daggerWorld();
+    ult(w, 'cutthroat');
+    const tough = w.spawnEnemy(MONSTERS.ghoul!, w.px + 3, w.pz);
+    tough.speed = 0;
+    tough.hp = 100000;
+    tough.maxHp = 100000;
+    run(w, SIM_DT);
+    expect(castSkill(w, 'cutthroat_ult', { x: tough.x, z: tough.z }).ok).toBe(true);
+    expect(tough.status.stun).toBeCloseTo(1, 2);
+    expect(w.cooldowns.cutthroat_ult).toBeGreaterThan(0);
+    // A fresh field: the same blow on something at death's door hands the skill straight back
+    const w2 = daggerWorld();
+    ult(w2, 'cutthroat');
+    const frail = w2.spawnEnemy(MONSTERS.ghoul!, w2.px + 3, w2.pz);
+    frail.speed = 0;
+    frail.hp = 1;
+    run(w2, SIM_DT);
+    expect(castSkill(w2, 'cutthroat_ult', { x: frail.x, z: frail.z }).ok).toBe(true);
+    expect(frail.dead).toBe(true);
+    expect(w2.cooldowns.cutthroat_ult).toBe(0);
+  });
+
+  it("god's hand reaches 150 px and its ultimate 300", () => {
+    const w = daggerWorld();
+    w.player.skillRanks.gods_hand = 5;
+    expect(castSkill(w, 'gods_hand', null).ok).toBe(true);
+    w.recomputeStats();
+    expect(w.derived.meleeRange).toBe(150);
+    w.buffs.length = 0;
+    w.recomputeStats();
+    ult(w, 'gods_hand');
+    expect(castSkill(w, 'gods_hand_ult', null).ok).toBe(true);
+    w.recomputeStats();
+    expect(w.derived.meleeRange).toBe(300);
+  });
+
+  it("daggers protection's ultimate spins eight daggers on a close ring and a wide one", () => {
+    const w = daggerWorld();
+    ult(w, 'daggers_protection');
+    expect(castSkill(w, 'daggers_protection_ult', null).ok).toBe(true);
+    const od = w.buffs.find((b) => b.id === 'daggers_protection_ult')!.mods.orbitDaggers!;
+    expect(od.count * (od.rings ?? 1)).toBe(8);
+    const inner = w.spawnEnemy(MONSTERS.ghoul!, w.px + od.radius / 32, w.pz);
+    const outer = w.spawnEnemy(MONSTERS.ghoul!, w.px, w.pz + (od.radius + (od.ringGap ?? 0)) / 32);
+    for (const e of [inner, outer]) {
+      e.speed = 0;
+      e.hp = 100000;
+      e.maxHp = 100000;
+    }
+    run(w, 2.5);
+    expect(inner.hp).toBeLessThan(100000);
+    expect(outer.hp).toBeLessThan(100000);
   });
 });
 

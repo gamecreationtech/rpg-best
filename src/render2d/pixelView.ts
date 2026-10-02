@@ -1,3 +1,4 @@
+import { shrunk } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -586,11 +587,12 @@ export class PixelView {
           pt.burst(z.x, 0.2, z.z, 14, 1.6, 0xd8f4ff, 0.5, { up: 1.5, priority: 0.6 });
         }
         if (z.type === 'summon') {
-          // The ground breaks open where the daemon comes up
-          this.effects.cracks(z.x, z.z, 30, 0x55cc33, 1.2, 8);
-          this.effects.ring(z.x, z.z, 0.2, 1.4, 0x55cc33, 0.5, 2, 1.2);
-          pt.burst(z.x, 0.1, z.z, 24, 2.2, 0x8a7a68, 0.6, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
-          this.view.kick(0.12);
+          // The ground breaks open where the daemon comes up; a lesser daemon (radius under one) breaks less of it
+          const big = z.radius >= 1;
+          this.effects.cracks(z.x, z.z, big ? 30 : 16, 0x55cc33, 1.2, big ? 8 : 5);
+          this.effects.ring(z.x, z.z, 0.2, big ? 1.4 : 0.8, 0x55cc33, 0.5, 2, 1.2);
+          pt.burst(z.x, 0.1, z.z, big ? 24 : 12, 2.2, 0x8a7a68, 0.6, { up: 2.5, gravity: 6, priority: 0.7, size: 2 });
+          this.view.kick(big ? 0.12 : 0.05);
         }
         if (z.type === 'smoke') {
           // The bomb pops: a flash, a fast ring, and a thick puff of smoke thrown out to the edge
@@ -850,18 +852,12 @@ export class PixelView {
   /** Arrow Storm's volley on one enemy: three big arrows plunge from the sky round it, and stick quivering in the ground a moment. */
   private arrowFall(x: number, z: number): void {
     const arrow = this.fx.bigArrow;
-    for (let i = 0; i < 3; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = i === 0 ? 0 : 0.25 + Math.random() * 0.35;
-      const ax = x + Math.cos(a) * r;
-      const az = z + Math.sin(a) * r;
-      const delay = i * 0.06;
-      // Falls from four tiles up over a fifth of a second, then stands in the ground while it fades
-      this.effects.sprite(arrow, ax, 4, az, arrow.width >> 1, arrow.height, 0.22 + delay, 'air', -4 * Y_PX, undefined, true);
-      this.effects.sprite(arrow, ax, 0.15, az, arrow.width >> 1, arrow.height, 0.9, 'air', 0, undefined, false, 0.22 + delay);
-      this.particles.burst(ax, 0.1, az, 5, 1.2, 0xc8b8a0, 0.35, { gravity: 6, up: 1.5, priority: 0.4, delay: 0.2 + delay });
-    }
-    this.effects.ring(x, z, 0.1, 0.6, 0xe8e0d0, 0.25, 1, 0.6, 0.2);
+    // Each arrow of the volley lands on its own spot a little apart in time, falling from four tiles up over a fifth of a second, then standing in the ground while it fades
+    const delay = Math.random() * 0.12;
+    this.effects.sprite(arrow, x, 4, z, arrow.width >> 1, arrow.height, 0.22 + delay, 'air', -4 * Y_PX, undefined, true);
+    this.effects.sprite(arrow, x, 0.15, z, arrow.width >> 1, arrow.height, 0.9, 'air', 0, undefined, false, 0.22 + delay);
+    this.particles.burst(x, 0.1, z, 5, 1.2, 0xc8b8a0, 0.35, { gravity: 6, up: 1.5, priority: 0.4, delay: 0.2 + delay });
+    this.effects.ring(x, z, 0.1, 0.6, 0xe8e0d0, 0.25, 1, 0.6, 0.2 + delay);
   }
 
   /** Blizzard's hit: a big snowflake drops from above and bursts into ice where it lands. */
@@ -1417,7 +1413,7 @@ export class PixelView {
         const r = Math.sqrt(Math.random()) * Math.min(z.radius, 11);
         pt.spawn(z.x + Math.cos(a) * r, 3.5 + Math.random(), z.z + Math.sin(a) * r, 0.3, -2.5, 0.3, 1.2, 0xffffff, { priority: 0.35, alpha: 0.8 });
       }
-      if (z.type === 'arrow_storm' && Math.random() < dt * 8) {
+      if (z.type === 'arrow_storm' && Math.random() < dt * 3) {
         // Stray arrows dropping across the field between volleys
         const a = Math.random() * Math.PI * 2;
         const r = Math.sqrt(Math.random()) * Math.min(z.radius, 9);
@@ -1703,7 +1699,7 @@ export class PixelView {
       const shape: ProjectileShape = od.shape ?? 'dagger';
       const color = shape === 'hammer' ? 0xffd860 : shape === 'star' ? 0xffe070 : 0xe8e0d0;
       const prop = this.projectileProp(shape, color);
-      const rings = od.stacks ? b.data.rings ?? 1 : 1;
+      const rings = od.stacks ? b.data.rings ?? 1 : od.rings ?? 1;
       for (let ring = 0; ring < rings; ring++) {
       for (let i = 0; i < od.count; i++) {
         // Drawn exactly where the simulation's hit box is
@@ -1797,7 +1793,7 @@ export class PixelView {
       if (w.buffs.some((b) => b.id === 'fire_armor')) this.drawArmorBubble(heroY, 'fire');
       if (w.buffs.some((b) => b.id === 'frozen_armor')) this.drawArmorBubble(heroY, 'ice');
       if (w.zones.some((z) => z.type === 'wind' && z.followsPlayer)) this.drawTornado(heroY);
-      if (w.buffs.some((b) => b.id === 'quickshot')) this.drawQuickWind(heroY);
+      if (w.buffs.some((b) => b.id === 'quickshot' || b.id === 'quickshot_ult')) this.drawQuickWind(heroY);
       if (w.buffs.some((b) => b.mods.deflect)) this.drawWindBarrier(heroY);
       if (w.buffs.some((b) => b.mods.overload)) this.drawOverload(heroY);
       if (w.buffs.some((b) => b.mods.holyBlade)) this.drawHolyBlade(heroY);
@@ -2056,7 +2052,7 @@ export class PixelView {
       this.skyLight(z);
     }
     // Buff aura under the hero: Autoaim draws a target reticle instead of the plain glow
-    if (w.buffs.some((b) => b.id === 'autoaim')) this.drawReticle(ctx);
+    if (w.buffs.some((b) => b.id === 'autoaim' || b.id === 'autoaim_ult')) this.drawReticle(ctx);
     else {
       const buff = w.buffs[0];
       if (buff) ellipse(w.px, w.pz, 0.9, cssOf(buff.color), true, 0.18 + Math.sin(this.time * 6) * 0.06);
@@ -2286,7 +2282,9 @@ export class PixelView {
   private drawDaemon(z: Zone): void {
     const cam = this.view;
     const ctx = this.ctx;
-    const frames = this.fx.daemon;
+    // The ultimate's lesser daemons are half the size: the same frames shrunk by a whole factor once and cached
+    const lesser = z.radius < 1;
+    const frames = lesser ? this.fx.daemon.map((f) => shrunk(f, 2)) : this.fx.daemon;
     const age = z.duration - z.remaining;
     const riseTime = 0.5;
     const sinkTime = 0.35;
@@ -2314,7 +2312,7 @@ export class PixelView {
       const a = Math.random() * Math.PI * 2;
       this.particles.spawn(z.x + Math.cos(a) * 0.5, 0.05, z.z + Math.sin(a) * 0.5, Math.cos(a) * 1.2, 1.5 + Math.random(), Math.sin(a) * 1.2, 0.5, Math.random() < 0.5 ? 0x6a5a48 : 0x9a8a70, { gravity: 6, priority: 0.5, size: 2 });
     }
-    if (rise > 0.6) this.lights.push({ x: fx + (flip ? -2 : 2), y: fy - Math.round(46 * rise), radius: 50, intensity: 1.2 + (loosed ? 0.6 : 0), r: 0.5, g: 1, b: 0.35 });
+    if (rise > 0.6) this.lights.push({ x: fx + (flip ? -2 : 2), y: fy - Math.round((lesser ? 23 : 46) * rise), radius: lesser ? 32 : 50, intensity: (lesser ? 0.8 : 1.2) + (loosed ? 0.6 : 0), r: 0.5, g: 1, b: 0.35 });
   }
 
   /**

@@ -102,6 +102,10 @@ export interface DerivedStats {
   /** Bonus melee reach or projectile range in px. */
   range: number;
   projSpeedPct: number;
+  /** Percent more damage on arrows, bolts and every projectile skill (a buff's doing). */
+  projDmgPct: number;
+  /** Extra arrows on every shot and projectile skill (a buff's doing). */
+  extraProjectiles: number;
   /** Extra projectiles on every projectile skill. */
   split: number;
   /** Percent more damage on the sworn pledge's skills. */
@@ -232,6 +236,9 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
   let atkSpdPct = g('atkSpdPct');
   let dmgPct = 0;
   let moveSpdPct = 0;
+  let projSpeedPct = g('projSpeed');
+  let projDmgPct = 0;
+  let extraProjectiles = 0;
   let meleeRangeOverride = 0;
   const mods: BuffMods[] = [zoneMods, ...buffs.map((b) => b.mods)];
   // A complete set's percentage modifiers count like a buff that never ends
@@ -244,6 +251,9 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     atkSpdPct += m.atkSpdPct ?? 0;
     dmgPct += m.dmgPct ?? 0;
     moveSpdPct += m.moveSpdPct ?? 0;
+    projSpeedPct += m.projSpeedPct ?? 0;
+    projDmgPct += m.projDmgPct ?? 0;
+    extraProjectiles += m.extraProjectiles ?? 0;
     if (m.meleeRange) meleeRangeOverride = Math.max(meleeRangeOverride, m.meleeRange);
   }
 
@@ -291,7 +301,9 @@ export function deriveStats(p: PlayerState, buffs: Buff[], zoneMods: BuffMods, e
     poisonChance: g('poisonChance'),
     burnChance: g('burnChance'),
     range: g('range'),
-    projSpeedPct: g('projSpeed'),
+    projSpeedPct,
+    projDmgPct,
+    extraProjectiles,
     split: g('split'),
     pledgeDmgPct: g('pledgeDmgPct'),
     energyShieldPct: g('energyShieldPct'),

@@ -68,6 +68,7 @@ export interface ProjectileSpec {
   pierce?: number;
   homing?: boolean;
   ricochets?: number;
+  ricochetBack?: boolean;
   returns?: boolean;
   throughWalls?: boolean;
   splashRadius?: number;
@@ -769,7 +770,7 @@ export class World {
   addZone(spec: Partial<Zone> & { type: ZoneType; x: number; z: number; radius: number; duration: number; damage: number; element: Element }): Zone {
     const zone: Zone = {
       id: this.nextZoneId++,
-      dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0,
+      dx: 0, dz: 0, length: 0, remaining: spec.duration, tickTimer: 0, tickInterval: 0.5, slow: 0, slowPct: 0, holds: false, aoeRadius: 0, targets: 0, perWave: 0, aimedPct: 0,
       triggered: false, followsPlayer: false, skillId: null, hit: [], count: 0, mods: null, onEnd: null, onFire: null, pctPerSec: 0, freezeAfter: 0, freeze: 0, stun: 0, knockback: 0, wallMult: 1, pull: 0,
       ...spec,
     };
@@ -804,6 +805,7 @@ export class World {
     p.homingTarget = -1;
     p.ricochets = spec.ricochets ?? 0;
     p.ricochetDecay = spec.ricochetDecay ?? 1;
+    p.ricochetBack = !!spec.ricochetBack;
     p.rehit = spec.rehit ?? 0;
     p.rehitTimer = 0;
     p.returns = !!spec.returns;
@@ -1443,7 +1445,7 @@ export class World {
   private tickOrbit(b: Buff, dt: number): void {
     const od = b.mods.orbitDaggers!;
     b.data.angle = (b.data.angle ?? 0) + dt * (od.spin ?? 3.2);
-    const rings = od.stacks ? b.data.rings ?? 1 : 1;
+    const rings = od.stacks ? b.data.rings ?? 1 : od.rings ?? 1;
     // The buff carries its skill's id, so the damage is that skill's
     const def = SKILLS[b.id] ?? SKILLS.daggers_protection!;
     const dmg = Math.round(skillDamageFor(this, def.id, od.damageMult));
@@ -1720,12 +1722,21 @@ export class World {
     if (d.isRanged) {
       const homing = this.buffs.some((b) => b.mods.homingArrows);
       const shape: ProjectileShape = d.isMagicWeapon ? 'bolt' : 'arrow';
-      this.spawnProjectile({
-        owner: 'player', shape, element: 'physical', x: this.px + dirX * 0.5, z: this.pz + dirZ * 0.5, dirX, dirZ,
-        speed: 480 * PX * (1 + d.projSpeedPct / 100), radius: 0.22, maxRange: reach + 1,
-        packet: { amount, element: 'physical', canCrit: true, skillId: null, weaponHit: true },
-        pierce: shape === 'arrow' ? d.pierce : 0, homing,
-      });
+      // A buff can add arrows to every shot (Quickshot's ultimate): a narrow fan, 8 degrees per extra arrow
+      const count = 1 + d.extraProjectiles;
+      const spread = ((8 * d.extraProjectiles) * Math.PI) / 180;
+      const shot = Math.max(1, Math.round(amount * (1 + d.projDmgPct / 100)));
+      for (let i = 0; i < count; i++) {
+        const a = count > 1 ? this.pyaw - spread / 2 + (spread * i) / (count - 1) : this.pyaw;
+        const ax = Math.sin(a);
+        const az = Math.cos(a);
+        this.spawnProjectile({
+          owner: 'player', shape, element: 'physical', x: this.px + ax * 0.5, z: this.pz + az * 0.5, dirX: ax, dirZ: az,
+          speed: 480 * PX * (1 + d.projSpeedPct / 100), radius: 0.22, maxRange: reach + 1,
+          packet: { amount: shot, element: 'physical', canCrit: true, skillId: null, weaponHit: true },
+          pierce: shape === 'arrow' ? d.pierce : 0, homing,
+        });
+      }
     } else {
       this.emit({ type: 'melee_swing', x: this.px, z: this.pz, dirX, dirZ, range: reach, arc: 70, element: 'physical' });
       if (t) hitEnemy(this, t, { amount, element: 'physical', canCrit: true, skillId: null, weaponHit: true });
@@ -2102,7 +2113,7 @@ export class World {
   private blankProjectile(id: number): Projectile {
     return {
       id, alive: false, owner: 'player', shape: 'bolt', element: 'physical', x: 0, z: 0, y: 1, vx: 0, vz: 0, speed: 0, radius: 0.2, traveled: 0, maxRange: 1,
-      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0, ricochetDecay: 1, rehit: 0, rehitTimer: 0,
+      packet: { amount: 0, element: 'physical', canCrit: false, skillId: null, weaponHit: false }, pierce: 0, hit: [], homing: false, homingTarget: -1, ricochets: 0, ricochetDecay: 1, ricochetBack: false, rehit: 0, rehitTimer: 0,
       returns: false, returning: false, throughWalls: false, splashRadius: 0, onHitZone: null, burstOnHit: null, skillId: null,
     };
   }
@@ -2180,7 +2191,14 @@ export class World {
             }
           }
           if (p.ricochets > 0) {
-            const next = this.nearestEnemy(p.x, p.z, 9, p.hit);
+            // The ultimate shuttles: back to the enemy struck just before, as long as it still stands
+            let next: Enemy | null = null;
+            if (p.ricochetBack) {
+              const prev = p.hit.length >= 2 ? this.enemies[p.hit[p.hit.length - 2]!] : undefined;
+              if (prev && prev.alive && !prev.dead) next = prev;
+              p.hit.splice(0, p.hit.length - 1);
+            }
+            next ??= this.nearestEnemy(p.x, p.z, 9, p.hit);
             if (next) {
               p.ricochets--;
               p.traveled = 0;
@@ -2306,12 +2324,26 @@ export class World {
           }
           break;
         case 'arrow_storm':
-          // A volley on every enemy in sight each tick; the renderer drops the arrows where each one stands
+          // A volley of arrows each tick, falling wherever they may; the ultimate aims a share of them at enemies in reach. The renderer drops an arrow at every landing spot
           while (z.tickTimer >= z.tickInterval) {
             z.tickTimer -= z.tickInterval;
-            for (const e of this.enemiesWithin(z.x, z.z, z.radius)) {
-              this.emit({ type: 'zone_tick', id: z.id, x: e.x, z: e.z });
-              hitEnemy(this, e, packetFor());
+            const inSight = this.enemiesWithin(z.x, z.z, z.radius);
+            const aimed = Math.ceil((z.perWave * z.aimedPct) / 100);
+            for (let k = 0; k < z.perWave; k++) {
+              let fx: number;
+              let fz: number;
+              if (k < aimed && inSight.length) {
+                const t = inSight[this.rng.int(0, inSight.length - 1)]!;
+                fx = t.x;
+                fz = t.z;
+              } else {
+                const a = this.rng.range(0, Math.PI * 2);
+                const r = Math.sqrt(this.rng.next()) * z.radius;
+                fx = z.x + Math.cos(a) * r;
+                fz = z.z + Math.sin(a) * r;
+              }
+              this.emit({ type: 'zone_tick', id: z.id, x: fx, z: fz });
+              for (const e of this.enemiesWithin(fx, fz, z.aoeRadius)) hitEnemy(this, e, packetFor());
             }
           }
           break;

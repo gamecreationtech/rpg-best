@@ -173,6 +173,8 @@ function castMelee(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'm
         w.emit({ type: 'enemy_hit', id: target.id });
       } else {
         hitEnemy(w, target, packet(w, def, eff.damageMult, { stun: eff.stun, slow: eff.slow, healOnKillPct: eff.healOnKillPct }, eff.scalesWithInt));
+        // A killing blow hands the skill straight back
+        if (eff.resetOnKill && target.dead) w.cooldowns[def.id] = 0;
       }
       if (eff.leap) {
         for (const e of w.enemiesWithin(w.px, w.pz, eff.leap.landingRadius * PX)) {
@@ -212,15 +214,16 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
   const dir = facing(w, at, null);
   pay(w, def, dir, at.x, at.z);
   // Split Shot adds projectiles to every projectile skill; a single shot opens into a narrow fan
-  const split = w.derived.split;
+  const split = w.derived.split + w.derived.extraProjectiles;
   const count = (eff.count ?? 1) + split;
   const spread = ((eff.spreadAngle ?? (split > 0 ? 8 * split : 0)) * Math.PI) / 180;
   const homing = !!eff.homing || (eff.shape === 'arrow' && w.buffs.some((b) => b.mods.homingArrows));
   const baseAngle = Math.atan2(dir.x, dir.z);
-  const loose = (fromX: number, fromZ: number, y?: number): void => {
+  const loose = (fromX: number, fromZ: number, y?: number, aimAngle = baseAngle): void => {
     for (let i = 0; i < count; i++) {
-      const a = count > 1 ? baseAngle - spread / 2 + (spread * i) / (count - 1) : baseAngle;
+      const a = count > 1 ? aimAngle - spread / 2 + (spread * i) / (count - 1) : aimAngle;
       const p = packet(w, def, eff.damageMult, { stun: eff.stun, bonusVsDisabled: eff.bonusVsDisabled });
+      if (w.derived.projDmgPct) p.amount = Math.max(1, Math.round(p.amount * (1 + w.derived.projDmgPct / 100)));
       if (eff.bleed) p.bleed = { ticks: eff.bleed.ticks, interval: eff.bleed.interval, damage: Math.max(1, Math.round(p.amount * eff.bleed.tickMult)) };
       w.spawnProjectile({
         owner: 'player',
@@ -238,6 +241,7 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
         pierce: eff.pierce ?? (eff.shape === 'arrow' ? w.derived.pierce : 0),
         homing,
         ricochets: eff.ricochets ?? 0,
+        ricochetBack: !!eff.ricochetBack,
       ricochetDecay: eff.ricochetDecay,
       rehit: eff.rehit ? eff.rehit * MS : 0,
         returns: !!eff.returns,
@@ -250,17 +254,25 @@ function castProjectile(w: World, def: SkillDef, eff: Extract<SkillEffect, { kin
     }
   };
   if (eff.summon) {
-    // Something rises behind the hero and looses the shot from there once it stands
-    const sx = w.px - dir.x * eff.summon.behind * PX;
-    const sz = w.pz - dir.z * eff.summon.behind * PX;
-    const delay = eff.summon.delay * MS;
-    w.addZone({
-      type: 'summon', x: sx, z: sz, dx: dir.x, dz: dir.z, radius: 1, duration: delay + 0.9, tickInterval: delay, damage: 0, element: def.element, skillId: def.id,
-      onFire: () => {
-        loose(sx, sz, 2.4);
-        w.emit({ type: 'kick', k: 0.18 });
-      },
-    });
+    // Something rises behind the hero and looses the shot from there once it stands; several stand in a line across the line of fire, each aiming at the mark
+    const summon = eff.summon;
+    const shooters = summon.count ?? 1;
+    const bx = w.px - dir.x * summon.behind * PX;
+    const bz = w.pz - dir.z * summon.behind * PX;
+    const delay = summon.delay * MS;
+    for (let i = 0; i < shooters; i++) {
+      const side = (i - (shooters - 1) / 2) * (summon.spread ?? 0) * PX;
+      const sx = bx - dir.z * side;
+      const sz = bz + dir.x * side;
+      const aimAngle = Math.atan2(at.x - sx, at.z - sz);
+      w.addZone({
+        type: 'summon', x: sx, z: sz, dx: Math.sin(aimAngle), dz: Math.cos(aimAngle), radius: summon.lesser ? 0.5 : 1, duration: delay + 0.9, tickInterval: delay, damage: 0, element: def.element, skillId: def.id,
+        onFire: () => {
+          loose(sx, sz, summon.lesser ? 1.4 : 2.4, aimAngle);
+          w.emit({ type: 'kick', k: summon.lesser ? 0.08 : 0.18 });
+        },
+      });
+    }
   } else {
     loose(w.px, w.pz);
   }
@@ -404,7 +416,7 @@ function castZone(w: World, def: SkillDef, eff: Extract<SkillEffect, { kind: 'zo
       w.addZone({ ...common, type: 'storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 1000) * MS, targets: eff.targets ?? 5 });
       break;
     case 'arrow_storm':
-      w.addZone({ ...common, type: 'arrow_storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 500) * MS });
+      w.addZone({ ...common, type: 'arrow_storm', followsPlayer: true, tickInterval: (eff.tickInterval ?? 500) * MS, perWave: eff.perWave ?? 10, aoeRadius: (eff.aoeRadius ?? 32) * PX, aimedPct: eff.aimedPct ?? 0 });
       break;
     case 'frostbite':
       w.addZone({ ...common, type: 'frostbite', tickInterval: (eff.tickInterval ?? 500) * MS, slow: (eff.slow ?? 1000) * MS, pctPerSec: eff.pctPerSec ?? 2, freezeAfter: (eff.freezeAfter ?? 3000) * MS, freeze: 1.5 });

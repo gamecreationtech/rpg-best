@@ -86,10 +86,11 @@ What that means for each kind of asset:
   ultimate's smoke bomb pops with a flash and a puff thrown to the edge, then
   billows fat grey puffs over a layered floor cloud under a murky shade.
   Arrow Storm is a ten-second zone that follows the hero: every half second
-  a volley hits every enemy in its 600px reach, and the renderer drops three
-  big generated arrows from four tiles up onto each one, leaving them standing
-  in the ground a moment, with stray arrows falling across the field between
-  volleys. Autoaim draws a green target reticle under the hero instead of the
+  ten arrows fall at random within its 260px reach (`perWave`), each hitting
+  what stands within a tile of it; the ultimate aims half of them at enemies
+  in reach (`aimedPct`). The renderer drops a big generated arrow from four
+  tiles up on every landing spot, leaving it standing in the ground a moment,
+  with a few stray arrows between volleys. Autoaim draws a green target reticle under the hero instead of the
   plain buff glow; Quickshot whips three wind streaks round the hero's waist.
   Arrow of Beyond is a projectile with `summon`: a `summon` zone appears
   `behind` px back along the line of fire, fires the shot from there once
@@ -97,6 +98,10 @@ What that means for each kind of asset:
   renderer draws a generated two-frame daemon there, clipped at the floor as
   it rises and sinks, bow drawn until the shot, and the `greatarrow` shape is
   a hero-long black arrow with blinking green runes, a green wake and light.
+  The ultimate's `summon.count` raises three of them `spread` px apart across
+  the line of fire, each aiming at the mark; `lesser` makes the zone's radius
+  0.5 and the renderer draws the same frames shrunk by two (`shrunk`), never
+  by a fraction.
   The Wintercaller's five: Ice Lance is a piercing `lance` projectile with
   `bonusVsDisabled`; Frostbite a `frostbite` zone (drain, slow, chill to a
   freeze) drawn as hoarfrost with glitter; Frost Step a teleport that leaves a
