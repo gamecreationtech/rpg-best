@@ -327,7 +327,7 @@ export function addXp(p: PlayerState, amount: number): LevelUpResult {
     p.xpToNext = xpForLevel(p.level);
     p.statPoints += LEVELING.statPointsPerLevel;
     p.skillPoints += LEVELING.skillPointsPerLevel;
-    if (p.level === LEVELING.ultimatePointLevel) {
+    if (LEVELING.ultimatePointLevels.includes(p.level)) {
       p.ultimatePoints++;
       result.ultimatePointGained = true;
     }

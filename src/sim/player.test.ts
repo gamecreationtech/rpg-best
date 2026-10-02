@@ -154,9 +154,12 @@ describe('player', () => {
     const p = createPlayer('rogue', 'quiverbound');
     expect(unlockedSlots(1)).toBe(6);
     expect(unlockedSlots(20)).toBe(6);
-    while (p.level < 20) addXp(p, 100000);
-    expect(p.level).toBeGreaterThanOrEqual(20);
+    while (p.level < 20) addXp(p, p.xpToNext - p.xp);
+    expect(p.level).toBe(20);
     expect(p.ultimatePoints).toBe(1);
+    // Another at 40, 60, 80 and 100
+    while (p.level < 40) addXp(p, p.xpToNext - p.xp);
+    expect(p.ultimatePoints).toBe(2);
     for (let i = 0; i < 4; i++) learnSkill(p, 'dagger_throw');
     expect(canUnlockUltimate(p, 'dagger_throw').ok).toBe(true);
     expect(unlockUltimate(p, 'dagger_throw')).toBe(true);

@@ -181,6 +181,8 @@ export class HeroMenu {
     const oldContent = body.querySelector<HTMLElement>('.px-content');
     const keepScroll = oldContent && oldContent.dataset.tab === this.tab ? oldContent.scrollTop : 0;
     const keepStats = body.querySelector<HTMLElement>('.px-stats')?.scrollTop ?? 0;
+    const keepSkills = body.querySelector<HTMLElement>('.px-skillbook > .px-skills')?.scrollTop ?? 0;
+    const keepPassives = body.querySelector<HTMLElement>('.px-skillbook > .px-passives')?.scrollTop ?? 0;
     clear(body);
     const w = this.host.world;
     const p = w.player;
@@ -200,7 +202,8 @@ export class HeroMenu {
       h('div', { class: 'px-tabs-title' }, pxText(`${pledge ? pledge.name + ' ' : ''}${cls.name}  Lv ${p.level}`, { color: hex(pledge ? pledge.color : cls.color) })),
       pbtn('X', () => this.host.close(), 'btn'),
     );
-    const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : '') });
+    // The inventory and, with a mouse, the skill book fill the window and scroll inside their own columns
+    const content = h('div', { class: 'px-content' + (this.tab === 'inventory' ? ' fixed' : this.tab === 'skills' && this.mouse ? ' fixed column' : '') });
     // The window goes into the page first so the inventory can measure the room it has
     body.append(h('div', { class: 'px-window' + (this.mouse ? '' : ' touch') }, tabs, content));
     content.dataset.tab = this.tab;
@@ -211,6 +214,10 @@ export class HeroMenu {
     if (keepScroll) content.scrollTop = keepScroll;
     const stats = content.querySelector<HTMLElement>('.px-stats');
     if (stats && keepStats) stats.scrollTop = keepStats;
+    const skills = content.querySelector<HTMLElement>('.px-skillbook > .px-skills');
+    if (skills && keepSkills) skills.scrollTop = keepSkills;
+    const passives = content.querySelector<HTMLElement>('.px-skillbook > .px-passives');
+    if (passives && keepPassives) passives.scrollTop = keepPassives;
   }
 
   // ---------------------------------------------------------------- inventory
