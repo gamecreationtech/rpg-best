@@ -1,4 +1,4 @@
-import { CLASSES } from '../../data/classes';
+import { kinOf, CLASSES } from '../../data/classes';
 import { EQUIP_SLOTS, RARITIES } from '../../data/items';
 import { SETS, describeSetBonus } from '../../data/sets';
 import { armorReduction } from '../../sim/combat';
@@ -852,7 +852,7 @@ export class HeroMenu {
     const pledgeTree = pledge
       ? tree(`${pledge.name} Passives`, hex(pledge.color), PLEDGE_TREES[pledge.id] ?? [])
       : h('div', { class: 'px-tree' }, h('div', { class: 'px-group-head' }, pxText('Pledge Passives', { color: MUTED })), pxText('Swear a pledge at level 20 to open this tree.', { color: MUTED, scale: 1 }));
-    passives.append(h('div', { class: 'px-trees' }, tree('Standard Passives', GOLD, GENERAL_TREE), tree(`${CLASSES[p.classId].name} Passives`, hex(CLASSES[p.classId].color), CLASS_TREES[p.classId]), pledgeTree));
+    passives.append(h('div', { class: 'px-trees' }, tree('Standard Passives', GOLD, GENERAL_TREE), tree(`${CLASSES[p.classId].name} Passives`, hex(CLASSES[p.classId].color), CLASS_TREES[kinOf(p.classId)] ?? []), pledgeTree));
     return passives;
   }
 }

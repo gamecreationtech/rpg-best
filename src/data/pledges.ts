@@ -1,4 +1,4 @@
-import type { ClassId } from './classes';
+import { kinOf, type ClassId } from './classes';
 
 export interface PledgeDef {
   id: string;
@@ -67,5 +67,6 @@ export const PLEDGES: Record<string, PledgeDef> = {
 };
 
 export function pledgesFor(classId: ClassId): PledgeDef[] {
-  return Object.values(PLEDGES).filter((p) => p.classId === classId);
+  const kin = kinOf(classId);
+  return Object.values(PLEDGES).filter((p) => p.classId === kin);
 }

@@ -1,4 +1,4 @@
-import type { ClassId } from './classes';
+import { kinOf, type ClassId } from './classes';
 import type { StatKey } from './stats';
 
 /** One passive: each rank adds every effect once. No prerequisites (producer's list, 2026-10-02). */
@@ -24,7 +24,7 @@ export const GENERAL_TREE: PassiveDef[] = [
 ];
 
 /** Class passives. */
-export const CLASS_TREES: Record<ClassId, PassiveDef[]> = {
+export const CLASS_TREES: Partial<Record<ClassId, PassiveDef[]>> = {
   knight: [
     one('kn_life', 'Iron Constitution', 4, 'life', 25),
     one('kn_armor', 'Plated', 4, 'armor', 10),
@@ -99,5 +99,5 @@ export const PLEDGE_TREES: Record<string, PassiveDef[]> = {
 
 /** Every passive a hero can learn: the standard tree, the class tree and, once sworn, the pledge tree. */
 export function passivesFor(classId: ClassId, pledgeId: string | null = null): PassiveDef[] {
-  return [...GENERAL_TREE, ...CLASS_TREES[classId], ...(pledgeId ? PLEDGE_TREES[pledgeId] ?? [] : [])];
+  return [...GENERAL_TREE, ...(CLASS_TREES[kinOf(classId)] ?? []), ...(pledgeId ? PLEDGE_TREES[pledgeId] ?? [] : [])];
 }

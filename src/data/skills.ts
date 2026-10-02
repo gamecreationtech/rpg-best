@@ -1,4 +1,4 @@
-import type { ClassId } from './classes';
+import { kinOf, type ClassId } from './classes';
 import type { Element } from './stats';
 
 export type SkillTier = 'base' | 'ultimate' | 'pledge';
@@ -362,7 +362,8 @@ export const SKILL_RULES = {
 };
 
 export function skillsFor(classId: ClassId, pledgeId: string | null): SkillDef[] {
-  return Object.values(SKILLS).filter((s) => s.classId === classId && (s.tier !== 'pledge' || s.pledgeId === pledgeId) && (!s.hidden || SKILL_RULES.showHidden));
+  const kin = kinOf(classId);
+  return Object.values(SKILLS).filter((s) => s.classId === kin && (s.tier !== 'pledge' || s.pledgeId === pledgeId) && (!s.hidden || SKILL_RULES.showHidden));
 }
 
 export function skill(id: string): SkillDef {

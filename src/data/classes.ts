@@ -1,6 +1,6 @@
 import type { WeaponType } from './items';
 
-export type ClassId = 'knight' | 'sorcerer' | 'rogue';
+export type ClassId = 'knight' | 'sorcerer' | 'sorcerer2' | 'rogue';
 
 export interface BaseStats {
   str: number;
@@ -12,6 +12,8 @@ export interface BaseStats {
 export interface ClassDef {
   id: ClassId;
   name: string;
+  /** A twin of another class: it plays exactly as that one (skills, passives, pledges, look), under its own name. */
+  kin?: ClassId;
   color: number;
   description: string;
   base: BaseStats;
@@ -66,6 +68,22 @@ export const CLASSES: Record<ClassId, ClassDef> = {
     pledges: ['necromancer', 'stormsinger', 'wintercaller'],
     preferredWeapons: ['staff', 'wand', 'spellbook'],
   },
+  sorcerer2: {
+    id: 'sorcerer2',
+    kin: 'sorcerer',
+    name: 'Sorcerer2',
+    color: 0xaa55ee,
+    description: 'A master of arcane arts who bends elemental forces to devastating effect at range.',
+    base: { str: 5, dex: 5, int: 10, vit: 10 },
+    perLevel: { str: 0, dex: 0, int: 0, vit: 0 },
+    baseHp: 100,
+    baseMana: 100,
+    hpPerVit: 10,
+    manaPerInt: 10,
+    startingGear: ['wooden_staff'],
+    pledges: ['necromancer', 'stormsinger', 'wintercaller'],
+    preferredWeapons: ['staff', 'wand', 'spellbook'],
+  },
   rogue: {
     id: 'rogue',
     name: 'Rogue',
@@ -85,7 +103,12 @@ export const CLASSES: Record<ClassId, ClassDef> = {
   },
 };
 
-export const CLASS_LIST: ClassDef[] = [CLASSES.knight, CLASSES.sorcerer, CLASSES.rogue];
+export const CLASS_LIST: ClassDef[] = [CLASSES.knight, CLASSES.sorcerer, CLASSES.sorcerer2, CLASSES.rogue];
+
+/** The class whose skills, passives, pledges and look a class uses: itself, or the one it is a twin of. */
+export function kinOf(classId: ClassId): ClassId {
+  return CLASSES[classId]?.kin ?? classId;
+}
 
 /** Per level: +5 stat points, +1 skill point, +1 passive point. Level 20 grants an ultimate point. */
 export const LEVELING = {

@@ -1,4 +1,4 @@
-import type { ClassId } from '../../data/classes';
+import { kinOf, type ClassId } from '../../data/classes';
 import type { MonsterLook } from '../../data/monsters';
 import type { WeaponType } from '../../data/items';
 import { PLEDGES } from '../../data/pledges';
@@ -668,27 +668,29 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
   const H = size === 'large' ? 44 : 22;
   const W = Math.round(H * 0.7);
   const pledge = look.pledgeId ? PLEDGES[look.pledgeId] : null;
-  const bright = pledge?.color ?? (look.classId === 'knight' ? 0x3858c8 : look.classId === 'sorcerer' ? 0x5a3a8a : 0x4a6a3a);
+  // A twin class dresses as its kin
+  const kin = kinOf(look.classId);
+  const bright = pledge?.color ?? (kin === 'knight' ? 0x3858c8 : kin === 'sorcerer' ? 0x5a3a8a : 0x4a6a3a);
   const cloth = pledge ? (pledge.cloth ?? darken(pledge.color, 0.55)) : bright;
   const materials = {
     skin: pal.skin,
     cloth,
     trim: pledge?.armor?.trim ?? (pledge ? pledge.color : pal.heroTrim),
     // A rogue's leathers and a knight's plate take the pledge's colours once sworn
-    leather: look.classId === 'rogue' && pledge?.armor ? pledge.armor.plate : pal.leather,
-    leatherDark: look.classId === 'rogue' && pledge?.armor ? pledge.armor.dark : darken(pal.leather, 0.8),
-    steel: look.classId === 'knight' && pledge?.armor ? pledge.armor.plate : pal.steel,
+    leather: kin === 'rogue' && pledge?.armor ? pledge.armor.plate : pal.leather,
+    leatherDark: kin === 'rogue' && pledge?.armor ? pledge.armor.dark : darken(pal.leather, 0.8),
+    steel: kin === 'knight' && pledge?.armor ? pledge.armor.plate : pal.steel,
     wood: pal.wood,
     bone: pal.bone,
-    cape: look.classId === 'knight' && pledge?.armor ? pledge.armor.dark : look.classId === 'knight' ? 0x5a6070 : cloth,
-    steelDark: look.classId === 'knight' && pledge?.armor ? pledge.armor.dark : 0x5a6070,
-    hood: look.classId === 'sorcerer' ? darken(cloth, 0.8) : look.classId === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
+    cape: kin === 'knight' && pledge?.armor ? pledge.armor.dark : kin === 'knight' ? 0x5a6070 : cloth,
+    steelDark: kin === 'knight' && pledge?.armor ? pledge.armor.dark : 0x5a6070,
+    hood: kin === 'sorcerer' ? darken(cloth, 0.8) : kin === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
   };
   // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour
   const heroLook: Look =
-    look.classId === 'knight'
+    kin === 'knight'
       ? { skin: 'skin', body: 'steel', head: 'steel', legs: 'steelDark', arms: 'steel', trim: 'trim', belt: 'steelDark', helm: true, cape: 'cape' }
-      : look.classId === 'sorcerer'
+      : kin === 'sorcerer'
         ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leatherDark', arms: 'skin', trim: 'trim', hood: true };
   // Only what is actually equipped is drawn: no weapon means empty hands

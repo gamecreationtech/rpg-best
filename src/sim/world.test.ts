@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { MONSTERS, MONSTER_RULES, monsterScale } from '../data/monsters';
-import { powerCurve } from '../data/classes';
+import { CLASSES, CLASS_LIST, powerCurve } from '../data/classes';
 import { ZONES } from '../data/zones';
+import { passivesFor } from '../data/passives';
+import { pledgesFor } from '../data/pledges';
 import { SKILLS, SKILL_RULES, skillsFor } from '../data/skills';
 import { makeItem, makeStarterItem } from './items/item';
 import { baseItem } from '../data/items';
 import { armorReduction, damagePlayer, hitEnemy } from './combat';
 import { castSkill } from './skills/cast';
 import type { DamagePacket, Enemy, SimEvent } from './types';
-import { createPlayer, unlockUltimate } from './player';
+import { createPlayer, deriveStats, unlockUltimate } from './player';
 import { SIM_DT, World } from './world';
 
 function run(w: World, seconds: number): void {
@@ -214,6 +216,23 @@ describe('world', () => {
     w.respawn();
     expect(w.area).toBe('town');
     expect(w.player.hp).toBe(w.derived.maxHp);
+  });
+});
+
+describe('twin classes', () => {
+  it('Sorcerer2 plays exactly as the Sorcerer: same skills, passives, pledges and stats', () => {
+    const ids = (list: { id: string }[]) => list.map((d) => d.id);
+    expect(ids(skillsFor('sorcerer2', null))).toEqual(ids(skillsFor('sorcerer', null)));
+    expect(ids(skillsFor('sorcerer2', 'wintercaller'))).toEqual(ids(skillsFor('sorcerer', 'wintercaller')));
+    expect(ids(passivesFor('sorcerer2', 'necromancer'))).toEqual(ids(passivesFor('sorcerer', 'necromancer')));
+    expect(ids(pledgesFor('sorcerer2'))).toEqual(ids(pledgesFor('sorcerer')));
+    const twin = createPlayer('sorcerer2', null);
+    const one = createPlayer('sorcerer', null);
+    expect(deriveStats(twin, [], {}).maxHp).toBe(deriveStats(one, [], {}).maxHp);
+    expect(deriveStats(twin, [], {}).int).toBe(deriveStats(one, [], {}).int);
+    expect(twin.equipment.get('weapon')?.baseId).toBe(one.equipment.get('weapon')?.baseId);
+    expect(CLASSES.sorcerer2!.name).toBe('Sorcerer2');
+    expect(CLASS_LIST.map((c) => c.id)).toContain('sorcerer2');
   });
 });
 
