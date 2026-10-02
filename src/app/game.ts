@@ -16,7 +16,7 @@ import { GameCursor } from '../ui/game/cursor';
 import { DevMenu } from '../ui/game/devMenu';
 import { canFullscreen, enterFullscreen, exitFullscreen, installHint, isFullscreen, isStandalone, isTouchDevice } from './fullscreen';
 import { Input } from './input';
-import { deleteSave, hiddenLoot, loadGame, loadSettings, saveGame, saveSettings, type Settings } from './storage';
+import { deleteSave, hiddenLoot, listHeroes, loadGame, loadSettings, MAX_HEROES, saveGame, saveSettings, type HeroSummary, type Settings } from './storage';
 import { loadArt } from '../art/images';
 
 type State = 'title' | 'class' | 'pledge' | 'playing';
@@ -38,6 +38,9 @@ export class Game {
   private autoplay: Autoplay | null = null;
   private seed = Math.floor(Math.random() * 1e9);
   private hasSave = false;
+  /** The saved heroes on this device and the slot the hero in play is saved to. */
+  private heroes: HeroSummary[] = [];
+  private slot = 1;
   private accumulator = 0;
   private time = 0;
   private autosaveTimer = 0;
@@ -57,9 +60,18 @@ export class Game {
         this.goFullscreenOnPhones();
         this.beginNewGame();
       },
+      // Play: with heroes saved, the hero select; with none, straight to the class pick
       continueGame: () => {
         this.goFullscreenOnPhones();
-        void this.continueGame();
+        if (this.heroes.length) this.showHeroes();
+        else this.beginNewGame();
+      },
+      playHero: (slot) => void this.continueGame(slot),
+      deleteHero: async (slot) => {
+        await deleteSave(slot);
+        await this.refreshHeroes();
+        if (this.heroes.length) this.showHeroes();
+        else this.showTitle();
       },
       login: () => {
         // Accounts come with the online update; until then the title says so
@@ -159,17 +171,35 @@ export class Game {
 
   async init(): Promise<void> {
     // Optional hand-made images load alongside the save, before anything is drawn
-    const [save] = await Promise.all([loadGame(), loadArt()]);
-    this.hasSave = !!save;
+    await Promise.all([this.refreshHeroes(), loadArt()]);
     this.showTitle();
+  }
+
+  private async refreshHeroes(): Promise<void> {
+    this.heroes = await listHeroes();
+    this.hasSave = this.heroes.length > 0;
   }
 
   private showTitle(): void {
     this.state = 'title';
     this.screens.clearDead();
     this.screens.hasSave = this.hasSave;
+    this.screens.heroes = this.heroes;
     this.screens.installHint = installHint();
     this.screens.splash();
+  }
+
+  private showHeroes(): void {
+    this.state = 'title';
+    this.screens.clearDead();
+    this.screens.heroes = this.heroes;
+    this.screens.heroSelect();
+  }
+
+  /** The first empty slot, for a new hero. */
+  private freeSlot(): number | null {
+    for (let slot = 1; slot <= MAX_HEROES; slot++) if (!this.heroes.some((hero) => hero.slot === slot)) return slot;
+    return null;
   }
 
   /** Phones in a browser tab: ask for full screen on the first tap. iPhones ignore this and need the home-screen install. */
@@ -183,17 +213,24 @@ export class Game {
   }
 
   private beginNewGame(): void {
+    const slot = this.freeSlot();
+    if (slot === null) {
+      this.showHeroes();
+      return;
+    }
+    this.slot = slot;
     this.state = 'class';
     this.screens.classSelect();
   }
 
-  private async continueGame(): Promise<void> {
-    const save = await loadGame();
+  private async continueGame(slot: number): Promise<void> {
+    const save = await loadGame(slot);
     if (!save) {
-      this.hasSave = false;
+      await this.refreshHeroes();
       this.showTitle();
       return;
     }
+    this.slot = slot;
     this.start(save.player, save.seed, false);
   }
 
@@ -235,9 +272,9 @@ export class Game {
         try {
           const data = decodeSave(code);
           const p = deserialize(data);
-          await saveGame(p, data.seed);
+          await saveGame(p, data.seed, this.slot);
           this.start(p, data.seed, false);
-          this.hud?.message('Hero imported', 0x9fe08f);
+          this.hud?.message('Hero imported into this slot', 0x9fe08f);
           return true;
         } catch {
           return false;
@@ -245,16 +282,16 @@ export class Game {
       },
       saveNow: () => this.autosave(),
       quitToTitle: () => {
-        void this.autosave().then(() => {
+        void this.autosave().then(async () => {
           this.teardown();
-          this.hasSave = true;
+          await this.refreshHeroes();
           this.showTitle();
         });
       },
       deleteSave: async () => {
-        await deleteSave();
+        await deleteSave(this.slot);
         this.teardown();
-        this.hasSave = false;
+        await this.refreshHeroes();
         this.showTitle();
       },
     });
@@ -370,7 +407,7 @@ export class Game {
 
   private async autosave(): Promise<void> {
     if (!this.world) return;
-    await saveGame(this.world.player, this.seed);
+    await saveGame(this.world.player, this.seed, this.slot);
     this.hasSave = true;
   }
 

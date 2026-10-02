@@ -1,5 +1,6 @@
 import { CLASSES, CLASS_LIST, LEVELING, type ClassId } from '../../data/classes';
-import { pledgesFor } from '../../data/pledges';
+import { PLEDGES, pledgesFor } from '../../data/pledges';
+import { MAX_HEROES, type HeroSummary } from '../../app/storage';
 import { SKILLS } from '../../data/skills';
 import { PALETTES } from '../../gen/pixel/palettes';
 import { heroSheet, type HeroLook } from '../../gen/pixel/characters';
@@ -9,6 +10,9 @@ import { button, clear, h, hex } from '../dom';
 export interface ScreenHost {
   newGame(): void;
   continueGame(): void;
+  /** Hero select: play or delete one of the saved heroes. */
+  playHero(slot: number): void;
+  deleteHero(slot: number): void;
   /** Accounts are not live yet: the title says so and offers guest play. */
   login(): void;
   chooseClass(id: ClassId): void;
@@ -23,6 +27,8 @@ export interface ScreenHost {
 export class Screens {
   readonly root: HTMLDivElement;
   hasSave = false;
+  /** The saved heroes, for the hero select. */
+  heroes: HeroSummary[] = [];
   /** Set once accounts exist and the player is signed in: the title then shows a single Play button. */
   loggedIn = false;
   /** A line under the title buttons, such as the sign-in notice. */
@@ -56,10 +62,38 @@ export class Screens {
         { class: 'title-buttons' },
         this.loggedIn ? button('Play', play, 'btn big primary') : button('Login', () => this.host.login(), 'btn big primary'),
         this.loggedIn ? null : button('Play as Guest', play, 'btn big'),
-        this.hasSave ? button('New hero', () => this.host.newGame(), 'btn ghost') : null,
+        this.hasSave && this.heroes.length < MAX_HEROES ? button('New hero', () => this.host.newGame(), 'btn ghost') : null,
       ),
       this.titleNote ? h('div', { class: 'title-note' }, this.titleNote) : null,
       this.installHint ? h('div', { class: 'title-note install' }, this.installHint) : null,
+    );
+  }
+
+  /** The saved heroes, one row each: class and level, the pledge, when it was last saved, Play and Delete. Up to ten. */
+  heroSelect(): void {
+    const ago = (t: number) => {
+      const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+      return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+    };
+    const rows = this.heroes.map((hero) => {
+      const cls = CLASSES[hero.classId];
+      const pledge = hero.pledgeId ? PLEDGES[hero.pledgeId] : null;
+      return h('div', { class: 'hero-row', style: `--c:${hex(pledge?.color ?? cls.color)}` },
+        h('div', { class: 'hero-row-text' },
+          h('div', { class: 'hero-row-title' }, `Level ${hero.level} ${pledge ? pledge.name : cls.name}`),
+          h('div', { class: 'dim small' }, `${cls.name}${pledge ? ', sworn to the ' + pledge.name : ''}. Saved ${ago(hero.savedAt)}.`),
+        ),
+        button('Play', () => this.host.playHero(hero.slot), 'btn primary'),
+        button('Delete', () => { if (confirm(`Delete this level ${hero.level} ${cls.name}? This cannot be undone.`)) this.host.deleteHero(hero.slot); }, 'btn danger small'),
+      );
+    });
+    this.show(
+      h('h2', { class: 'screen-title' }, 'Your heroes'),
+      h('div', { class: 'hero-list' }, ...rows),
+      h('div', { class: 'title-buttons' },
+        this.heroes.length < MAX_HEROES ? button('New hero', () => this.host.newGame(), 'btn big') : h('div', { class: 'title-note' }, `All ${MAX_HEROES} hero slots are taken. Delete one to make room.`),
+        button('Back', () => this.host.cancelToTitle(), 'btn ghost'),
+      ),
     );
   }
 

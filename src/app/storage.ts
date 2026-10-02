@@ -1,11 +1,17 @@
 import { deserialize, serialize, type SaveData } from '../sim/save';
 import type { PlayerState } from '../sim/player';
 import type { Rarity } from '../data/items';
+import type { ClassId } from '../data/classes';
 
 const DB_NAME = 'falling-sky';
 const STORE = 'saves';
-const KEY = 'slot1';
 const SETTINGS_KEY = 'falling-sky-settings';
+/** How many heroes a device keeps (producer's call, 2026-10-02). */
+export const MAX_HEROES = 10;
+
+/** Slot 1 keeps the keys the single-hero days used, so an old save is the first hero. */
+const slotKey = (slot: number) => `slot${slot}`;
+const localKey = (slot: number) => (slot === 1 ? 'falling-sky-save' : `falling-sky-save-${slot}`);
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,21 +26,40 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+async function readSlot(slot: number): Promise<SaveData | null> {
+  try {
+    const db = await openDb();
+    return await new Promise<SaveData | null>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(slotKey(slot));
+      req.onsuccess = () => resolve((req.result as SaveData) ?? null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    try {
+      const raw = localStorage.getItem(localKey(slot));
+      return raw ? (JSON.parse(raw) as SaveData) : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
 /** Saves land in IndexedDB. Everything is best-effort: a failed save never breaks play. */
-export async function saveGame(player: PlayerState, seed: number): Promise<boolean> {
+export async function saveGame(player: PlayerState, seed: number, slot = 1): Promise<boolean> {
   const data = serialize(player, seed);
   try {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put(data, KEY);
+      tx.objectStore(STORE).put(data, slotKey(slot));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
     return true;
   } catch {
     try {
-      localStorage.setItem('falling-sky-save', JSON.stringify(data));
+      localStorage.setItem(localKey(slot), JSON.stringify(data));
       return true;
     } catch {
       return false;
@@ -42,24 +67,8 @@ export async function saveGame(player: PlayerState, seed: number): Promise<boole
   }
 }
 
-export async function loadGame(): Promise<{ player: PlayerState; seed: number } | null> {
-  let data: SaveData | null = null;
-  try {
-    const db = await openDb();
-    data = await new Promise<SaveData | null>((resolve, reject) => {
-      const tx = db.transaction(STORE, 'readonly');
-      const req = tx.objectStore(STORE).get(KEY);
-      req.onsuccess = () => resolve((req.result as SaveData) ?? null);
-      req.onerror = () => reject(req.error);
-    });
-  } catch {
-    try {
-      const raw = localStorage.getItem('falling-sky-save');
-      if (raw) data = JSON.parse(raw) as SaveData;
-    } catch {
-      data = null;
-    }
-  }
+export async function loadGame(slot = 1): Promise<{ player: PlayerState; seed: number } | null> {
+  const data = await readSlot(slot);
   if (!data) return null;
   try {
     return { player: deserialize(data), seed: data.seed };
@@ -68,12 +77,12 @@ export async function loadGame(): Promise<{ player: PlayerState; seed: number } 
   }
 }
 
-export async function deleteSave(): Promise<void> {
+export async function deleteSave(slot = 1): Promise<void> {
   try {
     const db = await openDb();
     await new Promise<void>((resolve) => {
       const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).delete(KEY);
+      tx.objectStore(STORE).delete(slotKey(slot));
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
@@ -81,10 +90,30 @@ export async function deleteSave(): Promise<void> {
     // ignore
   }
   try {
-    localStorage.removeItem('falling-sky-save');
+    localStorage.removeItem(localKey(slot));
   } catch {
     // ignore
   }
+}
+
+/** What the hero select shows for each saved hero. */
+export interface HeroSummary {
+  slot: number;
+  classId: ClassId;
+  pledgeId: string | null;
+  level: number;
+  savedAt: number;
+}
+
+/** Every saved hero, in slot order. A slot whose save cannot be read is skipped. */
+export async function listHeroes(): Promise<HeroSummary[]> {
+  const out: HeroSummary[] = [];
+  for (let slot = 1; slot <= MAX_HEROES; slot++) {
+    const data = await readSlot(slot);
+    if (!data?.player) continue;
+    out.push({ slot, classId: data.player.classId, pledgeId: data.player.pledgeId ?? null, level: data.player.level, savedAt: data.savedAt });
+  }
+  return out;
 }
 
 export interface Settings {
