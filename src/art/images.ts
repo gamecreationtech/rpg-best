@@ -27,6 +27,8 @@ const itemImages = new Map<string, HTMLCanvasElement>();
  * theirs exist and fall back to idle otherwise.
  */
 export const HERO_ART_CLASSES: ClassId[] = ['sorcerer2'];
+/** Classes whose sprites are drawn bigger than the game's pixels and shrunk by this whole factor at load (block averages, hard edges), so a 64 px drawing stands about 28 px tall like the hero. */
+export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = { sorcerer2: 2 };
 export type HeroDir = 'n' | 's' | 'e' | 'w';
 export type HeroAnimName = 'idle' | 'walk' | 'attack';
 export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
@@ -70,7 +72,8 @@ async function loadHeroFrames(classId: string, anim: HeroAnimName, dir: HeroDir)
   for (let n = 1; n <= MAX_FRAMES; n++) {
     const frame = await fetchImage(`${import.meta.env.BASE_URL}art/heroes/${classId}/${anim}_${dir}${n === 1 ? '' : `_${n}`}.png`);
     if (!frame) break;
-    frames.push(frame);
+    const k = HERO_ART_SHRINK[classId as ClassId] ?? 1;
+    frames.push(k > 1 ? shrunk(frame, k) : frame);
   }
   return frames;
 }
