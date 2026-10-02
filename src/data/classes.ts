@@ -105,7 +105,7 @@ export const LEVELING = {
   xpPerLevel: 0.15,
   statPointsPerLevel: 5,
   /** One pool for skill ranks and passives (producer's call, 2026-10-01): two a level. */
-  skillPointsPerLevel: 2,
+  skillPointsPerLevel: 1,
   /** An ultimate point at each of these levels (producer's call, 2026-10-02). */
   ultimatePointLevels: [20, 40, 60, 80, 100],
   /** The level at which a hero swears a pledge; play is held until they do. */

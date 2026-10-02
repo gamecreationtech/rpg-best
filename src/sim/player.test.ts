@@ -104,8 +104,8 @@ describe('player', () => {
     expect(p.level).toBe(2);
     expect(p.xpToNext).toBe(xpForLevel(2));
     expect(p.statPoints).toBe(5);
-    // Two a level, shared by skills and passives
-    expect(p.skillPoints).toBe(2);
+    // One a level, shared by skills and passives
+    expect(p.skillPoints).toBe(1);
     const d = deriveStats(p, [], {});
     // No automatic stat growth: 10 INT -> 200 mana lifted by the power curve of level 2; the level only grants free points
     expect(d.maxMana).toBe(Math.round((100 + 10 * 10) * powerCurve(2)));
