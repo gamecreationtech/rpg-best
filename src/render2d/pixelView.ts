@@ -1,4 +1,4 @@
-import { shrunk } from '../art/images';
+import { heroArt, heroArtSheet, shrunk } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -221,7 +221,9 @@ export class PixelView {
     this.heroKey = key;
     let sheet = this.heroSheets.get(key);
     if (!sheet) {
-      sheet = heroSheet(look, this.pal, SIZE, OUTLINE);
+      // A class with hand-made sprites on disk is drawn from them, whatever it wears
+      const art = heroArt(look.classId);
+      sheet = art ? heroArtSheet(art) : heroSheet(look, this.pal, SIZE, OUTLINE);
       this.heroSheets.set(key, sheet);
     }
     return sheet;
@@ -2903,12 +2905,14 @@ export class PixelView {
   private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null): void {
     const cam = this.view;
     const ctx = this.ctx;
-    const set = p.sheet[p.facing];
+    // Facing left: the sheet's own left-facing drawing when it has one, else the side mirrored
+    const ownLeft = p.facing === 'side' && p.faceLeft && !!p.sheet.left;
+    const set = ownLeft ? p.sheet.left! : p.sheet[p.facing];
     const anim: SpriteAnim = p.dying >= 0 ? set.idle : set[p.anim];
     const frame = anim.frames[Math.floor(p.animT / anim.frameTime) % anim.frames.length]!;
     const fx = Math.round(cam.frameX(x, z));
     const fy = Math.round(cam.frameY(x, y, z));
-    const flip = p.facing === 'side' && p.faceLeft;
+    const flip = p.facing === 'side' && p.faceLeft && !ownLeft;
     const flash = p.flash > 0;
     const dying = p.dying;
     this.items.push({

@@ -6,6 +6,10 @@
  * Images are used at their own pixel size, never scaled by a fraction.
  */
 
+import type { ClassId } from '../data/classes';
+import type { AnimSet, CharacterSheet } from '../gen/pixel/characters';
+import type { SpriteAnim } from '../gen/pixel/sprites';
+
 /** Item base ids that may have an icon at `art/items/<id>.png` (any size, transparent background; see `public/art/README.md`). */
 export const ITEM_ART_IDS = ['sword', 'bow', 'dagger', 'mace', 'crossbow', 'skull', 'quiver', 'lantern', 'energy_shield', 'belt', 'wooden_shield_base', 'iron_shield', 'tower_shield', 'leather_armor', 'helmet', 'amulet', 'ring', 'war_belt', 'gauntlets', 'spear', 'chest_armor', 'boots', 'blowgun', 'spellbook', 'bardiche', 'javelin', 'warfork', 'wand', 'staff', 'pilgrim_cap', 'pilgrim_boots', 'vital_charm', 'axe', 'prisoner_cuffs', 'prisoner_ball', 'pilgrim_gloves'];
 /** Bases that share another base's drawing: the starters look like the plain weapon they are. */
@@ -14,28 +18,99 @@ const ITEM_ART_ALIASES: Record<string, string> = { wooden_sword: 'sword', wooden
 
 const itemImages = new Map<string, HTMLCanvasElement>();
 
+/**
+ * Classes drawn from hand-made sprites instead of the generated hero, when
+ * their files exist at `art/heroes/<classId>/<anim>_<dir>.png`: `anim` is
+ * idle, walk or attack, `dir` is n, s, e or w, and more frames of one
+ * animation follow as `_2`, `_3`... (see `public/art/README.md`). The idle
+ * set needs all four directions; walk and attack are used when all four of
+ * theirs exist and fall back to idle otherwise.
+ */
+export const HERO_ART_CLASSES: ClassId[] = ['sorcerer2'];
+export type HeroDir = 'n' | 's' | 'e' | 'w';
+export type HeroAnimName = 'idle' | 'walk' | 'attack';
+export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
+export interface HeroArt {
+  idle: HeroArtSet;
+  walk: HeroArtSet | null;
+  attack: HeroArtSet | null;
+}
+const HERO_DIRS: HeroDir[] = ['n', 's', 'e', 'w'];
+const MAX_FRAMES = 8;
+
+const heroImages = new Map<string, HeroArt>();
+
 /** Fetches every optional image before play. Missing files are skipped quietly. */
 export async function loadArt(): Promise<void> {
   if (typeof document === 'undefined') return;
-  await Promise.all(ITEM_ART_IDS.map((id) => loadItemImage(id)));
+  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id))]);
 }
 
-async function loadItemImage(id: string): Promise<void> {
-  const url = `${import.meta.env.BASE_URL}art/items/${id}.png`;
+/** One image as a crisp canvas, or null when the file is not there. */
+async function fetchImage(url: string): Promise<HTMLCanvasElement | null> {
   const img = new Image();
   const ok = await new Promise<boolean>((resolve) => {
     img.onload = () => resolve(true);
     img.onerror = () => resolve(false);
     img.src = url;
   });
-  if (!ok || !img.naturalWidth) return;
-  // Copied into a canvas so it draws like the generated icons, crisp and unsmoothed
+  if (!ok || !img.naturalWidth) return null;
   const c = document.createElement('canvas');
   c.width = img.naturalWidth;
   c.height = img.naturalHeight;
   const ctx = c.getContext('2d')!;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, 0, 0);
+  return c;
+}
+
+/** The frames of one animation facing one way: `<anim>_<dir>.png`, then `_2`, `_3`... while they exist. Kept at their own size, untrimmed, so every frame shares the artist's framing. */
+async function loadHeroFrames(classId: string, anim: HeroAnimName, dir: HeroDir): Promise<HTMLCanvasElement[]> {
+  const frames: HTMLCanvasElement[] = [];
+  for (let n = 1; n <= MAX_FRAMES; n++) {
+    const frame = await fetchImage(`${import.meta.env.BASE_URL}art/heroes/${classId}/${anim}_${dir}${n === 1 ? '' : `_${n}`}.png`);
+    if (!frame) break;
+    frames.push(frame);
+  }
+  return frames;
+}
+
+async function loadHeroArt(classId: string): Promise<void> {
+  const sets: Partial<Record<HeroAnimName, HeroArtSet | null>> = {};
+  for (const anim of ['idle', 'walk', 'attack'] as const) {
+    const dirs = await Promise.all(HERO_DIRS.map((dir) => loadHeroFrames(classId, anim, dir)));
+    sets[anim] = dirs.every((f) => f.length > 0) ? { n: dirs[0]!, s: dirs[1]!, e: dirs[2]!, w: dirs[3]! } : null;
+  }
+  if (!sets.idle) return;
+  heroImages.set(classId, { idle: sets.idle, walk: sets.walk ?? null, attack: sets.attack ?? null });
+}
+
+/** The hand-made sprites for a class, when its idle set is complete. */
+export function heroArt(classId: string): HeroArt | null {
+  return heroImages.get(classId) ?? null;
+}
+
+/**
+ * A character sheet built from hand-made sprites: south faces the camera
+ * (front), north is the back, east the side and west its own set, so the
+ * renderer never mirrors the artist's drawing. Feet sit at the bottom centre
+ * of each frame; idle frames change every quarter second, walk and attack
+ * every eighth.
+ */
+export function heroArtSheet(art: HeroArt): CharacterSheet {
+  const anim = (frames: HTMLCanvasElement[], frameTime: number): SpriteAnim => ({ frames, originX: frames[0]!.width >> 1, originY: frames[0]!.height, frameTime });
+  const set = (dir: HeroDir): AnimSet => ({
+    idle: anim(art.idle[dir], 0.25),
+    walk: anim((art.walk ?? art.idle)[dir], 0.125),
+    attack: anim((art.attack ?? art.idle)[dir], 0.125),
+  });
+  return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height };
+}
+
+async function loadItemImage(id: string): Promise<void> {
+  // Copied into a canvas so it draws like the generated icons, crisp and unsmoothed
+  const c = await fetchImage(`${import.meta.env.BASE_URL}art/items/${id}.png`);
+  if (!c) return;
   // The drawing is kept at its own pixel size, transparent margins trimmed, so a slot can fit the drawing itself
   itemImages.set(id, trim(c));
 }

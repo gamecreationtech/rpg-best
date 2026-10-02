@@ -25,6 +25,8 @@ export interface CharacterSheet {
   side: AnimSet;
   front: AnimSet;
   back: AnimSet;
+  /** Facing left, when the sheet has its own drawing for it (hand-made sprites); otherwise `side` is mirrored. */
+  left?: AnimSet;
   /** Height of the body in pixels, for placing labels and lights. */
   height: number;
 }

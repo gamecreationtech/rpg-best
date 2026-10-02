@@ -3,6 +3,25 @@
 Drop image files here to replace the game's generated drawings. Every file is
 optional: if it is missing, the code-drawn version is used.
 
+## Hero sprites: `heroes/<classId>/<anim>_<dir>.png`
+
+- A class listed in `HERO_ART_CLASSES` in `src/art/images.ts` (today only
+  `sorcerer2`) is drawn from these instead of the code-drawn hero, whatever it
+  wears. `anim` is `idle`, `walk` or `attack`; `dir` is `n` (back to the
+  camera), `s` (facing the camera), `e` (facing right) or `w` (facing left).
+  The `w` drawing is used as is, never a mirrored `e`.
+- The idle set needs all four directions before it is used at all. Walk and
+  attack are used when all four of theirs are present and otherwise fall back
+  to idle, so idle alone is enough to start.
+- More frames of one animation are numbered: `walk_s.png`, `walk_s_2.png`,
+  `walk_s_3.png`... up to eight. Idle frames change every quarter second,
+  walk and attack frames every eighth.
+- Size: the code-drawn hero is 22 pixels tall; a drawing of about 22 to 30
+  pixels tall sits right next to monsters and doors. It is drawn at its own
+  pixel size, never scaled. Give every frame of a class the same canvas size
+  with the feet at the bottom centre: that point is placed on the ground, so
+  it must not move between frames or directions. Transparent background.
+
 ## Item icons: `items/<id>.png`
 
 - One PNG per item, named after the item's id in `src/data/items.ts`
