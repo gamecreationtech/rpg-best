@@ -328,7 +328,7 @@ export class HeroMenu {
       const rect = inner.getBoundingClientRect();
       return { col: Math.floor((e.clientX - rect.left) / cell), row: Math.floor((e.clientY - rect.top) / cell) };
     };
-    // Press on an item, release elsewhere: a move. Release in place: a click. While it moves, a faded
+    // Mouse: press on an item, release elsewhere: a move. Release in place: a click. While it moves, a faded
     // copy follows the pointer and the cells it would land on light up green, or red where it does not fit.
     let drag: { item: Item; x: number; y: number; offX: number; offY: number; moved: boolean; col: number; row: number; ghost: HTMLElement | null; target: HTMLElement | null; source: HTMLElement | null } | null = null;
     const itemEls = new Map<Item, HTMLElement>();
@@ -364,49 +364,45 @@ export class HeroMenu {
       drag.source?.classList.remove('lifted');
       inner.classList.remove('dragging');
     };
-    inner.addEventListener('pointerdown', (e) => {
-      e.stopPropagation();
-      const { col, row } = cellAt(e);
-      const item = inv.itemAt(col, row);
-      if (item) {
-        const rect = inner.getBoundingClientRect();
-        drag = { item, x: e.clientX, y: e.clientY, offX: e.clientX - rect.left - item.col * cell, offY: e.clientY - rect.top - item.row * cell, moved: false, col: item.col, row: item.row, ghost: null, target: null, source: null };
-        inner.setPointerCapture(e.pointerId);
-      } else if (this.selected && this.selectedFrom === 'bag' && !this.mouse) {
-        if (!inv.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
-        rerender();
-      }
-    });
-    inner.addEventListener('pointercancel', () => { endDrag(); drag = null; });
-    inner.addEventListener('pointermove', (e) => {
-      // A finger wobbles more than a mouse: a touch has to travel further before it counts as a drag
-      if (drag && (drag.moved || Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > (e.pointerType === 'mouse' ? 6 : 12))) {
-        drag.moved = true;
-        this.hideTip();
-        inner.classList.add('dragging');
-        follow(e);
-      }
-      if (!drag && e.pointerType === 'mouse') {
+    if (this.mouse) {
+      inner.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
         const { col, row } = cellAt(e);
         const item = inv.itemAt(col, row);
-        if (item) this.showTip(w, item, 'bag', e.clientX, e.clientY);
-        else this.hideTip();
-      }
-    });
-    inner.addEventListener('pointerleave', () => this.hideTip());
-    inner.addEventListener('contextmenu', (e) => e.preventDefault());
-    inner.addEventListener('pointerup', (e) => {
-      if (!drag) return;
-      const d = drag;
-      endDrag();
-      drag = null;
-      // A drag that ends on the item's own cell was a tap after all
-      if (d.moved && (d.col !== d.item.col || d.row !== d.item.row)) {
-        if (!inv.place(d.item, d.col, d.row)) this.host.message('Does not fit there', 0xff8080);
-        rerender();
-        return;
-      }
-      if (e.pointerType === 'mouse') {
+        if (item) {
+          const rect = inner.getBoundingClientRect();
+          drag = { item, x: e.clientX, y: e.clientY, offX: e.clientX - rect.left - item.col * cell, offY: e.clientY - rect.top - item.row * cell, moved: false, col: item.col, row: item.row, ghost: null, target: null, source: null };
+          inner.setPointerCapture(e.pointerId);
+        }
+      });
+      inner.addEventListener('pointercancel', () => { endDrag(); drag = null; });
+      inner.addEventListener('pointermove', (e) => {
+        if (drag && (drag.moved || Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6)) {
+          drag.moved = true;
+          this.hideTip();
+          inner.classList.add('dragging');
+          follow(e);
+        }
+        if (!drag && e.pointerType === 'mouse') {
+          const { col, row } = cellAt(e);
+          const item = inv.itemAt(col, row);
+          if (item) this.showTip(w, item, 'bag', e.clientX, e.clientY);
+          else this.hideTip();
+        }
+      });
+      inner.addEventListener('pointerleave', () => this.hideTip());
+      inner.addEventListener('contextmenu', (e) => e.preventDefault());
+      inner.addEventListener('pointerup', (e) => {
+        if (!drag) return;
+        const d = drag;
+        endDrag();
+        drag = null;
+        // A drag that ends on the item's own cell was a tap after all
+        if (d.moved && (d.col !== d.item.col || d.row !== d.item.row)) {
+          if (!inv.place(d.item, d.col, d.row)) this.host.message('Does not fit there', 0xff8080);
+          rerender();
+          return;
+        }
         if (e.button === 2) w.dropItem(d.item);
         else {
           const r = w.equipItem(d.item);
@@ -414,17 +410,28 @@ export class HeroMenu {
         }
         this.hideTip();
         this.reset();
-      } else {
-        this.selected = d.item;
-        this.selectedFrom = 'bag';
-        const rect = inner.getBoundingClientRect();
-        const at = new DOMRect(rect.left + d.item.col * cell, rect.top + d.item.row * cell, d.item.size[0] * cell, d.item.size[1] * cell);
         rerender();
-        this.showPopup(w, d.item, 'bag', at, this.itemActions(w, d.item, 'bag', rerender));
-        return;
-      }
-      rerender();
-    });
+      });
+    } else {
+      // Touch (producer's call, 2026-10-02): no dragging. A tap on an item pops its card up on it, as on the doll;
+      // a tap on an empty cell moves the last-tapped item there
+      inner.addEventListener('pointerdown', (e) => e.stopPropagation());
+      inner.onclick = (e) => {
+        const { col, row } = cellAt(e);
+        const item = inv.itemAt(col, row);
+        if (item) {
+          this.selected = item;
+          this.selectedFrom = 'bag';
+          const rect = inner.getBoundingClientRect();
+          const at = new DOMRect(rect.left + item.col * cell, rect.top + item.row * cell, item.size[0] * cell, item.size[1] * cell);
+          rerender();
+          this.showPopup(w, item, 'bag', at, this.itemActions(w, item, 'bag', rerender));
+        } else if (this.selected && this.selectedFrom === 'bag') {
+          if (!inv.place(this.selected, col, row)) this.host.message('Does not fit there', 0xff8080);
+          rerender();
+        }
+      };
+    }
     for (const item of inv.items) {
       const el = h('div', { class: 'px-item' + (item === this.selected ? ' on' : '') });
       el.style.left = `${item.col * cell}px`;
