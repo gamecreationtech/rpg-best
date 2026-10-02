@@ -42,6 +42,8 @@ html, body {
   pointer-events: none;
 }
 
+.hud-autoplay { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 3px 10px; font: 11px/1 var(--mono, monospace); letter-spacing: 2px; color: #ffd860; background: rgba(8, 9, 15, 0.75); border: 1px solid rgba(255, 216, 96, 0.5); pointer-events: none; animation: autoplay-blink 2s ease-in-out infinite; }
+@keyframes autoplay-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .hud {
   position: absolute;
   top: calc(10px + var(--safe-t));

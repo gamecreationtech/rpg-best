@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+import { MONSTER_RULES } from '../data/monsters';
+import { Autoplay } from './autoplay';
+import { createPlayer } from './player';
+import { SIM_DT, World } from './world';
+
+describe('autoplay', () => {
+  it('a level 10 knight left to itself in the Proving Grounds hunts, casts and wins', () => {
+    MONSTER_RULES.firstWave = 1;
+    try {
+      const w = new World(createPlayer('knight', null), 3);
+      for (let i = 1; i < 10; i++) w.devLevelUp();
+      w.player.skillRanks.heavy_strike = 3;
+      w.player.slots[1] = 'heavy_strike';
+      w.recomputeStats();
+      w.player.hp = w.derived.maxHp;
+      w.travel('arena', 'proving_grounds');
+      const bot = new Autoplay();
+      let respawns = 0;
+      for (let t = 0; t < 120; t += SIM_DT) {
+        const ask = bot.step(w, SIM_DT);
+        if (ask === 'respawn') {
+          respawns++;
+          w.respawn();
+          break;
+        }
+        w.step(SIM_DT);
+      }
+      expect(respawns).toBe(0);
+      expect(w.player.kills).toBeGreaterThanOrEqual(10);
+      expect(w.events.some((ev) => ev.type === 'cast' && ev.skillId === 'heavy_strike')).toBe(true);
+      // It walked: not still standing where it arrived
+      expect(Math.hypot(w.px - w.arena!.spawn.x, w.pz - w.arena!.spawn.z)).toBeGreaterThan(3);
+    } finally {
+      MONSTER_RULES.firstWave = 0;
+    }
+  });
+
+  it('asks the app to respawn three seconds after a death and to go home from town', () => {
+    const w = new World(createPlayer('rogue', null), 3);
+    w.travel('arena', 'proving_grounds');
+    const bot = new Autoplay();
+    bot.step(w, SIM_DT);
+    w.player.hp = 0;
+    w.playerDead = true;
+    let ask: ReturnType<Autoplay['step']> = null;
+    for (let t = 0; t < 3.5 && !ask; t += SIM_DT) ask = bot.step(w, SIM_DT);
+    expect(ask).toBe('respawn');
+    w.respawn();
+    expect(w.area).toBe('town');
+    ask = null;
+    for (let t = 0; t < 2.5 && !ask; t += SIM_DT) ask = bot.step(w, SIM_DT);
+    expect(ask).toBe('return');
+    expect(bot.home?.zoneId).toBe('proving_grounds');
+  });
+});

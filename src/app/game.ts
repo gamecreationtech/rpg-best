@@ -7,6 +7,7 @@ import { PixelView } from '../render2d/pixelView';
 import { createPlayer, type PlayerState } from '../sim/player';
 import { decodeSave, deserialize, encodeSave, serialize } from '../sim/save';
 import type { SimEvent } from '../sim/types';
+import { Autoplay } from '../sim/autoplay';
 import { SIM_DT, World } from '../sim/world';
 import { Hud, type PanelKind } from '../ui/game/hud';
 import { Panels } from '../ui/game/panels';
@@ -33,6 +34,8 @@ export class Game {
   readonly sfx = new Sfx();
   readonly music = new Music();
   readonly settings: Settings = loadSettings();
+  /** The hero plays itself while this is set (Settings > Autoplay); any manual move or cast switches it off. */
+  private autoplay: Autoplay | null = null;
   private seed = Math.floor(Math.random() * 1e9);
   private hasSave = false;
   private accumulator = 0;
@@ -98,16 +101,19 @@ export class Game {
         return true;
       },
       tapGround: (sx, sy) => {
+        this.setAutoplay(false);
         if (this.view!.view.unproject(sx, sy, this.aim)) this.world!.moveTo(this.aim.x, this.aim.z);
       },
       attackAt: (sx, sy) => {
+        this.setAutoplay(false);
         if (this.view!.view.unproject(sx, sy, this.aim)) this.world!.attackAt(this.aim.x, this.aim.z);
       },
-      castSlot: (slot, sx, sy) => this.castSlot(slot, sx, sy),
+      castSlot: (slot, sx, sy) => { this.setAutoplay(false); this.castSlot(slot, sx, sy); },
       usePotion: (id) => this.usePotion(id),
       setMoveInput: (x, z) => {
         // Keys and the joystick speak in screen directions; the isometric world is turned 45 degrees
         if (!this.view) return;
+        if (x || z) this.setAutoplay(false);
         this.view.screenDirToWorld(x, z, this.moveDir);
         this.world?.setMoveInput(this.moveDir.x, this.moveDir.z);
       },
@@ -215,6 +221,8 @@ export class Game {
       },
       message: (t, c) => this.hud?.message(t, c),
       close: () => this.closePanel(),
+      autoplay: () => !!this.autoplay,
+      setAutoplay: (on) => this.setAutoplay(on),
       travel: (area, zoneId, level) => {
         this.closePanel();
         this.world!.travel(area, zoneId, level);
@@ -333,6 +341,25 @@ export class Game {
     this.state = 'playing';
   }
 
+  setAutoplay(on: boolean): void {
+    if (on === !!this.autoplay) return;
+    this.autoplay = on ? new Autoplay() : null;
+    this.hud?.setAutoplay(on);
+    this.hud?.message(on ? 'Autoplay on: the hero fights on its own. Move or cast to take over.' : 'Autoplay off', 0xffd860);
+    if (!on) this.world?.setMoveInput(0, 0);
+  }
+
+  /** The autoplay driver's decisions for one simulation step, and the two things it leaves to the app. */
+  private driveAutoplay(): void {
+    if (!this.autoplay || !this.world) return;
+    const ask = this.autoplay.step(this.world, SIM_DT);
+    if (ask === 'respawn' && this.world.playerDead) this.respawn();
+    else if (ask === 'return') {
+      const home = this.autoplay.home;
+      if (home) this.world.travel('arena', home.zoneId, home.level || undefined);
+    }
+  }
+
   private async autosave(): Promise<void> {
     if (!this.world) return;
     await saveGame(this.world.player, this.seed);
@@ -420,6 +447,7 @@ export class Game {
       this.accumulator += dt;
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < 5) {
+        this.driveAutoplay();
         this.world.step(SIM_DT);
         this.accumulator -= SIM_DT;
         steps++;

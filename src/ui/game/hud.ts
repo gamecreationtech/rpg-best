@@ -209,6 +209,19 @@ export class Hud {
     this.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
   }
 
+  private autoplayTag: HTMLElement | null = null;
+
+  /** A small tag at the top of the frame while the hero plays itself. */
+  setAutoplay(on: boolean): void {
+    if (on && !this.autoplayTag) {
+      this.autoplayTag = h('div', { class: 'hud-autoplay' }, 'AUTOPLAY');
+      this.root.appendChild(this.autoplayTag);
+    } else if (!on && this.autoplayTag) {
+      this.autoplayTag.remove();
+      this.autoplayTag = null;
+    }
+  }
+
   message(text: string, color?: number): void {
     const el = h('div', { class: 'msg' }, text);
     if (color !== undefined) el.style.color = hex(color);
