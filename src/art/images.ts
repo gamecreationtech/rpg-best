@@ -27,8 +27,8 @@ const itemImages = new Map<string, HTMLCanvasElement>();
  * theirs exist and fall back to idle otherwise.
  */
 export const HERO_ART_CLASSES: ClassId[] = ['sorcerer2'];
-/** Classes whose sprites are shrunk by a whole factor at load (block averages, hard edges). None today: the producer wants Sorcerer2's 64 by 64 witch drawn at full size (2026-10-02). */
-export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = {};
+/** Classes whose sprites are shrunk by a whole factor at load (block averages, hard edges): Sorcerer2's 64 by 64 witch is shown at 32 by 32 (producer's call, 2026-10-02). */
+export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = { sorcerer2: 2 };
 export type HeroDir = 'n' | 's' | 'e' | 'w';
 export type HeroAnimName = 'idle' | 'walk' | 'attack';
 export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
