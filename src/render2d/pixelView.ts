@@ -98,6 +98,9 @@ export class PixelView {
   readonly stats = { drawn: 0 };
 
   private readonly frame: HTMLCanvasElement;
+  /** Silhouettes of the characters lit without the floor's dither (the hero, the merchant, the dummies), for the compositor's mask. */
+  private readonly maskFrame: HTMLCanvasElement;
+  private readonly mctx: CanvasRenderingContext2D;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly scratch: HTMLCanvasElement;
   private readonly sctx: CanvasRenderingContext2D;
@@ -151,6 +154,8 @@ export class PixelView {
     const pal = this.pal;
     this.frame = document.createElement('canvas');
     this.ctx = this.frame.getContext('2d', { alpha: false, willReadFrequently: false })!;
+    this.maskFrame = document.createElement('canvas');
+    this.mctx = this.maskFrame.getContext('2d')!;
     this.scratch = document.createElement('canvas');
     this.sctx = this.scratch.getContext('2d')!;
     this.compositor = new Compositor(canvas);
@@ -208,6 +213,8 @@ export class PixelView {
     this.view.fit(W, H, this.mobile ? 400 : 640, this.mobile ? 225 : 360, this.zoom, dpr);
     this.frame.width = this.view.width;
     this.frame.height = this.view.height;
+    this.maskFrame.width = this.view.width;
+    this.maskFrame.height = this.view.height;
   }
 
   // ---------------------------------------------------------------- sprites
@@ -1468,6 +1475,7 @@ export class PixelView {
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = cssOf(this.pal.background);
     ctx.fillRect(0, 0, W, H);
+    this.mctx.clearRect(0, 0, W, H);
     this.items.length = 0;
     this.lights.length = 0;
     this.bars.length = 0;
@@ -1549,6 +1557,7 @@ export class PixelView {
         draw: () => {
           if (hover) this.drawTinted(frame, fx - anim.originX, fy - anim.originY, false, '#ffffff', 0.3);
           else ctx.drawImage(frame, fx - anim.originX, fy - anim.originY);
+          this.maskDraw(frame, fx - anim.originX, fy - anim.originY, false);
         },
       });
     }
@@ -1626,7 +1635,7 @@ export class PixelView {
       }
       if (e.status.mark && !e.dead) this.drawJudgement(e, Math.round(fx), Math.round(fy), p.sheet.height);
       if (e.status.puppet > 0 && !e.dead) this.drawStrings(e, Math.round(fx), Math.round(cam.frameY(e.x, hover, e.z)), p.sheet.height);
-      this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null);
+      this.pushPuppet(p, e.x, hover, e.z, 1, tint, targeted ? TARGET_COLOR : null, !!e.dummy);
       if (e.status.blind > 0 && !e.dead && Math.random() < 0.5) {
         // Stars reeling round the head
         const a = this.time * 7 + e.id;
@@ -1892,8 +1901,7 @@ export class PixelView {
     ca[2] += (amb[2] - ca[2]) * 0.15;
     this.compositor.lights.length = 0;
     for (const l of this.lights) this.compositor.lights.push(l);
-    this.compositor.mask = this.heroMask;
-    this.heroMask = null;
+    this.compositor.mask = this.maskFrame;
     this.compositor.present(this.frame, cam.scale, cam.offsetX, cam.offsetY);
   }
 
@@ -2909,9 +2917,21 @@ export class PixelView {
     this.lights.push({ x: fx, y: baseY - 30, radius: 60, intensity: 0.6, r: 0.6, g: 0.85, b: 1 });
   }
 
-  private heroMask: { frame: HTMLCanvasElement; x: number; y: number; flip: boolean } | null = null;
+  /** Adds a sprite's silhouette to the mask layer, at the spot it is drawn in the frame. */
+  private maskDraw(frame: HTMLCanvasElement, x: number, y: number, flip: boolean): void {
+    const m = this.mctx;
+    if (!flip) {
+      m.drawImage(frame, x, y);
+      return;
+    }
+    m.save();
+    m.translate(x + frame.width, y);
+    m.scale(-1, 1);
+    m.drawImage(frame, 0, 0);
+    m.restore();
+  }
 
-  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null, isHero = false): void {
+  private pushPuppet(p: Puppet, x: number, y: number, z: number, alpha: number, tint: string | null, outline: string | null = null, smooth = false): void {
     const cam = this.view;
     const ctx = this.ctx;
     // Facing left: the sheet's own left-facing drawing when it has one, else the side mirrored
@@ -2924,8 +2944,7 @@ export class PixelView {
     const flip = p.facing === 'side' && p.faceLeft && !ownLeft;
     const flash = p.flash > 0;
     const dying = p.dying;
-    // The hero's sprite is handed to the lighting pass so the character is lit smoothly, without the floor's dither
-    if (isHero && dying < 0) this.heroMask = { frame, x: fx - anim.originX, y: fy - anim.originY, flip };
+
     this.items.push({
       depth: cam.depth(x, z),
       draw: () => {
@@ -2942,6 +2961,8 @@ export class PixelView {
           return;
         }
         if (alpha < 1) ctx.globalAlpha = alpha;
+        // Characters in the mask layer are lit smoothly by the compositor, without the floor's dither
+        if (smooth) this.maskDraw(frame, fx - anim.originX, fy - anim.originY, flip);
         if (outline) this.drawOutline(frame, fx - anim.originX, fy - anim.originY, flip, outline, anim.originX);
         if (flash) this.drawTinted(frame, fx - anim.originX, fy - anim.originY, flip, '#ffffff', 0.9, anim.originX);
         else if (tint) this.drawTinted(frame, fx - anim.originX, fy - anim.originY, flip, tint, 0.5, anim.originX);

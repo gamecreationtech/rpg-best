@@ -34,8 +34,7 @@ uniform float uLevels;
 uniform float uTint;
 uniform float uDim;
 uniform sampler2D uMask;
-uniform vec4 uMaskRect;
-uniform float uMaskFlip;
+uniform float uMaskOn;
 in vec2 vUv;
 out vec4 outColor;
 const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
@@ -60,15 +59,8 @@ void main() {
   float lp = max(0.0, l);
   vec3 t = lit > 0.0 ? mix(vec3(1.0), tint / lit, lp * uTint) : vec3(1.0);
   vec3 amb = mix(uAmbient, vec3(1.0), lp);
-  // The hero's own sprite is lit smoothly: no checker over the character (producer's call, 2026-10-02)
-  float keep = 0.0;
-  if (uMaskRect.z > 0.0) {
-    vec2 m = (p - uMaskRect.xy) / uMaskRect.zw;
-    if (m.x >= 0.0 && m.x < 1.0 && m.y >= 0.0 && m.y < 1.0) {
-      if (uMaskFlip > 0.5) m.x = 1.0 - m.x;
-      keep = texture(uMask, vec2(m.x, 1.0 - m.y)).a;
-    }
-  }
+  // Characters drawn into the mask layer (the hero, the merchant, the dummies) are lit smoothly: no checker over them (producer's call, 2026-10-02)
+  float keep = uMaskOn > 0.5 ? texture(uMask, vUv).a : 0.0;
   if (uDither > 0.5 && keep < 0.5) {
     int bx = int(mod(floor(p.x), 4.0));
     int by = int(mod(floor(p.y), 4.0));
@@ -109,8 +101,8 @@ export class Compositor {
   private readonly lightData = new Float32Array(MAX_LIGHTS * 4);
   private readonly colorData = new Float32Array(MAX_LIGHTS * 3);
   readonly lights: Light[] = [];
-  /** The hero's sprite and where it sits in the frame this tick, lit without dithering. */
-  mask: { frame: HTMLCanvasElement; x: number; y: number; flip: boolean } | null = null;
+  /** A frame-sized layer holding the silhouettes of the characters lit without dithering, drawn by the view each tick. */
+  mask: HTMLCanvasElement | null = null;
   private maskTex: WebGLTexture | null = null;
   darkness = 0.7;
   ambient: [number, number, number] = [0.85, 0.88, 1.0];
@@ -145,7 +137,7 @@ export class Compositor {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'link');
     this.program = program;
     gl.useProgram(program);
-    for (const name of ['uScene', 'uSize', 'uCount', 'uLights', 'uColors', 'uDarkness', 'uAmbient', 'uDither', 'uLevels', 'uTint', 'uDim', 'uMask', 'uMaskRect', 'uMaskFlip']) this.uniforms.set(name, gl.getUniformLocation(program, name));
+    for (const name of ['uScene', 'uSize', 'uCount', 'uLights', 'uColors', 'uDarkness', 'uAmbient', 'uDither', 'uLevels', 'uTint', 'uDim', 'uMask', 'uMaskOn']) this.uniforms.set(name, gl.getUniformLocation(program, name));
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -168,6 +160,8 @@ export class Compositor {
     gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
     nearest();
     gl.activeTexture(gl.TEXTURE0);
+    // Sampler units for the lighting program, set while it is the current program
+    gl.uniform1i(this.uniforms.get('uScene')!, 0);
     gl.uniform1i(this.uniforms.get('uMask')!, 1);
     // The blit: the lit frame to the screen, one fetch per device pixel
     const blit = gl.createProgram()!;
@@ -185,7 +179,6 @@ export class Compositor {
     gl.bindTexture(gl.TEXTURE_2D, this.lit);
     nearest();
     this.fbo = gl.createFramebuffer();
-    gl.uniform1i(this.uniforms.get('uScene')!, 0);
   }
 
   /**
@@ -235,15 +228,13 @@ export class Compositor {
     gl.useProgram(this.program);
     const mask = this.mask;
     if (mask) {
+      // Only the alpha matters: one byte a pixel keeps the upload light
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mask.frame);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, mask);
       gl.activeTexture(gl.TEXTURE0);
-      gl.uniform4f(this.uniforms.get('uMaskRect')!, mask.x, mask.y, mask.frame.width, mask.frame.height);
-      gl.uniform1f(this.uniforms.get('uMaskFlip')!, mask.flip ? 1 : 0);
-    } else {
-      gl.uniform4f(this.uniforms.get('uMaskRect')!, 0, 0, 0, 0);
     }
+    gl.uniform1f(this.uniforms.get('uMaskOn')!, mask ? 1 : 0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, frame);
     const n = Math.min(MAX_LIGHTS, this.lights.length);
