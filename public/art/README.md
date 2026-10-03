@@ -25,6 +25,14 @@ optional: if it is missing, the code-drawn version is used.
   with the feet at the bottom centre: that point is placed on the ground, so
   it must not move between frames or directions. Transparent background.
 
+## Training dummies: `dummies/dummy.png`
+
+- One still drawing used for every training dummy in town, from every side;
+  `dummies/<id>.png` (`fire`, `cold`, `lightning`, `poison`, `physical`)
+  replaces it for one kind. Same rules as the hero sprites: transparent
+  background, feet at the bottom centre, drawn at the game's size (the
+  producer's dummy is 32 by 32). The dummy's element shows in its name.
+
 ## Item icons: `items/<id>.png`
 
 - One PNG per item, named after the item's id in `src/data/items.ts`

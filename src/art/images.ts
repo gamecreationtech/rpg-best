@@ -42,10 +42,31 @@ const MAX_FRAMES = 8;
 
 const heroImages = new Map<string, HeroArt>();
 
+/** The training dummies' hand-made sprite: `art/dummies/dummy.png` for all of them, or `art/dummies/<id>.png` for one kind (fire, cold, lightning, poison, physical). One still image, drawn the same from every side. */
+const dummyImages = new Map<string, HTMLCanvasElement>();
+const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
+
 /** Fetches every optional image before play. Missing files are skipped quietly. */
 export async function loadArt(): Promise<void> {
   if (typeof document === 'undefined') return;
-  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id))]);
+  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id)), ...['dummy', ...DUMMY_IDS].map((id) => loadDummyImage(id))]);
+}
+
+async function loadDummyImage(id: string): Promise<void> {
+  const c = await fetchImage(`${import.meta.env.BASE_URL}art/dummies/${id}.png`);
+  if (c) dummyImages.set(id, c);
+}
+
+/** The sprite for a training dummy kind: its own file, else the shared one, else null for the code-drawn dummy. */
+export function dummyArt(id: string): HTMLCanvasElement | null {
+  return dummyImages.get(id) ?? dummyImages.get('dummy') ?? null;
+}
+
+/** A sheet from one still drawing: the same frame for every facing and animation, feet at the bottom centre. */
+export function stillSheet(frame: HTMLCanvasElement): CharacterSheet {
+  const anim: SpriteAnim = { frames: [frame], originX: frame.width >> 1, originY: frame.height, frameTime: 1 };
+  const set: AnimSet = { idle: anim, walk: anim, attack: anim };
+  return { front: set, back: set, side: set, height: frame.height };
 }
 
 /** One image as a crisp canvas, or null when the file is not there. */

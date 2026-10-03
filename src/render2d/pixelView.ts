@@ -1,4 +1,4 @@
-import { heroArt, heroArtSheet, shrunk } from '../art/images';
+import { dummyArt, heroArt, heroArtSheet, shrunk, stillSheet } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -161,7 +161,11 @@ export class PixelView {
     this.props = propSprites(pal, SIZE, OUTLINE);
     this.fx = effectSprites(pal, SIZE);
     for (const look of ['ghoul', 'skeleton', 'brute', 'wraith'] as MonsterKind[]) this.monsterSheet(look);
-    for (const d of DUMMIES) this.dummies.set(d.id, dummySheet(d.color, pal, SIZE, OUTLINE));
+    // A hand-made dummy sprite on disk stands in for the code-drawn one
+    for (const d of DUMMIES) {
+      const art = dummyArt(d.id);
+      this.dummies.set(d.id, art ? stillSheet(art) : dummySheet(d.color, pal, SIZE, OUTLINE));
+    }
     this.vendor = vendorSheet(pal, SIZE, OUTLINE);
     this.stations = {
       forge: forgeProp(pal, SIZE, OUTLINE),
