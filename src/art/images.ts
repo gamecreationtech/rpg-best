@@ -48,9 +48,9 @@ const heroImages = new Map<string, HeroArt>();
 const dummyImages = new Map<string, HTMLCanvasElement>();
 const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
 
-/** Town furniture with a hand-made sprite at `art/props/<id>.png`: one still image each. The stash chest today; `merchant_chest` is the pair beside the merchant, waiting for its drawing. */
-export const PROP_ART_IDS = ['stash', 'merchant_chest'];
-const propImages = new Map<string, HTMLCanvasElement>();
+/** Town furniture with a hand-made sprite at `art/props/<id>.png`, more frames of an animated piece numbered `_2`, `_3`...: the stash chest, the pair of chests beside the merchant, and the portal (town portal and return portal alike). */
+export const PROP_ART_IDS = ['stash', 'merchant_chest', 'portal'];
+const propImages = new Map<string, HTMLCanvasElement[]>();
 
 /** Townsfolk with a hand-made sprite at `art/npcs/<id>.png`: one still image each. The merchant today. */
 export const NPC_ART_IDS = ['merchant'];
@@ -63,18 +63,23 @@ export async function loadArt(): Promise<void> {
 }
 
 async function loadPropImage(id: string): Promise<void> {
-  const c = await fetchImage(`${import.meta.env.BASE_URL}art/props/${id}.png`);
-  if (c) propImages.set(id, c);
+  const frames: HTMLCanvasElement[] = [];
+  for (let n = 1; n <= MAX_FRAMES; n++) {
+    const c = await fetchImage(`${import.meta.env.BASE_URL}art/props/${id}${n === 1 ? '' : `_${n}`}.png`);
+    if (!c) break;
+    frames.push(c);
+  }
+  if (frames.length) propImages.set(id, frames);
 }
 
-/** The sprite for a piece of town furniture, or null for the code-drawn one. */
-export function propArt(id: string): HTMLCanvasElement | null {
+/** The frames for a piece of town furniture, or null for the code-drawn one. */
+export function propArt(id: string): HTMLCanvasElement[] | null {
   return propImages.get(id) ?? null;
 }
 
-/** One still drawing as a prop animation, standing on its lowest drawn pixel. */
-export function stillAnim(frame: HTMLCanvasElement): SpriteAnim {
-  return artAnim([frame], 1);
+/** Hand-made frames as a prop animation standing on its lowest drawn pixel: a still at one frame, otherwise `frameTime` seconds a frame. */
+export function propAnim(frames: HTMLCanvasElement[], frameTime = 0.12): SpriteAnim {
+  return artAnim(frames, frames.length > 1 ? frameTime : 1);
 }
 
 async function loadNpcImage(id: string): Promise<void> {

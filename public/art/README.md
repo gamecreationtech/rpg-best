@@ -48,9 +48,12 @@ optional: if it is missing, the code-drawn version is used.
 ## Town furniture: `props/<id>.png`
 
 - One still drawing per piece listed in `PROP_ART_IDS` in `src/art/images.ts`,
-  today `stash.png`, the player's chest at the stash, and `merchant_chest.png`
-  for the pair beside the merchant once drawn. Transparent background,
-  bottom centre on the ground, drawn at the game's size.
+  today `stash.png`, the player's chest at the stash, `merchant_chest.png`
+  for the pair beside the merchant, and `portal.png` for the town portal and
+  the return portal. An animated piece has its frames numbered
+  (`portal_2.png`, `portal_3.png`...), shown at about eight a second.
+  Transparent background, bottom centre on the ground, drawn at the game's
+  size.
 
 ## Item icons: `items/<id>.png`
 

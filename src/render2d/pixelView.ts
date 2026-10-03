@@ -1,4 +1,4 @@
-import { dummyArt, heroArt, heroArtSheet, npcArt, propArt, shrunk, stillAnim, stillSheet } from '../art/images';
+import { dummyArt, heroArt, heroArtSheet, npcArt, propAnim, propArt, shrunk, stillSheet } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -178,11 +178,12 @@ export class PixelView {
       bloodfountain: bloodFountainProp(pal, SIZE, OUTLINE),
       arcana: arcanaProp(pal, SIZE, OUTLINE),
       waypoint: portalProp(0xffd060, pal, SIZE, OUTLINE),
-      return_portal: portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
-      town_portal: portalProp(0xb070ff, pal, SIZE, OUTLINE),
-      stash: propArt('stash') ? stillAnim(propArt('stash')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
+      // The producer's animated portal serves both the town portal and the return portal
+      return_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
+      town_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0xb070ff, pal, SIZE, OUTLINE),
+      stash: propArt('stash') ? propAnim(propArt('stash')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
       // The merchant's two chests are their own piece: the code-drawn chest until their own drawing arrives
-      merchant_chest: propArt('merchant_chest') ? stillAnim(propArt('merchant_chest')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
+      merchant_chest: propArt('merchant_chest') ? propAnim(propArt('merchant_chest')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
       pillar: { frames: [this.props.pillar], originX: this.props.pillar.width >> 1, originY: this.props.pillar.height - 1, frameTime: 1 },
       brazier: { frames: this.props.brazier, originX: this.props.brazier[0]!.width >> 1, originY: this.props.brazier[0]!.height - 1, frameTime: 0.12 },
     };
