@@ -33,6 +33,13 @@ optional: if it is missing, the code-drawn version is used.
   background, feet at the bottom centre, drawn at the game's size (the
   producer's dummy is 32 by 32). The dummy's element shows in its name.
 
+## Townsfolk: `npcs/<id>.png`
+
+- One still drawing per townsperson listed in `NPC_ART_IDS` in
+  `src/art/images.ts`, today `merchant.png`. Same rules as the dummies:
+  transparent background, feet at the bottom centre, drawn at the game's size
+  (the producer's merchant is 32 by 32).
+
 ## Item icons: `items/<id>.png`
 
 - One PNG per item, named after the item's id in `src/data/items.ts`

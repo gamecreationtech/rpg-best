@@ -1,4 +1,4 @@
-import { dummyArt, heroArt, heroArtSheet, shrunk, stillSheet } from '../art/images';
+import { dummyArt, heroArt, heroArtSheet, npcArt, shrunk, stillSheet } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -166,7 +166,8 @@ export class PixelView {
       const art = dummyArt(d.id);
       this.dummies.set(d.id, art ? stillSheet(art) : dummySheet(d.color, pal, SIZE, OUTLINE));
     }
-    this.vendor = vendorSheet(pal, SIZE, OUTLINE);
+    const merchant = npcArt('merchant');
+    this.vendor = merchant ? stillSheet(merchant) : vendorSheet(pal, SIZE, OUTLINE);
     this.stations = {
       forge: forgeProp(pal, SIZE, OUTLINE),
       bloodfountain: bloodFountainProp(pal, SIZE, OUTLINE),

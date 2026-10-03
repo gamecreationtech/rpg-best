@@ -46,10 +46,24 @@ const heroImages = new Map<string, HeroArt>();
 const dummyImages = new Map<string, HTMLCanvasElement>();
 const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
 
+/** Townsfolk with a hand-made sprite at `art/npcs/<id>.png`: one still image each. The merchant today. */
+export const NPC_ART_IDS = ['merchant'];
+const npcImages = new Map<string, HTMLCanvasElement>();
+
 /** Fetches every optional image before play. Missing files are skipped quietly. */
 export async function loadArt(): Promise<void> {
   if (typeof document === 'undefined') return;
-  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id)), ...['dummy', ...DUMMY_IDS].map((id) => loadDummyImage(id))]);
+  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id)), ...['dummy', ...DUMMY_IDS].map((id) => loadDummyImage(id)), ...NPC_ART_IDS.map((id) => loadNpcImage(id))]);
+}
+
+async function loadNpcImage(id: string): Promise<void> {
+  const c = await fetchImage(`${import.meta.env.BASE_URL}art/npcs/${id}.png`);
+  if (c) npcImages.set(id, c);
+}
+
+/** The sprite for a townsperson, or null for the code-drawn one. */
+export function npcArt(id: string): HTMLCanvasElement | null {
+  return npcImages.get(id) ?? null;
 }
 
 async function loadDummyImage(id: string): Promise<void> {
