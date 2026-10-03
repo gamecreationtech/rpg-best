@@ -80,7 +80,7 @@ export function dummyArt(id: string): HTMLCanvasElement | null {
 
 /** A sheet from one still drawing: the same frame for every facing and animation, feet at the bottom centre. */
 export function stillSheet(frame: HTMLCanvasElement): CharacterSheet {
-  const anim: SpriteAnim = { frames: [frame], originX: frame.width >> 1, originY: frame.height, frameTime: 1 };
+  const anim = artAnim([frame], 1);
   const set: AnimSet = { idle: anim, walk: anim, attack: anim };
   return { front: set, back: set, side: set, height: frame.height };
 }
@@ -132,15 +132,45 @@ export function heroArt(classId: string): HeroArt | null {
   return heroImages.get(classId) ?? null;
 }
 
+/** Rows of empty canvas under the lowest drawn pixel of a frame. */
+function bottomMargin(frame: HTMLCanvasElement): number {
+  const px = frame.getContext('2d')!.getImageData(0, 0, frame.width, frame.height).data;
+  for (let y = frame.height - 1; y >= 0; y--) {
+    for (let x = 0; x < frame.width; x++) if (px[(y * frame.width + x) * 4 + 3]! > 0) return frame.height - 1 - y;
+  }
+  return 0;
+}
+
+const marginCache = new WeakMap<HTMLCanvasElement, number>();
+
+/**
+ * One animation from hand-made frames. The feet are placed on the ground at
+ * the lowest drawn pixel across the frames, not the canvas edge, so empty
+ * canvas under a drawing never floats it, while the bob from one frame to
+ * the next is kept.
+ */
+function artAnim(frames: HTMLCanvasElement[], frameTime: number): SpriteAnim {
+  let margin = Infinity;
+  for (const f of frames) {
+    let m = marginCache.get(f);
+    if (m === undefined) {
+      m = bottomMargin(f);
+      marginCache.set(f, m);
+    }
+    margin = Math.min(margin, m);
+  }
+  return { frames, originX: frames[0]!.width >> 1, originY: frames[0]!.height - (Number.isFinite(margin) ? margin : 0), frameTime };
+}
+
 /**
  * A character sheet built from hand-made sprites: south faces the camera
  * (front), north is the back, east the side and west its own set, so the
  * renderer never mirrors the artist's drawing. Feet sit at the bottom centre
- * of each frame; idle frames change every quarter second, walk and attack
+ * of the drawing; idle frames change every quarter second, walk and attack
  * every eighth.
  */
 export function heroArtSheet(art: HeroArt): CharacterSheet {
-  const anim = (frames: HTMLCanvasElement[], frameTime: number): SpriteAnim => ({ frames, originX: frames[0]!.width >> 1, originY: frames[0]!.height, frameTime });
+  const anim = artAnim;
   const set = (dir: HeroDir): AnimSet => ({
     idle: anim(art.idle[dir], 0.25),
     walk: anim(art.walk[dir] ?? art.idle[dir], 0.125),

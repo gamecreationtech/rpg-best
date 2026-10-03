@@ -18,7 +18,9 @@ optional: if it is missing, the code-drawn version is used.
   `walk_s_3.png`... up to twelve. Idle frames change every quarter second,
   walk and attack frames every eighth. Frames may be a different canvas size
   from the idle ones (Sorcerer2's walk is 40 by 40, its idle 32 by 32): each
-  frame stands on its own bottom centre.
+  frame stands on its own bottom centre, and it is the lowest drawn pixel of
+  the animation that touches the ground, not the canvas edge, so empty rows
+  under the feet do no harm.
 - Size: the code-drawn hero is 22 pixels tall; a drawing of about 22 to 30
   pixels tall sits right next to monsters and doors. It is drawn at its own
   pixel size, never scaled by a fraction. A class drawn bigger can be shrunk
