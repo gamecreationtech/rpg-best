@@ -49,7 +49,7 @@ const dummyImages = new Map<string, HTMLCanvasElement>();
 const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
 
 /** Town furniture with a hand-made sprite at `art/props/<id>.png`, more frames of an animated piece numbered `_2`, `_3`...: the stash chest, the pair of chests beside the merchant, and the portal (town portal and return portal alike). */
-export const PROP_ART_IDS = ['stash', 'merchant_chest', 'portal'];
+export const PROP_ART_IDS = ['stash', 'merchant_chest', 'caravan', 'portal'];
 const propImages = new Map<string, HTMLCanvasElement[]>();
 
 /** Townsfolk with a hand-made sprite at `art/npcs/<id>.png`: one still image each. The merchant today. */

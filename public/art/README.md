@@ -49,8 +49,8 @@ optional: if it is missing, the code-drawn version is used.
 
 - One still drawing per piece listed in `PROP_ART_IDS` in `src/art/images.ts`,
   today `stash.png`, the player's chest at the stash, `merchant_chest.png`
-  for the pair beside the merchant, and `portal.png` for the town portal and
-  the return portal. An animated piece has its frames numbered
+  for the chest on the merchant's right, `caravan.png` for the caravan on his
+  left, and `portal.png` for the town portal and the return portal. An animated piece has its frames numbered
   (`portal_2.png`, `portal_3.png`...), shown at about eight a second.
   Transparent background, bottom centre on the ground, drawn at the game's
   size.
