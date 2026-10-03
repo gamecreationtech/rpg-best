@@ -23,8 +23,9 @@ const itemImages = new Map<string, HTMLCanvasElement>();
  * their files exist at `art/heroes/<classId>/<anim>_<dir>.png`: `anim` is
  * idle, walk or attack, `dir` is n, s, e or w, and more frames of one
  * animation follow as `_2`, `_3`... (see `public/art/README.md`). The idle
- * set needs all four directions; walk and attack are used when all four of
- * theirs exist and fall back to idle otherwise.
+ * set needs all four directions; walk and attack are used direction by
+ * direction as their frames arrive, each missing direction falling back to
+ * that direction's idle.
  */
 export const HERO_ART_CLASSES: ClassId[] = ['sorcerer2'];
 /** Classes whose sprites are shrunk by a whole factor at load (block averages, hard edges). None today: Sorcerer2's witch is drawn at 32 by 32 to begin with (2026-10-03). */
@@ -34,11 +35,12 @@ export type HeroAnimName = 'idle' | 'walk' | 'attack';
 export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
 export interface HeroArt {
   idle: HeroArtSet;
-  walk: HeroArtSet | null;
-  attack: HeroArtSet | null;
+  /** Walk and attack frames per direction; a direction without any uses its idle frames. */
+  walk: Partial<HeroArtSet>;
+  attack: Partial<HeroArtSet>;
 }
 const HERO_DIRS: HeroDir[] = ['n', 's', 'e', 'w'];
-const MAX_FRAMES = 8;
+const MAX_FRAMES = 12;
 
 const heroImages = new Map<string, HeroArt>();
 
@@ -114,13 +116,15 @@ async function loadHeroFrames(classId: string, anim: HeroAnimName, dir: HeroDir)
 }
 
 async function loadHeroArt(classId: string): Promise<void> {
-  const sets: Partial<Record<HeroAnimName, HeroArtSet | null>> = {};
-  for (const anim of ['idle', 'walk', 'attack'] as const) {
+  const load = async (anim: HeroAnimName): Promise<Partial<HeroArtSet>> => {
     const dirs = await Promise.all(HERO_DIRS.map((dir) => loadHeroFrames(classId, anim, dir)));
-    sets[anim] = dirs.every((f) => f.length > 0) ? { n: dirs[0]!, s: dirs[1]!, e: dirs[2]!, w: dirs[3]! } : null;
-  }
-  if (!sets.idle) return;
-  heroImages.set(classId, { idle: sets.idle, walk: sets.walk ?? null, attack: sets.attack ?? null });
+    const set: Partial<HeroArtSet> = {};
+    HERO_DIRS.forEach((dir, i) => { if (dirs[i]!.length) set[dir] = dirs[i]; });
+    return set;
+  };
+  const idle = await load('idle');
+  if (!HERO_DIRS.every((dir) => idle[dir])) return;
+  heroImages.set(classId, { idle: idle as HeroArtSet, walk: await load('walk'), attack: await load('attack') });
 }
 
 /** The hand-made sprites for a class, when its idle set is complete. */
@@ -139,8 +143,8 @@ export function heroArtSheet(art: HeroArt): CharacterSheet {
   const anim = (frames: HTMLCanvasElement[], frameTime: number): SpriteAnim => ({ frames, originX: frames[0]!.width >> 1, originY: frames[0]!.height, frameTime });
   const set = (dir: HeroDir): AnimSet => ({
     idle: anim(art.idle[dir], 0.25),
-    walk: anim((art.walk ?? art.idle)[dir], 0.125),
-    attack: anim((art.attack ?? art.idle)[dir], 0.125),
+    walk: anim(art.walk[dir] ?? art.idle[dir], 0.125),
+    attack: anim(art.attack[dir] ?? art.idle[dir], 0.125),
   });
   return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height };
 }
