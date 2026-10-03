@@ -20,8 +20,8 @@ optional: if it is missing, the code-drawn version is used.
   pixels tall sits right next to monsters and doors. It is drawn at its own
   pixel size, never scaled by a fraction. A class drawn bigger can be shrunk
   by a whole number at load (`HERO_ART_SHRINK` in `src/art/images.ts`),
-  which averages blocks and keeps hard edges; Sorcerer2's 64 by 64 witch is
-  shown at 32 by 32 this way. Give every frame of a class the same canvas size
+  which averages blocks and keeps hard edges; Sorcerer2's witch is drawn at
+  32 by 32 and needs none. Give every frame of a class the same canvas size
   with the feet at the bottom centre: that point is placed on the ground, so
   it must not move between frames or directions. Transparent background.
 
