@@ -181,6 +181,8 @@ export class PixelView {
       return_portal: portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
       town_portal: portalProp(0xb070ff, pal, SIZE, OUTLINE),
       stash: propArt('stash') ? stillAnim(propArt('stash')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
+      // The merchant's two chests are their own piece: the code-drawn chest until their own drawing arrives
+      merchant_chest: propArt('merchant_chest') ? stillAnim(propArt('merchant_chest')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
       pillar: { frames: [this.props.pillar], originX: this.props.pillar.width >> 1, originY: this.props.pillar.height - 1, frameTime: 1 },
       brazier: { frames: this.props.brazier, originX: this.props.brazier[0]!.width >> 1, originY: this.props.brazier[0]!.height - 1, frameTime: 0.12 },
     };
@@ -318,8 +320,8 @@ export class PixelView {
       for (let i = 0; i < 6; i++) place(this.stations.pillar!, i % 2 ? 3.5 : 40.5, 6 + i * 4);
       for (let i = 0; i < 24; i++) place(this.rubble[i % this.rubble.length]!, 4 + ((i * 11) % 36) + 0.5, 4 + ((i * 7) % 25) + 0.5);
       // The merchant's stall: two chests beside him
-      place(this.stations.stash!, t.vendor.x - 1.2, t.vendor.z + 0.2);
-      place(this.stations.stash!, t.vendor.x + 1.3, t.vendor.z + 0.1);
+      place(this.stations.merchant_chest!, t.vendor.x - 1.2, t.vendor.z + 0.2);
+      place(this.stations.merchant_chest!, t.vendor.x + 1.3, t.vendor.z + 0.1);
     } else {
       const s = w.arena!.spawn;
       place(this.stations.town_portal!, s.x - 2, s.z, idOf('town_portal'));

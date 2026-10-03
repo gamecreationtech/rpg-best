@@ -48,8 +48,8 @@ const heroImages = new Map<string, HeroArt>();
 const dummyImages = new Map<string, HTMLCanvasElement>();
 const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
 
-/** Town furniture with a hand-made sprite at `art/props/<id>.png`: one still image each. The stash chest today; it also stands twice beside the merchant. */
-export const PROP_ART_IDS = ['stash'];
+/** Town furniture with a hand-made sprite at `art/props/<id>.png`: one still image each. The stash chest today; `merchant_chest` is the pair beside the merchant, waiting for its drawing. */
+export const PROP_ART_IDS = ['stash', 'merchant_chest'];
 const propImages = new Map<string, HTMLCanvasElement>();
 
 /** Townsfolk with a hand-made sprite at `art/npcs/<id>.png`: one still image each. The merchant today. */
