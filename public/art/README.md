@@ -45,6 +45,13 @@ optional: if it is missing, the code-drawn version is used.
   transparent background, feet at the bottom centre, drawn at the game's size
   (the producer's merchant is 32 by 32).
 
+## Town furniture: `props/<id>.png`
+
+- One still drawing per piece listed in `PROP_ART_IDS` in `src/art/images.ts`,
+  today `stash.png`, the chest at the stash (it also stands twice beside the
+  merchant). Transparent background, bottom centre on the ground, drawn at
+  the game's size.
+
 ## Item icons: `items/<id>.png`
 
 - One PNG per item, named after the item's id in `src/data/items.ts`

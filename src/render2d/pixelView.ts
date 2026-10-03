@@ -1,4 +1,4 @@
-import { dummyArt, heroArt, heroArtSheet, npcArt, shrunk, stillSheet } from '../art/images';
+import { dummyArt, heroArt, heroArtSheet, npcArt, propArt, shrunk, stillAnim, stillSheet } from '../art/images';
 import { DUMMIES } from '../data/dummies';
 import { RARITIES } from '../data/items';
 import { PX } from '../data/units';
@@ -180,7 +180,7 @@ export class PixelView {
       waypoint: portalProp(0xffd060, pal, SIZE, OUTLINE),
       return_portal: portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
       town_portal: portalProp(0xb070ff, pal, SIZE, OUTLINE),
-      stash: { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
+      stash: propArt('stash') ? stillAnim(propArt('stash')!) : { frames: [this.props.chest], originX: this.props.chest.width >> 1, originY: this.props.chest.height - 1, frameTime: 1 },
       pillar: { frames: [this.props.pillar], originX: this.props.pillar.width >> 1, originY: this.props.pillar.height - 1, frameTime: 1 },
       brazier: { frames: this.props.brazier, originX: this.props.brazier[0]!.width >> 1, originY: this.props.brazier[0]!.height - 1, frameTime: 0.12 },
     };

@@ -48,6 +48,10 @@ const heroImages = new Map<string, HeroArt>();
 const dummyImages = new Map<string, HTMLCanvasElement>();
 const DUMMY_IDS = ['fire', 'cold', 'lightning', 'poison', 'physical'];
 
+/** Town furniture with a hand-made sprite at `art/props/<id>.png`: one still image each. The stash chest today; it also stands twice beside the merchant. */
+export const PROP_ART_IDS = ['stash'];
+const propImages = new Map<string, HTMLCanvasElement>();
+
 /** Townsfolk with a hand-made sprite at `art/npcs/<id>.png`: one still image each. The merchant today. */
 export const NPC_ART_IDS = ['merchant'];
 const npcImages = new Map<string, HTMLCanvasElement>();
@@ -55,7 +59,22 @@ const npcImages = new Map<string, HTMLCanvasElement>();
 /** Fetches every optional image before play. Missing files are skipped quietly. */
 export async function loadArt(): Promise<void> {
   if (typeof document === 'undefined') return;
-  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id)), ...['dummy', ...DUMMY_IDS].map((id) => loadDummyImage(id)), ...NPC_ART_IDS.map((id) => loadNpcImage(id))]);
+  await Promise.all([...ITEM_ART_IDS.map((id) => loadItemImage(id)), ...HERO_ART_CLASSES.map((id) => loadHeroArt(id)), ...['dummy', ...DUMMY_IDS].map((id) => loadDummyImage(id)), ...NPC_ART_IDS.map((id) => loadNpcImage(id)), ...PROP_ART_IDS.map((id) => loadPropImage(id))]);
+}
+
+async function loadPropImage(id: string): Promise<void> {
+  const c = await fetchImage(`${import.meta.env.BASE_URL}art/props/${id}.png`);
+  if (c) propImages.set(id, c);
+}
+
+/** The sprite for a piece of town furniture, or null for the code-drawn one. */
+export function propArt(id: string): HTMLCanvasElement | null {
+  return propImages.get(id) ?? null;
+}
+
+/** One still drawing as a prop animation, standing on its lowest drawn pixel. */
+export function stillAnim(frame: HTMLCanvasElement): SpriteAnim {
+  return artAnim([frame], 1);
 }
 
 async function loadNpcImage(id: string): Promise<void> {
