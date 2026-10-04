@@ -476,17 +476,19 @@ function frontHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, he
 function wizardHat(d: Doll, look: Look, hx: number, brimY: number, headR: number, facing: Facing): void {
   const c = base(d, look.head);
   const band = base(d, look.trim ?? look.head);
-  const brimHalf = headR + 3;
+  // A wide brim, its upper edge in the trim colour, and a thick band where the cone meets it (after the producer's witch, 2026-10-04)
+  // One row thick so the brim sits above the eyes instead of over them
+  const brimHalf = headR + 4;
   const cone = d.top;
-  // Brim, and the band where the cone meets it
-  d.buf.rect(hx - brimHalf, brimY, brimHalf * 2 + 1, 2, c);
-  d.buf.rect(hx - headR, brimY - 1, headR * 2 + 1, 1, band);
-  // Cone: each row narrower than the one below, tip leaning back (side) or to one side (front)
+  d.buf.rect(hx - brimHalf, brimY, brimHalf * 2 + 1, 1, c);
+  d.buf.rect(hx - brimHalf + 2, brimY - 1, brimHalf * 2 - 3, 1, band);
+  d.buf.rect(hx - headR, brimY - 2, headR * 2 + 1, 1, band);
+  // Cone: each row narrower than the one below, the tip bending over, back (side) or to one side (front)
   const lean = facing === 'side' ? -1 : 1;
-  for (let i = 1; i <= cone; i++) {
-    const t = i / cone;
-    const half = Math.max(0, Math.round(headR * (1 - t) - (t > 0.85 ? 1 : 0)));
-    const shift = Math.round(lean * t * t * headR * 0.9);
+  for (let i = 3; i <= cone; i++) {
+    const t = (i - 2) / (cone - 2);
+    const half = Math.max(0, Math.round(headR * (1 - t * 0.9) - (t > 0.8 ? 1 : 0)));
+    const shift = Math.round(lean * t * t * t * headR * 1.4);
     d.buf.rect(hx - half + shift, brimY - 1 - i, half * 2 + 1, 1, c);
   }
 }
@@ -674,12 +676,13 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
   const pledge = look.pledgeId ? PLEDGES[look.pledgeId] : null;
   // A twin class dresses as its kin
   const kin = kinOf(look.classId);
-  const bright = pledge?.color ?? (kin === 'knight' ? 0x3858c8 : kin === 'sorcerer' ? 0x5a3a8a : 0x4a6a3a);
+  // The unsworn sorcerer wears the producer's witch colours: a maroon robe, orange trim, a darker hat
+  const bright = pledge?.color ?? (kin === 'knight' ? 0x3858c8 : kin === 'sorcerer' ? 0x5a2846 : 0x4a6a3a);
   const cloth = pledge ? (pledge.cloth ?? darken(pledge.color, 0.55)) : bright;
   const materials = {
-    skin: pal.skin,
+    skin: kin === 'sorcerer' ? 0xf0c0a8 : pal.skin,
     cloth,
-    trim: pledge?.armor?.trim ?? (pledge ? pledge.color : pal.heroTrim),
+    trim: pledge?.armor?.trim ?? (pledge ? pledge.color : kin === 'sorcerer' ? 0xe8923a : pal.heroTrim),
     // A rogue's leathers and a knight's plate take the pledge's colours once sworn
     leather: kin === 'rogue' && pledge?.armor ? pledge.armor.plate : pal.leather,
     leatherDark: kin === 'rogue' && pledge?.armor ? pledge.armor.dark : darken(pal.leather, 0.8),
@@ -688,14 +691,14 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     bone: pal.bone,
     cape: kin === 'knight' && pledge?.armor ? pledge.armor.dark : kin === 'knight' ? 0x5a6070 : cloth,
     steelDark: kin === 'knight' && pledge?.armor ? pledge.armor.dark : 0x5a6070,
-    hood: kin === 'sorcerer' ? darken(cloth, 0.8) : kin === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
+    hood: kin === 'sorcerer' ? darken(cloth, 0.7) : kin === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
   };
   // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour
   const heroLook: Look =
     kin === 'knight'
       ? { skin: 'skin', body: 'steel', head: 'steel', legs: 'steelDark', arms: 'steel', trim: 'trim', belt: 'steelDark', helm: true, cape: 'cape' }
       : kin === 'sorcerer'
-        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'hood', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'hood' }
+        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'cloth', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'trim' }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leatherDark', arms: 'skin', trim: 'trim', hood: true };
   // Only what is actually equipped is drawn: no weapon means empty hands
   const weapon = look.weapon ? WEAPONS[look.weapon] : null;
