@@ -401,6 +401,20 @@ export class PixelView {
     p.animT = 0;
   }
 
+  /**
+   * A hand-made attack is paced to the time between attacks, so every frame
+   * of the swing shows before the next one starts and the hero does not snap
+   * back to standing between fast attacks. Each frame gets 60 to 200 ms.
+   */
+  private paceAttack(interval: number): void {
+    const sheet = this.hero.sheet;
+    if (!sheet.handMade) return;
+    for (const set of [sheet.front, sheet.back, sheet.side, sheet.left]) {
+      if (!set) continue;
+      set.attack.frameTime = Math.max(0.06, Math.min(0.2, (interval * 0.9) / set.attack.frames.length));
+    }
+  }
+
   private syncHero(dt: number): void {
     const w = this.world;
     const h = this.hero;
@@ -477,6 +491,7 @@ export class PixelView {
         break;
       }
       case 'player_attack':
+        this.paceAttack(1 / w.derived.atkSpd);
         this.play(this.hero, 'attack');
         break;
       case 'player_hit':
@@ -493,6 +508,7 @@ export class PixelView {
         break;
       case 'cast': {
         const def = SKILLS[ev.skillId];
+        this.paceAttack(w.derived.castInterval);
         this.play(this.hero, 'attack');
         const color = def && def.pledgeId ? PLEDGES[def.pledgeId]!.color : ELEMENT_COLORS[ev.element];
         this.effects.flash(ev.x + ev.dirX * 0.5, 1.2, ev.z + ev.dirZ * 0.5, color, 1.2, 40, 0.2);

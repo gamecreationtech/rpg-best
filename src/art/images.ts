@@ -200,7 +200,7 @@ export function heroArtSheet(art: HeroArt): CharacterSheet {
     walk: anim(art.walk[dir] ?? art.idle[dir], 0.125),
     attack: anim(art.attack[dir] ?? art.idle[dir], 0.125),
   });
-  return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height };
+  return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height, handMade: true };
 }
 
 async function loadItemImage(id: string): Promise<void> {

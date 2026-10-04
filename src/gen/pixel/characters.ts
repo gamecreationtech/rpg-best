@@ -27,6 +27,8 @@ export interface CharacterSheet {
   back: AnimSet;
   /** Facing left, when the sheet has its own drawing for it (hand-made sprites); otherwise `side` is mirrored. */
   left?: AnimSet;
+  /** Built from the producer's drawings: the attack is paced to the hero's attack rate so every frame shows each swing. */
+  handMade?: boolean;
   /** Height of the body in pixels, for placing labels and lights. */
   height: number;
 }
