@@ -70,6 +70,10 @@ interface Look {
   robeFold?: string;
   /** Wider body. */
   stout?: boolean;
+  /** Hair showing under a hat or around the face, in this material. */
+  hair?: string;
+  /** Sleeve cuffs and lines down the robe front in the `trim` colour, and dark shoes under the hem: the witch's finery. */
+  finery?: boolean;
 }
 
 interface Pose {
@@ -212,6 +216,7 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
     const x = px(ox + hw + side * (W * reach) - armW / 2 + swing * W * 0.1 + lean * 0.5);
     const raise = Math.max(0, -swing) * px(H * 0.12);
     d.buf.rect(x - sleeve, oy + armTop - raise, armW + sleeve, armLen, base(d, look.arms ?? look.body));
+    if (look.finery) d.buf.rect(x - sleeve, oy + armTop - raise + armLen - 1, armW + sleeve, 1, base(d, look.trim ?? look.body));
     d.buf.rect(x, oy + armTop - raise + armLen, armW, Math.max(1, px(H * 0.05)), base(d, look.skin));
   };
   if (!look.robe) drawLeg(pose.legR, true);
@@ -256,8 +261,11 @@ function sideBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: WeaponD
       // Two folds down the front and the back edge in shadow
       if (t > 0.3 && y % 2 === 0) d.buf.set(front - Math.round(half * 0.6), y, fold);
       if (t > 0.2) d.buf.set(back, y, fold);
+      // Finery: a trim line down the robe's front opening
+      if (look.finery && t > 0.1) d.buf.set(front - 1, y, base(d, look.trim ?? look.body));
     }
     d.buf.rect(Math.round(cx - W * 0.42 + pose.legR * 1.5), bottom - 1, Math.round(W * 0.84) + 1, 1, fold);
+    if (look.finery) d.buf.rect(Math.round(cx + W * 0.1 + pose.legL * 1.5), bottom - 1, Math.max(2, px(W * 0.2)), 1, base(d, look.head));
     const sashY = oy + px(H * 0.52);
     d.buf.rect(Math.round(cx - torsoW * 0.55), sashY, px(torsoW * 1.1), Math.max(1, px(H * 0.05)), base(d, look.trim ?? look.belt ?? 'leather'));
   } else {
@@ -286,6 +294,11 @@ function sideHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, hea
   const eye = look.eyes ?? hex(pal.outline);
   if (look.wizardHat) {
     d.buf.ellipse(hx, hy, headR, headR, base(d, look.skin));
+    if (look.hair) {
+      // Hair down the back of the head and a lock over the brow
+      d.buf.rect(hx - headR - 1, hy - headR + 2, 2, headR * 2 - 1, base(d, look.hair));
+      d.buf.rect(hx - headR + 1, hy - headR + 2, headR, 1, base(d, look.hair));
+    }
     d.buf.set(hx + Math.max(1, px(headR * 0.5)), hy, eye);
     wizardHat(d, look, hx, hy - headR + 1, headR, 'side');
   } else if (look.hood) {
@@ -364,8 +377,19 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
         d.buf.set(Math.round(cx + sway), y, fold);
         d.buf.set(Math.round(cx - half + sway), y, fold);
       }
+      // Finery: two trim lines down the front opening, spreading a little toward the hem
+      if (look.finery && !back) {
+        const gapT = Math.max(1, px(W * 0.08)) + Math.round(t * 2);
+        d.buf.set(Math.round(cx - gapT + sway), y, base(d, look.trim ?? look.body));
+        d.buf.set(Math.round(cx + gapT + sway), y, base(d, look.trim ?? look.body));
+      }
     }
     d.buf.rect(Math.round(cx - W * 0.46), bottom - 1, Math.round(W * 0.92) + 1, 1, fold);
+    if (look.finery) {
+      const bw = Math.max(2, px(W * 0.14));
+      d.buf.rect(Math.round(cx - gap / 2 - bw), bottom - 1, bw, 1, base(d, look.head));
+      d.buf.rect(Math.round(cx + gap / 2) + 1, bottom - 1, bw, 1, base(d, look.head));
+    }
     if (!back) d.buf.rect(Math.round(cx - torsoW * 0.55), oy + px(H * 0.52), px(torsoW * 1.1), Math.max(1, px(H * 0.05)), base(d, look.trim ?? look.belt ?? 'leather'));
   } else if (!look.stout) {
     const waist = Math.max(1, px(W * 0.06));
@@ -391,6 +415,7 @@ function frontBody(d: Doll, pal: Palette, look: Look, pose: Pose, weapon: Weapon
     const up = swing < 0 ? Math.round(-swing * px(H * 0.12)) : 0;
     const down = swing > 0 ? Math.round(swing * 1.5) : 0;
     d.buf.rect(x, oy + armTop - up + down, armW, armLen, base(d, look.arms ?? look.body));
+    if (look.finery) d.buf.rect(x, oy + armTop - up + down + armLen - 1, armW, 1, base(d, look.trim ?? look.body));
     d.buf.rect(x, oy + armTop - up + down + armLen, armW, Math.max(1, px(H * 0.05)), base(d, look.skin));
   };
   drawArm(back ? 1 : -1, pose.armB);
@@ -426,6 +451,16 @@ function frontHead(d: Doll, pal: Palette, look: Look, hx: number, hy: number, he
   const eyeDx = Math.max(1, px(headR * 0.5));
   if (look.wizardHat) {
     d.buf.ellipse(hx, hy, headR, headR, base(d, look.skin));
+    if (look.hair) {
+      // Hair: the whole back of the head from behind, and locks framing the face from the front
+      const hair = base(d, look.hair);
+      if (back) d.buf.ellipse(hx, hy, headR, headR, hair);
+      else {
+        d.buf.rect(hx - headR - 1, hy - headR + 2, 2, headR * 2 - 1, hair);
+        d.buf.rect(hx + headR, hy - headR + 2, 2, headR * 2 - 1, hair);
+        d.buf.rect(hx - headR + 1, hy - headR + 2, headR * 2 - 1, 1, hair);
+      }
+    }
     if (!back) {
       d.buf.set(hx - eyeDx, eyeY, eye);
       d.buf.set(hx + eyeDx, eyeY, eye);
@@ -483,6 +518,8 @@ function wizardHat(d: Doll, look: Look, hx: number, brimY: number, headR: number
   d.buf.rect(hx - brimHalf, brimY, brimHalf * 2 + 1, 1, c);
   d.buf.rect(hx - brimHalf + 2, brimY - 1, brimHalf * 2 - 3, 1, band);
   d.buf.rect(hx - headR, brimY - 2, headR * 2 + 1, 1, band);
+  // A bright buckle on the band, off to the front
+  if (facing !== 'back') d.buf.set(hx + (facing === 'side' ? 1 : 0), brimY - 2, (d.ramps.get(look.trim ?? look.head) ?? d.ramps.get(look.head))![3]);
   // Cone: each row narrower than the one below, the tip bending over, back (side) or to one side (front)
   const lean = facing === 'side' ? -1 : 1;
   for (let i = 3; i <= cone; i++) {
@@ -671,11 +708,12 @@ function darken(hex6: number, k: number): number {
 
 /** A hero: class silhouette, pledge colour on the cloth and trim, the equipped weapon and shield or offhand. */
 export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outline: boolean): CharacterSheet {
-  const H = size === 'large' ? 44 : 22;
-  const W = Math.round(H * 0.7);
   const pledge = look.pledgeId ? PLEDGES[look.pledgeId] : null;
   // A twin class dresses as its kin
   const kin = kinOf(look.classId);
+  // The sorcerer stands 24 tall plus an 8 row hat, a 32 pixel frame like the producer's hand-drawn witch (2026-10-04); the rest 22
+  const H = (kin === 'sorcerer' ? 24 : 22) * (size === 'large' ? 2 : 1);
+  const W = Math.round(H * 0.7);
   // The unsworn sorcerer wears the producer's witch colours: a maroon robe, orange trim, a darker hat
   const bright = pledge?.color ?? (kin === 'knight' ? 0x3858c8 : kin === 'sorcerer' ? 0x5a2846 : 0x4a6a3a);
   const cloth = pledge ? (pledge.cloth ?? darken(pledge.color, 0.55)) : bright;
@@ -692,13 +730,14 @@ export function heroSheet(look: HeroLook, pal: Palette, size: SpriteSize, outlin
     cape: kin === 'knight' && pledge?.armor ? pledge.armor.dark : kin === 'knight' ? 0x5a6070 : cloth,
     steelDark: kin === 'knight' && pledge?.armor ? pledge.armor.dark : 0x5a6070,
     hood: kin === 'sorcerer' ? darken(cloth, 0.7) : kin === 'rogue' && pledge?.armor ? pledge.armor.dark : pal.leather,
+    hair: 0x3a2030,
   };
   // The knight is plate from head to foot, grey all round, with only the belt in the pledge colour
   const heroLook: Look =
     kin === 'knight'
       ? { skin: 'skin', body: 'steel', head: 'steel', legs: 'steelDark', arms: 'steel', trim: 'trim', belt: 'steelDark', helm: true, cape: 'cape' }
       : kin === 'sorcerer'
-        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'cloth', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'trim' }
+        ? { skin: 'skin', body: 'cloth', head: 'hood', legs: 'cloth', arms: 'cloth', trim: 'trim', wizardHat: true, robe: true, robeFold: 'trim', hair: 'hair', finery: true }
         : { skin: 'skin', body: 'leather', head: 'hood', legs: 'leatherDark', arms: 'skin', trim: 'trim', hood: true };
   // Only what is actually equipped is drawn: no weapon means empty hands
   const weapon = look.weapon ? WEAPONS[look.weapon] : null;
