@@ -5,7 +5,7 @@ import { PX } from '../data/units';
 import { PLEDGES } from '../data/pledges';
 import { SKILLS, orbiterPlace } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
-import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
+import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type AnimSet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
 import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, waypointProp, type Prop } from '../gen/pixel/props';
 import { zoneById } from '../data/zones';
@@ -25,7 +25,12 @@ import { INTERACT_INFO, InteractLabels } from './interactLabels';
 import { Minimap } from './minimap';
 import { Particles2D } from './particles2d';
 
-type AnimName = 'idle' | 'walk' | 'attack';
+type AnimName = 'idle' | 'walk' | 'attack' | 'cast';
+
+/** The animation a puppet's state plays: a cast falls back to the attack where none is drawn. */
+function animOf(set: AnimSet, anim: AnimName): SpriteAnim {
+  return anim === 'cast' ? (set.cast ?? set.attack) : set[anim];
+}
 
 interface Puppet {
   sheet: CharacterSheet;
@@ -410,8 +415,8 @@ export class PixelView {
   private advance(p: Puppet, dt: number, moving: boolean): void {
     p.animT += dt;
     if (p.flash > 0) p.flash -= dt;
-    if (p.anim === 'attack') {
-      const a = p.sheet[p.facing].attack;
+    if (p.anim === 'attack' || p.anim === 'cast') {
+      const a = animOf(p.facing === 'side' && p.faceLeft && p.sheet.left ? p.sheet.left : p.sheet[p.facing], p.anim);
       if (p.animT >= a.frames.length * a.frameTime) {
         p.anim = 'idle';
         p.animT = 0;
@@ -435,12 +440,13 @@ export class PixelView {
    * of the swing shows before the next one starts and the hero does not snap
    * back to standing between fast attacks. Each frame gets 60 to 200 ms.
    */
-  private paceAttack(interval: number): void {
+  private paceAttack(interval: number, anim: 'attack' | 'cast' = 'attack'): void {
     const sheet = this.hero.sheet;
     if (!sheet.handMade) return;
     for (const set of [sheet.front, sheet.back, sheet.side, sheet.left]) {
       if (!set) continue;
-      set.attack.frameTime = Math.max(0.06, Math.min(0.2, (interval * 0.9) / set.attack.frames.length));
+      const a = animOf(set, anim);
+      a.frameTime = Math.max(0.06, Math.min(0.2, (interval * 0.9) / a.frames.length));
     }
   }
 
@@ -537,8 +543,8 @@ export class PixelView {
         break;
       case 'cast': {
         const def = SKILLS[ev.skillId];
-        this.paceAttack(w.derived.castInterval);
-        this.play(this.hero, 'attack');
+        this.paceAttack(w.derived.castInterval, 'cast');
+        this.play(this.hero, 'cast');
         const color = def && def.pledgeId ? PLEDGES[def.pledgeId]!.color : ELEMENT_COLORS[ev.element];
         this.effects.flash(ev.x + ev.dirX * 0.5, 1.2, ev.z + ev.dirZ * 0.5, color, 1.2, 40, 0.2);
         pt.burst(ev.x + ev.dirX * 0.5, 1.2, ev.z + ev.dirZ * 0.5, 6, 1.5, color, 0.35, { priority: 0.5 });
@@ -2990,7 +2996,7 @@ export class PixelView {
     // Facing left: the sheet's own left-facing drawing when it has one, else the side mirrored
     const ownLeft = p.facing === 'side' && p.faceLeft && !!p.sheet.left;
     const set = ownLeft ? p.sheet.left! : p.sheet[p.facing];
-    const anim: SpriteAnim = p.dying >= 0 ? set.idle : set[p.anim];
+    const anim: SpriteAnim = p.dying >= 0 ? set.idle : animOf(set, p.anim);
     const frame = anim.frames[Math.floor(p.animT / anim.frameTime) % anim.frames.length]!;
     const fx = Math.round(cam.frameX(x, z));
     const fy = Math.round(cam.frameY(x, y, z));

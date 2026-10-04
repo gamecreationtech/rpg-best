@@ -7,11 +7,14 @@ optional: if it is missing, the code-drawn version is used.
 
 - A class listed in `HERO_ART_CLASSES` in `src/art/images.ts` (today only
   `sorcerer2`) is drawn from these instead of the code-drawn hero, whatever it
-  wears. `anim` is `idle`, `walk` or `attack`; `dir` is `n` (back to the
+  wears. `anim` is `idle`, `walk`, `attack` or `cast` (casting a spell; a
+  direction without cast frames plays its attack); `dir` is `n` (back to the
   camera), `s` (facing the camera), `e` (facing right) or `w` (facing left).
   A class listed in `HERO_ART_SHARED` reads another class's folder instead of
   its own: since 2026-10-04 the Sorcerer wears Sorcerer2's sprites, so files
   dropped in `heroes/sorcerer2/` change both classes.
+  A walk, attack or cast with `e` frames but no `w` frames yet plays the `e`
+  frames flipped when facing west.
   The `w` drawing is used as is, never a mirrored `e`, unless the animation is
   listed in `HERO_ART_MIRROR_WEST`: then west is the east frames flipped and
   the `w` files are ignored. Sorcerer2's attack is listed (2026-10-04), so its

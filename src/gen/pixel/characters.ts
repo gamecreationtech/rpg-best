@@ -19,6 +19,8 @@ export interface AnimSet {
   idle: SpriteAnim;
   walk: SpriteAnim;
   attack: SpriteAnim;
+  /** Casting a spell, when drawn (hand-made sprites); otherwise the attack plays. */
+  cast?: SpriteAnim;
 }
 
 export interface CharacterSheet {

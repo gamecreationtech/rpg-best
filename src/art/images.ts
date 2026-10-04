@@ -37,7 +37,7 @@ export const HERO_ART_SHARED: Partial<Record<ClassId, ClassId>> = { sorcerer: 's
 /** Classes whose sprites are shrunk by a whole factor at load (block averages, hard edges). None today: Sorcerer2's witch is drawn at 32 by 32 to begin with (2026-10-03). */
 export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = {};
 export type HeroDir = 'n' | 's' | 'e' | 'w';
-export type HeroAnimName = 'idle' | 'walk' | 'attack';
+export type HeroAnimName = 'idle' | 'walk' | 'attack' | 'cast';
 export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
 /**
  * Animations whose west frames are the east frames flipped left to right,
@@ -51,6 +51,8 @@ export interface HeroArt {
   /** Walk and attack frames per direction; a direction without any uses its idle frames. */
   walk: Partial<HeroArtSet>;
   attack: Partial<HeroArtSet>;
+  /** Casting a spell; a direction without any plays its attack. */
+  cast: Partial<HeroArtSet>;
 }
 const HERO_DIRS: HeroDir[] = ['n', 's', 'e', 'w'];
 const MAX_FRAMES = 12;
@@ -161,10 +163,15 @@ async function loadHeroArt(classId: string): Promise<void> {
   };
   const idle = await load('idle');
   if (!HERO_DIRS.every((dir) => idle[dir])) return;
-  const art: HeroArt = { idle: idle as HeroArtSet, walk: await load('walk'), attack: await load('attack') };
+  const art: HeroArt = { idle: idle as HeroArtSet, walk: await load('walk'), attack: await load('attack'), cast: await load('cast') };
   for (const anim of HERO_ART_MIRROR_WEST[classId as ClassId] ?? []) {
     const east = art[anim].e;
     if (east) art[anim].w = east.map(mirrored);
+  }
+  // A west animation not drawn yet is the east one flipped, as soon as the east one exists
+  for (const anim of ['walk', 'attack', 'cast'] as const) {
+    const east = art[anim].e;
+    if (east && !art[anim].w) art[anim].w = east.map(mirrored);
   }
   heroImages.set(classId, art);
 }
@@ -230,6 +237,7 @@ export function heroArtSheet(art: HeroArt): CharacterSheet {
     idle: anim(art.idle[dir], 0.25),
     walk: anim(art.walk[dir] ?? art.idle[dir], 0.125),
     attack: anim(art.attack[dir] ?? art.idle[dir], 0.125),
+    cast: art.cast[dir] ? anim(art.cast[dir], 0.1) : undefined,
   });
   return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height, handMade: true };
 }
