@@ -28,6 +28,12 @@ const itemImages = new Map<string, HTMLCanvasElement>();
  * that direction's idle.
  */
 export const HERO_ART_CLASSES: ClassId[] = ['sorcerer2'];
+/**
+ * Classes drawn from another class's sprites, read from that class's folder
+ * (no copies on disk). The Sorcerer wears Sorcerer2's witch (producer's call,
+ * 2026-10-04).
+ */
+export const HERO_ART_SHARED: Partial<Record<ClassId, ClassId>> = { sorcerer: 'sorcerer2' };
 /** Classes whose sprites are shrunk by a whole factor at load (block averages, hard edges). None today: Sorcerer2's witch is drawn at 32 by 32 to begin with (2026-10-03). */
 export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = {};
 export type HeroDir = 'n' | 's' | 'e' | 'w';
@@ -176,9 +182,9 @@ function mirrored(src: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
-/** The hand-made sprites for a class, when its idle set is complete. */
+/** The hand-made sprites for a class (its own, or the class it shares with), when the idle set is complete. */
 export function heroArt(classId: string): HeroArt | null {
-  return heroImages.get(classId) ?? null;
+  return heroImages.get(HERO_ART_SHARED[classId as ClassId] ?? classId) ?? null;
 }
 
 /** Rows of empty canvas under the lowest drawn pixel of a frame. */

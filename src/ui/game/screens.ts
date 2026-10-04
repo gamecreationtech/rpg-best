@@ -5,6 +5,7 @@ import { SKILLS } from '../../data/skills';
 import { PALETTES } from '../../gen/pixel/palettes';
 import { heroSheet, type HeroLook } from '../../gen/pixel/characters';
 import { isoTiles } from '../../gen/pixel/sprites';
+import { heroArt } from '../../art/images';
 import { button, clear, h, hex } from '../dom';
 
 export interface ScreenHost {
@@ -193,8 +194,9 @@ function zoomPreview(classId: ClassId, zoom: 1 | 1.5): HTMLCanvasElement {
   }
   const kin = kinOf(classId);
   const look: HeroLook = { classId, pledgeId: null, weapon: kin === 'knight' ? 'sword' : kin === 'sorcerer' ? 'staff' : 'bow', offhand: kin === 'knight' ? 'wooden' : null };
-  const sheet = heroSheet(look, pal, 'small', true);
-  const anim = sheet.front.idle;
+  // A class drawn from the producer's sprites shows its first south idle frame, standing on its bottom centre
+  const art = heroArt(classId);
+  const anim = art ? { frames: art.idle.s, originX: art.idle.s[0]!.width >> 1, originY: art.idle.s[0]!.height } : heroSheet(look, pal, 'small', true).front.idle;
   const frame = anim.frames[0]!;
   const fx = Math.round(W / 2 - anim.originX * scale);
   const fy = Math.round(H * 0.62 - anim.originY * scale);
