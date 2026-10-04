@@ -237,7 +237,7 @@ export function heroArtSheet(art: HeroArt): CharacterSheet {
     idle: anim(art.idle[dir], 0.25),
     walk: anim(art.walk[dir] ?? art.idle[dir], 0.125),
     attack: anim(art.attack[dir] ?? art.idle[dir], 0.125),
-    cast: art.cast[dir] ? anim(art.cast[dir], 0.1) : undefined,
+    cast: art.cast[dir] ? anim(art.cast[dir], 0.05) : undefined,
   });
   return { front: set('s'), back: set('n'), side: set('e'), left: set('w'), height: art.idle.s[0]!.height, handMade: true };
 }

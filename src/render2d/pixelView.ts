@@ -438,15 +438,19 @@ export class PixelView {
   /**
    * A hand-made attack is paced to the time between attacks, so every frame
    * of the swing shows before the next one starts and the hero does not snap
-   * back to standing between fast attacks. Each frame gets 60 to 200 ms.
+   * back to standing between fast attacks: each frame gets 60 to 200 ms. A
+   * cast is quicker (producer's call, 2026-10-04): it fills under half the
+   * time between spells, 40 to 100 ms a frame, so a base one-second cast
+   * plays its nine frames in about 0.45 s.
    */
   private paceAttack(interval: number, anim: 'attack' | 'cast' = 'attack'): void {
     const sheet = this.hero.sheet;
     if (!sheet.handMade) return;
+    const [share, min, max] = anim === 'cast' ? [0.45, 0.04, 0.1] : [0.9, 0.06, 0.2];
     for (const set of [sheet.front, sheet.back, sheet.side, sheet.left]) {
       if (!set) continue;
       const a = animOf(set, anim);
-      a.frameTime = Math.max(0.06, Math.min(0.2, (interval * 0.9) / a.frames.length));
+      a.frameTime = Math.max(min, Math.min(max, (interval * share) / a.frames.length));
     }
   }
 
