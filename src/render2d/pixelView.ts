@@ -175,7 +175,7 @@ export class PixelView {
     this.vendor = merchant ? stillSheet(merchant) : vendorSheet(pal, SIZE, OUTLINE);
     this.stations = {
       forge: forgeProp(pal, SIZE, OUTLINE),
-      bloodfountain: bloodFountainProp(pal, SIZE, OUTLINE),
+      bloodfountain: propArt('bloodfountain') ? propAnim(propArt('bloodfountain')!) : bloodFountainProp(pal, SIZE, OUTLINE),
       arcana: arcanaProp(pal, SIZE, OUTLINE),
       waypoint: portalProp(0xffd060, pal, SIZE, OUTLINE),
       // The producer's animated portal serves both the town portal and the return portal
