@@ -16,7 +16,9 @@ describe('town layout', () => {
   it('refuses a code that is not a whole town', () => {
     expect(parseTownLayoutCode('hello')).toBeNull();
     const code = townLayoutCode(TOWN_LAYOUT);
-    expect(parseTownLayoutCode(code.replace('"waypoint": [30.5,18.5]', '"waypoint": [30.5]'))).toBeNull();
+    const wp = `"waypoint": ${JSON.stringify(TOWN_LAYOUT.waypoint)}`;
+    expect(code).toContain(wp);
+    expect(parseTownLayoutCode(code.replace(wp, `"waypoint": [${TOWN_LAYOUT.waypoint[0]}]`))).toBeNull();
     const short = copyTownLayout(TOWN_LAYOUT);
     short.pillars.pop();
     expect(parseTownLayoutCode(townLayoutCode(short))).toBeNull();
