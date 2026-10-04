@@ -61,7 +61,7 @@ export class Minimap {
     ctx.drawImage(this.base!, 0, 0, w.map.cols * scale, w.map.rows * scale);
     for (const it of w.interactables) {
       if (!it.active) continue;
-      ctx.fillStyle = it.kind === 'vendor' ? '#ffd060' : it.kind.includes('portal') || it.kind === 'waypoint' ? '#7fb8ff' : '#e0a0ff';
+      ctx.fillStyle = it.kind === 'vendor' ? '#ffd060' : it.kind.includes('portal') || it.kind.startsWith('gate_') ? '#7fb8ff' : '#e0a0ff';
       ctx.fillRect(it.x * scale - 2, it.z * scale - 2, 4, 4);
     }
     for (const d of w.drops) {

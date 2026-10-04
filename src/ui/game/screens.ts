@@ -156,7 +156,7 @@ export class Screens {
 
   dead(): void {
     this.root.classList.add('dead');
-    this.show(h('h1', { class: 'title death' }, 'You died'), h('div', { class: 'title-note' }, 'No penalty. Your gear and gold are safe.'), button('Return to town', () => this.host.respawn(), 'btn big primary'));
+    this.show(h('h1', { class: 'title death' }, 'You died'), h('div', { class: 'title-note' }, 'No penalty. Your gear and gold are safe.'), button('Return to the Telecenter', () => this.host.respawn(), 'btn big primary'));
   }
 
   clearDead(): void {

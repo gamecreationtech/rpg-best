@@ -8,7 +8,7 @@ import { ELEMENT_COLORS, type Element } from '../data/stats';
 import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type AnimSet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
 import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, waypointProp, type Prop } from '../gen/pixel/props';
-import { zoneById } from '../data/zones';
+import { DIFFICULTIES, zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
 import type { Drop, Enemy, Minion, ProjectileShape, SimEvent, Zone } from '../sim/types';
@@ -212,7 +212,8 @@ export class PixelView {
       forge: forgeProp(pal, SIZE, OUTLINE),
       bloodfountain: propArt('bloodfountain') ? propAnim(propArt('bloodfountain')!) : bloodFountainProp(pal, SIZE, OUTLINE),
       arcana: arcanaProp(pal, SIZE, OUTLINE),
-      waypoint: propArt('waypoint') ? propAnim(propArt('waypoint')!) : waypointProp(0xffd060, pal, SIZE, OUTLINE),
+      // The four gates share the waypoint's arch, each swirling in its difficulty's colour
+      ...Object.fromEntries(DIFFICULTIES.map((d) => [`gate_${d.id}`, waypointProp(d.color, pal, SIZE, OUTLINE)])),
       // The producer's animated portal serves both the town portal and the return portal
       return_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
       town_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0xb070ff, pal, SIZE, OUTLINE),
@@ -342,13 +343,21 @@ export class PixelView {
       place(this.stations.forge!, t.forge.x, t.forge.z, idOf('forge'), false, 'forge');
       place(this.stations.bloodfountain!, t.bloodfountain.x, t.bloodfountain.z, idOf('bloodfountain'), false, 'bloodfountain');
       place(this.stations.arcana!, t.arcana.x, t.arcana.z, idOf('arcana'), false, 'arcana');
-      place(this.stations.waypoint!, t.waypoint.x, t.waypoint.z, idOf('waypoint'), true, 'waypoint');
+      const gates: [string, { x: number; z: number }, string, number][] = [
+        ['gate_normal', t.gateNormal, 'gateNormal', DIFFICULTIES[0]!.color],
+        ['gate_nightmare', t.gateNightmare, 'gateNightmare', DIFFICULTIES[1]!.color],
+        ['gate_hell', t.gateHell, 'gateHell', DIFFICULTIES[2]!.color],
+        ['gate_inferno', t.gateInferno, 'gateInferno', DIFFICULTIES[3]!.color],
+      ];
+      for (const [kind, at, piece, color] of gates) {
+        place(this.stations[kind]!, at.x, at.z, idOf(kind), true, piece);
+        light(at.x, at.z, color, 1.1, 3);
+      }
       // Creator mode shows the return portal even before it opens, so it can be moved
       if (w.arenaVisited || this.creator) place(this.stations.return_portal!, t.returnPortal.x, t.returnPortal.z, idOf('return_portal'), false, 'returnPortal');
       light(t.forge.x, t.forge.z, 0xff8a30, 1.3, 3.2, true);
       light(t.bloodfountain.x, t.bloodfountain.z, 0xff3a3a, 1.0, 2.6);
       light(t.arcana.x, t.arcana.z, 0xb066ff, 1.1, 3);
-      light(t.waypoint.x, t.waypoint.z, 0xffd060, 1.1, 3);
       if (w.arenaVisited) light(t.returnPortal.x, t.returnPortal.z, 0x6fa8ff, 1.1, 3);
       t.braziers.forEach((b, i) => {
         place(this.stations.brazier!, b.x, b.z, -1, false, `braziers.${i}`);

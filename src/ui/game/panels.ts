@@ -1,7 +1,7 @@
 import { ARCANA_OPS, BLOOD_OPS, FORGE_OPS, STATIONS } from '../../data/crafting';
 import { PROFESSIONS, PROFESSION_PERKS } from '../../data/professions';
 import { ITEM_RULES, RARITIES } from '../../data/items';
-import { DIFFICULTIES, ZONES } from '../../data/zones';
+import { DIFFICULTIES, ZONES, type DifficultyDef } from '../../data/zones';
 import { LEVELING } from '../../data/classes';
 import { EQUIP_KEYS, keyLabel, type EquipKey } from '../../sim/items/equipment';
 import { applyArcana, applyBlood, applyForge, canBlood, canForge } from '../../sim/items/crafting';
@@ -43,7 +43,7 @@ const TITLES: Record<PanelKind, string> = {
   passives: 'Passives',
   stash: 'Stash',
   vendor: 'Merchant',
-  waypoint: 'Waypoint',
+  gate: 'Gate',
   forge: STATIONS.forge.name,
   bloodfountain: STATIONS.bloodfountain.name,
   arcana: STATIONS.arcana.name,
@@ -65,8 +65,9 @@ export class Panels {
   /** The merchant's two shelves: the wares, or what the hero sold. */
   private vendorPage: 'sale' | 'buyback' = 'sale';
   private stashPage = 0;
-  /** Waypoint: the normal zone list, or the difficulty page that replays zones at Normal, Nightmare, Hell or Inferno. */
+  /** The Normal gate at the cap: the zones at their own levels, or all at level 100. */
   private wpPage: 'zones' | 'beyond' = 'zones';
+  /** The difficulty of the gate last walked into. */
   private difficulty = DIFFICULTIES[0]!;
   private cellSize = 30;
   /** Which half of a two-part panel a phone shows: the stock or the bag, the gear or the bag. */
@@ -121,7 +122,7 @@ export class Panels {
       this.hero.reset();
       this.hero.tab = kind === 'skills' || kind === 'passives' ? 'skills' : kind === 'character' ? 'stats' : 'inventory';
     }
-    this.root.classList.toggle('hero', this.isHero || kind === 'waypoint');
+    this.root.classList.toggle('hero', this.isHero || kind === 'gate');
     this.render();
   }
 
@@ -143,7 +144,7 @@ export class Panels {
     switch (this.kind) {
       case 'stash': this.renderStash(w); break;
       case 'vendor': this.renderVendor(w); break;
-      case 'waypoint': this.renderWaypoint(w); break;
+      case 'gate': this.renderGate(w); break;
       case 'forge':
       case 'bloodfountain':
       case 'arcana': this.renderCrafting(w, this.kind); break;
@@ -308,10 +309,22 @@ export class Panels {
     this.root.append(overlay);
   }
 
-  // ---------------------------------------------------------------- waypoint
+  // ---------------------------------------------------------------- gates
 
-  /** The waypoint in the same pixel window as the hero menu: one framed row per place, Travel on the right. */
-  private renderWaypoint(w: World): void {
+  /** Opens the gate of one difficulty. */
+  openGate(d: DifficultyDef): void {
+    if (d !== this.difficulty) this.wpPage = 'zones';
+    this.difficulty = d;
+    this.open('gate');
+  }
+
+  /**
+   * A gate out of the Telecenter, in the same pixel window as the hero menu:
+   * one framed row per zone, Travel on the right. The Normal gate lists the
+   * zones at their own levels (and at the cap, also all at level 100); the
+   * other three open at the cap and send every zone to their level.
+   */
+  private renderGate(w: World): void {
     const row = (name: string, level: number | null, desc: string, here: boolean, warn: string | null, onGo: () => void) => {
       return h(
         'div',
@@ -321,22 +334,25 @@ export class Panels {
         warn ? pxText(warn, { color: '#ff6a6a' }) : null,
       );
     };
+    const d = this.difficulty;
     const list = h('div', { class: 'px-zones' });
     const capped = w.player.level >= LEVELING.maxLevel;
-    if (!capped) this.wpPage = 'zones';
-    if (this.wpPage === 'beyond') {
-      // Difficulties: every zone again at Normal, Nightmare, Hell or Inferno. Drops follow the monster level.
-      const d = this.difficulty;
+    const normal = d.id === 'normal';
+    if (!normal || !capped) this.wpPage = 'zones';
+    const atLevel = !normal || this.wpPage === 'beyond';
+    if (atLevel) {
       list.append(h('div', { class: 'px-inset px-zone' },
-        h('div', { class: 'px-row tight gear-row' }, ...DIFFICULTIES.map((o) => pbtn(o.name, () => { this.difficulty = o; this.render(); }, o === d ? 'on' : 'btn'))),
         pxText(`${d.name}: monster level ${d.level}. ${d.blurb}`, { color: TEXT, maxChars: 60 }),
         pxText('Heroes stop at level 100; monsters keep climbing, their life compounding to 26,000 times a level 1 monster at Inferno. What they drop is made at their level.', { color: MUTED })));
-      for (const z of ZONES) {
-        const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === d.level;
-        list.append(row(z.name, d.level, z.blurb, here, null, () => this.host.travel('arena', z.id, d.level)));
+      if (!capped) {
+        list.append(h('div', { class: 'px-inset px-zone' }, pxText(`This gate opens at level ${LEVELING.maxLevel}. You are level ${w.player.level}.`, { color: '#ff6a6a' })));
+      } else {
+        for (const z of ZONES) {
+          const here = w.area === 'arena' && w.zoneId === z.id && w.zoneLevel === d.level;
+          list.append(row(z.name, d.level, z.blurb, here, null, () => this.host.travel('arena', z.id, d.level)));
+        }
       }
     } else {
-      list.append(row('Town', null, 'Merchant, stash, crafting stations and training dummies. Nothing here can hurt you except the dummies.', w.area === 'town', null, () => this.host.travel('town')));
       for (const z of ZONES) {
         const here = w.area === 'arena' && w.zoneId === z.id && !w.zoneLevel;
         const tooHigh = w.player.level + 4 < z.level;
@@ -344,9 +360,9 @@ export class Panels {
       }
     }
     const head = h('div', { class: 'px-tabs' },
-      h('div', { class: 'px-tabs-title' }, pxText('Waypoint', { color: GOLD })),
-      capped ? pbtn('Zones', () => { this.wpPage = 'zones'; this.render(); }, this.wpPage === 'zones' ? 'on' : 'btn') : null,
-      capped ? pbtn('Difficulty', () => { this.wpPage = 'beyond'; this.render(); }, this.wpPage === 'beyond' ? 'on' : 'btn') : null,
+      h('div', { class: 'px-tabs-title' }, pxText(`${d.name} Gate`, { color: hex(d.color) })),
+      normal && capped ? pbtn('Zone levels', () => { this.wpPage = 'zones'; this.render(); }, this.wpPage === 'zones' ? 'on' : 'btn') : null,
+      normal && capped ? pbtn(`Level ${d.level}`, () => { this.wpPage = 'beyond'; this.render(); }, this.wpPage === 'beyond' ? 'on' : 'btn') : null,
       pbtn('X', () => this.host.close(), 'btn'));
     this.body.append(h('div', { class: 'px-window' }, head, h('div', { class: 'px-content' }, list)));
   }
@@ -438,10 +454,10 @@ export class Panels {
       h('div', { class: 'actions' }, button(this.host.autoplay() ? 'Autoplay: on' : 'Autoplay: off', () => { this.host.setAutoplay(!this.host.autoplay()); this.render(); }, 'btn small' + (this.host.autoplay() ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'The hero plays itself: roams the zone, fights every pack with its skills, drinks potions when low and picks up the loot. Touching anything, moving, a menu or a death switches it off.'),
       h('div', { class: 'section-label' }, 'Creator mode'),
-      h('div', { class: 'actions' }, button('Arrange the town', () => this.host.openCreator(), 'btn small' + (this.host.world.area === 'town' ? '' : ' disabled'))),
+      h('div', { class: 'actions' }, button('Arrange the Telecenter', () => this.host.openCreator(), 'btn small' + (this.host.world.area === 'town' ? '' : ' disabled'))),
       h('div', { class: 'dim small' }, this.host.world.area === 'town'
-        ? 'Drag the merchant, stations, dummies, braziers, pillars and rubble where you want them, then Get code and paste it to Claude to make it the town for everyone.'
-        : 'Go back to town to use it.'),
+        ? 'Drag the merchant, stations, dummies, braziers, pillars and rubble where you want them, then Get code and paste it to Claude to make it the Telecenter for everyone.'
+        : 'Go back to the Telecenter to use it.'),
       h('div', { class: 'section-label' }, 'Pet'),
       h('div', { class: 'actions' }, button(s.pet ? 'Crab: on' : 'Crab: off', () => { s.pet = !s.pet; this.host.applySettings(); this.render(); }, 'btn small' + (s.pet ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'A small crab follows you and fetches gold and items that drop within 300 px.'),

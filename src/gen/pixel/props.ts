@@ -143,7 +143,7 @@ export function portalProp(color: number, pal: Palette, size: SpriteSize, outlin
 }
 
 /**
- * The town waypoint: twice the size of a portal (52 by 68) and drawn at that
+ * A gate out of the Telecenter (first drawn as the waypoint): twice the size of a portal (52 by 68) and drawn at that
  * size, not scaled (producer's call, 2026-10-04). A stone arch laid in
  * wedge-shaped blocks with a keystone gem, two pillars with capitals, plinths
  * and carved runes that light up in turn, a two-step stone base, and a golden

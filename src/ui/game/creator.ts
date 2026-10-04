@@ -65,13 +65,13 @@ export class Creator {
     this.info = h('div', { class: 'creator-info' });
     this.codeBox = h('div', { class: 'creator-code', style: 'display:none' });
     const bar = h('div', { class: 'creator-bar' },
-      h('div', { class: 'creator-hint' }, 'Drag anything in town to move it. Drag the ground to look around.'),
+      h('div', { class: 'creator-hint' }, 'Drag anything in the Telecenter to move it. Drag the ground to look around.'),
       h('div', { class: 'creator-title' }, 'Creator'),
       this.info,
       h('div', { class: 'creator-actions' },
         button('Get code', () => this.showCode(), 'btn small primary'),
         button('Undo', () => this.stepBack(), 'btn small'),
-        button('Reset town', () => this.reset(), 'btn small danger'),
+        button('Reset', () => this.reset(), 'btn small danger'),
         button('Exit', () => this.host.exit(), 'btn small'),
       ),
     );
@@ -191,7 +191,7 @@ export class Creator {
   }
 
   private reset(): void {
-    if (!window.confirm('Put everything in town back where it was?')) return;
+    if (!window.confirm('Put everything in the Telecenter back where it was?')) return;
     this.undo.push(copyTownLayout(this.layout));
     this.use(copyTownLayout(TOWN_LAYOUT));
     saveTownDraft(null);
@@ -201,7 +201,7 @@ export class Creator {
     const code = townLayoutCode(this.layout);
     const text = h('textarea', { class: 'code', readonly: true, rows: 10 });
     text.value = code;
-    const status = h('div', { class: 'dim small' }, 'Paste this whole code in a message to Claude to make it the town for everyone.');
+    const status = h('div', { class: 'dim small' }, 'Paste this whole code in a message to Claude to make it the Telecenter for everyone.');
     const copy = button('Copy', () => {
       text.select();
       const done = () => { status.textContent = 'Copied. Paste it in a message to Claude.'; };
@@ -212,7 +212,7 @@ export class Creator {
       }
     }, 'btn small primary');
     this.codeBox.replaceChildren(
-      h('div', { class: 'creator-title' }, 'Your town code'),
+      h('div', { class: 'creator-title' }, 'Your Telecenter code'),
       text,
       status,
       h('div', { class: 'creator-actions' }, copy, button('Close', () => { this.codeBox.style.display = 'none'; }, 'btn small')),

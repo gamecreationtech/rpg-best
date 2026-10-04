@@ -178,7 +178,10 @@ export interface TownLayout {
   forge: At;
   bloodfountain: At;
   arcana: At;
-  waypoint: At;
+  gateNormal: At;
+  gateNightmare: At;
+  gateHell: At;
+  gateInferno: At;
   /** Where the return portal appears after visiting the proving grounds. */
   returnPortal: At;
   dummies: At[];
@@ -210,7 +213,10 @@ export function placeTown(town: TownLayout, data: TownLayoutData): void {
     forge: at(layout.forge),
     bloodfountain: at(layout.bloodfountain),
     arcana: at(layout.arcana),
-    waypoint: at(layout.waypoint),
+    gateNormal: at(layout.gateNormal),
+    gateNightmare: at(layout.gateNightmare),
+    gateHell: at(layout.gateHell),
+    gateInferno: at(layout.gateInferno),
     returnPortal: at(layout.returnPortal),
     dummies: layout.dummies.map(at),
     braziers: layout.braziers.map(at),

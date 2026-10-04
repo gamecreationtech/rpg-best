@@ -1,5 +1,5 @@
 /**
- * Zones reachable from the town waypoint. Each has its own map generator, stone
+ * Zones reachable through the Telecenter's gates. Each has its own map generator, stone
  * colours, light colour and monster roster. Monster numbers scale with the
  * zone's level (see MONSTER_RULES), so the hero grows into the next zone.
  */
@@ -120,20 +120,41 @@ export function zoneById(id: string): ZoneDef {
   return ZONES.find((z) => z.id === id) ?? ZONES[0]!;
 }
 
-/** Difficulties on the waypoint's second page: every zone replayed at this monster level. Heroes stop at 100; monsters do not. */
+/** Difficulties, one gate each in the Telecenter: every zone replayed at this monster level. Heroes stop at 100; monsters do not. */
 export interface DifficultyDef {
-  id: string;
+  id: 'normal' | 'nightmare' | 'hell' | 'inferno';
   name: string;
+  /** The monster level every zone takes at this difficulty once the hero reaches the cap. */
   level: number;
   blurb: string;
+  /** The colour of its gate in the Telecenter. */
+  color: number;
 }
 
 export const DIFFICULTIES: DifficultyDef[] = [
-  { id: 'normal', name: 'Normal', level: 100, blurb: 'Every zone at level 100, the hero cap.' },
-  { id: 'nightmare', name: 'Nightmare', level: 300, blurb: 'Level 300 monsters: about five times the life and four times the damage of Normal.' },
-  { id: 'hell', name: 'Hell', level: 650, blurb: 'Level 650 monsters: about a hundred times the life and ten times the damage of Normal.' },
-  { id: 'inferno', name: 'Inferno', level: 1000, blurb: 'Level 1000 monsters: two thousand times the life and fifteen times the damage of Normal.' },
+  { id: 'normal', name: 'Normal', level: 100, blurb: 'Every zone at level 100, the hero cap.', color: 0xffd060 },
+  { id: 'nightmare', name: 'Nightmare', level: 300, blurb: 'Level 300 monsters: about five times the life and four times the damage of Normal.', color: 0xa070ff },
+  { id: 'hell', name: 'Hell', level: 650, blurb: 'Level 650 monsters: about a hundred times the life and ten times the damage of Normal.', color: 0xff3040 },
+  { id: 'inferno', name: 'Inferno', level: 1000, blurb: 'Level 1000 monsters: two thousand times the life and fifteen times the damage of Normal.', color: 0xff8a20 },
 ];
+
+/**
+ * The Telecenter's four gates, one per difficulty (producer's call,
+ * 2026-10-04, replacing the waypoint). The Normal gate leads to every zone at
+ * its own level, and at the cap also at level 100; the other three open at
+ * the cap and send every zone to their difficulty's level.
+ */
+export const GATE_KINDS = ['gate_normal', 'gate_nightmare', 'gate_hell', 'gate_inferno'] as const;
+export type GateKind = (typeof GATE_KINDS)[number];
+
+export function isGateKind(kind: string): kind is GateKind {
+  return (GATE_KINDS as readonly string[]).includes(kind);
+}
+
+/** The difficulty behind a gate. */
+export function difficultyOfGate(kind: string): DifficultyDef | null {
+  return DIFFICULTIES.find((d) => `gate_${d.id}` === kind) ?? null;
+}
 
 export function difficultyForLevel(level: number): DifficultyDef | null {
   return DIFFICULTIES.find((d) => d.level === level) ?? null;

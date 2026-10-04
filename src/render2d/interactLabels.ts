@@ -7,8 +7,11 @@ export const INTERACT_INFO: Record<InteractableKind, { name: string; verb: strin
   forge: { name: 'Forge of Heaven', verb: 'smelt', color: 0xffe066 },
   bloodfountain: { name: 'Blood Fountain', verb: 'sacrifice', color: 0xff5050 },
   arcana: { name: 'Arcana Oracle', verb: 'enchant', color: 0xc080ff },
-  waypoint: { name: 'Waypoint', verb: 'travel', color: 0xffd060 },
-  town_portal: { name: 'Portal to Town', verb: 'enter', color: 0xb070ff },
+  gate_normal: { name: 'Normal Gate', verb: 'travel', color: 0xffd060 },
+  gate_nightmare: { name: 'Nightmare Gate', verb: 'travel', color: 0xa070ff },
+  gate_hell: { name: 'Hell Gate', verb: 'travel', color: 0xff3040 },
+  gate_inferno: { name: 'Inferno Gate', verb: 'travel', color: 0xff8a20 },
+  town_portal: { name: 'Portal to the Telecenter', verb: 'enter', color: 0xb070ff },
   return_portal: { name: 'Portal to the Proving Grounds', verb: 'enter', color: 0x6fa8ff },
 };
 
@@ -47,8 +50,8 @@ export class InteractLabels {
       const how = this.touch ? (inReach ? `Tap to ${info.verb}` : `Tap to walk over and ${info.verb}`) : inReach ? `Press F to ${info.verb}` : `Click to walk over and ${info.verb}`;
       el.innerHTML = `<b style="color:#${info.color.toString(16).padStart(6, '0')}">${info.name}</b><span>${how}</span>`;
       el.classList.toggle('near', inReach);
-      // The waypoint arch stands twice as tall as the other stations, so its tag floats higher
-      if (this.view.project(it.x, it.kind === 'waypoint' ? 5.6 : 3.2, it.z, this.tmp)) {
+      // A gate's arch stands twice as tall as the other stations, so its tag floats higher
+      if (this.view.project(it.x, it.kind.startsWith('gate_') ? 5.6 : 3.2, it.z, this.tmp)) {
         el.style.display = 'block';
         el.style.transform = `translate(-50%, -100%) translate(${this.tmp.x.toFixed(0)}px, ${this.tmp.y.toFixed(0)}px)`;
       } else {

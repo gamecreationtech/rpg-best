@@ -1,7 +1,7 @@
 
 import { Creator, loadTownDraft } from '../ui/game/creator';
 import type { ConsumableId } from '../data/consumables';
-import { difficultyForLevel, zoneById } from '../data/zones';
+import { difficultyForLevel, difficultyOfGate, isGateKind, zoneById } from '../data/zones';
 import { Music } from '../audio/music';
 import { Sfx } from '../audio/sfx';
 import { PixelView } from '../render2d/pixelView';
@@ -311,7 +311,7 @@ export class Game {
     this.screens.hide();
     this.hud!.banner(fresh ? 'Falling Sky' : 'Welcome back');
     this.hud!.message(fresh ? (this.touchControls ? 'Drag on the ground to move. Attack hits what is in reach. Tap skills to cast.' : 'Tap to move. Tap an enemy to attack. Tap a skill to cast it.') : `Level ${player.level}, ${player.gold} gold.`);
-    this.hud!.message('Find the gold waypoint to travel to the zones.', 0xa0a8c0);
+    this.hud!.message('Step into the Normal Gate to travel to the zones.', 0xa0a8c0);
     this.drainEvents();
     if (fresh) void this.autosave();
   }
@@ -373,6 +373,17 @@ export class Game {
     this.sfx.play('uiClick');
   }
 
+  /** A gate out of the Telecenter opens the zone list of its difficulty. */
+  private openGate(kind: string): void {
+    const d = difficultyOfGate(kind);
+    if (!d || !this.panels || !this.world || this.world.playerDead || this.creator) return;
+    this.setAutoplay(false);
+    this.world.stop();
+    this.panels.openGate(d);
+    this.hud?.root.classList.add('hidden');
+    this.sfx.play('uiClick');
+  }
+
   private closePanel(): void {
     this.panels?.close();
     this.hud?.root.classList.remove('hidden');
@@ -405,7 +416,7 @@ export class Game {
     if (on === !!this.creator || !this.world || !this.view) return;
     if (on) {
       if (this.world.area !== 'town') {
-        this.hud?.message('Creator mode works in town', 0xff8a8a);
+        this.hud?.message('Creator mode works in the Telecenter', 0xff8a8a);
         return;
       }
       this.closePanel();
@@ -420,7 +431,7 @@ export class Game {
       this.creator = null;
       this.view.creator = null;
       this.hud?.root.classList.remove('hidden');
-      this.hud?.message('Creator mode closed. Your town is kept in this browser until you reset it.', 0xa0a8c0);
+      this.hud?.message('Creator mode closed. Your Telecenter is kept in this browser until you reset it.', 0xa0a8c0);
     }
   }
 
@@ -468,12 +479,14 @@ export class Game {
           this.world!.travel('town');
         } else if (ev.panel === 'return_portal') {
           this.world!.travel('arena');
+        } else if (isGateKind(ev.panel)) {
+          this.openGate(ev.panel);
         } else {
           this.openPanel(ev.panel);
         }
         break;
       case 'area':
-        this.hud?.banner(ev.area === 'town' ? 'Town' : zoneById(ev.zone ?? this.world!.zoneId).name + (ev.level ? `, ${difficultyForLevel(ev.level)?.name ?? `level ${ev.level}`}` : ''));
+        this.hud?.banner(ev.area === 'town' ? 'Telecenter' : zoneById(ev.zone ?? this.world!.zoneId).name + (ev.level ? `, ${difficultyForLevel(ev.level)?.name ?? `level ${ev.level}`}` : ''));
         this.sfx.play('portal');
         void this.autosave();
         break;

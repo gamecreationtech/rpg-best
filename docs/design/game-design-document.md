@@ -71,7 +71,8 @@ Every feature must serve at least one of these. If it does not, cut it.
 
 ### 4.2b Zones (first draft)
 
-Eleven zones reached from the town waypoint, each with its own map
+Eleven zones reached through the Normal Gate in the Telecenter (the town,
+renamed on 2026-10-04), each with its own map
 generator, colours and monsters, and a level that its monsters scale to: the
 Proving Grounds (open field, level 1), the Cursed Hollow (caves, 6), the Ashen
 Marsh (sunken ruins, 12), the Frozen Crypt (halls and corridors, 18), the
@@ -80,9 +81,12 @@ Obsidian Halls (58), the Storm Peaks (72), the Abyss (88) and the Throne of
 the Fallen (100). Drafted by the engineer until the producer's zone and
 monster data replaces them.
 
-**Difficulties** (producer's call, 2026-09-29): at the level cap the waypoint
-shows a second page that replays any zone at one of four difficulties: Normal
-(monster level 100), Nightmare (300), Hell (650) and Inferno (1000). Heroes
+**Difficulties** (producer's call, 2026-09-29): at the level cap any zone can
+be replayed at one of four difficulties: Normal (monster level 100), Nightmare
+(300), Hell (650) and Inferno (1000). Since 2026-10-04 each difficulty has its
+own gate in the Telecenter instead of a waypoint page: the Normal Gate lists
+the zones at their own levels and, at the cap, also all at level 100; the
+Nightmare, Hell and Inferno Gates stay shut until the cap. Heroes
 never pass level 100. Every monster is a level 1 creature (13 to 50 life, 3 to
 25 damage) and its zone's level does all the growing: life +12% of the base per
 level to 100, then compounding so a level 1000 monster has 26,000 times its

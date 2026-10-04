@@ -10,7 +10,7 @@ import { INTERACT_INFO } from '../../render2d/interactLabels';
 import { button, clear, h, hex } from '../dom';
 import { CLUSTER, skillPosition } from './touchLayout';
 
-export type PanelKind = 'inventory' | 'character' | 'skills' | 'passives' | 'stash' | 'vendor' | 'waypoint' | 'forge' | 'bloodfountain' | 'arcana' | 'professions' | 'settings';
+export type PanelKind = 'inventory' | 'character' | 'skills' | 'passives' | 'stash' | 'vendor' | 'gate' | 'forge' | 'bloodfountain' | 'arcana' | 'professions' | 'settings';
 
 export interface HudHost {
   world: World;

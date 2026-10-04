@@ -61,9 +61,9 @@ optional: if it is missing, the code-drawn version is used.
   today `stash.png`, the player's chest at the stash, `merchant_chest.png`
   for the chest on the merchant's right, `caravan.png` for the caravan on his
   left, `portal.png` for the town portal and the return portal, and
-  and `bloodfountain.png` for the blood fountain. The town's waypoint stays
-  code-drawn (a drawn one was tried and rolled back on 2026-10-04); since
-  the same day it is drawn twice the size of a portal, 52 by 68, with more detail. An animated piece has its frames numbered
+  and `bloodfountain.png` for the blood fountain. The Telecenter's four
+  difficulty gates are code-drawn (a drawn waypoint was tried and rolled back
+  on 2026-10-04), 52 by 68 each, swirling in their difficulty's colour. An animated piece has its frames numbered
   (`portal_2.png`, `portal_3.png`...), shown at about eight a second.
   Transparent background, bottom centre on the ground, drawn at the game's
   size.

@@ -219,7 +219,10 @@ export class World {
     add('forge', t.forge, 68 * PX);
     add('bloodfountain', t.bloodfountain, 68 * PX);
     add('arcana', t.arcana, 68 * PX);
-    add('waypoint', t.waypoint, 56 * PX);
+    add('gate_normal', t.gateNormal, 56 * PX);
+    add('gate_nightmare', t.gateNightmare, 56 * PX);
+    add('gate_hell', t.gateHell, 56 * PX);
+    add('gate_inferno', t.gateInferno, 56 * PX);
     add('return_portal', t.returnPortal, 50 * PX, this.arenaVisited);
     DUMMIES.forEach((d, i) => {
       const e = this.allocEnemy();
@@ -252,7 +255,8 @@ export class World {
     this.townVersion++;
     if (this.area !== 'town') return;
     const spots: Partial<Record<Interactable['kind'], { x: number; z: number }>> = {
-      vendor: t.vendor, stash: t.stash, forge: t.forge, bloodfountain: t.bloodfountain, arcana: t.arcana, waypoint: t.waypoint, return_portal: t.returnPortal,
+      vendor: t.vendor, stash: t.stash, forge: t.forge, bloodfountain: t.bloodfountain, arcana: t.arcana,
+      gate_normal: t.gateNormal, gate_nightmare: t.gateNightmare, gate_hell: t.gateHell, gate_inferno: t.gateInferno, return_portal: t.returnPortal,
     };
     for (const it of this.interactables) {
       const at = spots[it.kind];
@@ -275,7 +279,7 @@ export class World {
     return zoneById(this.zoneId);
   }
 
-  /** A monster level chosen on the waypoint's Beyond 100 page, or 0 for the zone's own. Kept through the return portal. */
+  /** A monster level chosen at a difficulty gate, or 0 for the zone's own. Kept through the return portal. */
   zoneLevel = 0;
 
   /** The level monsters, gold and endgame drops scale to in the current zone. */

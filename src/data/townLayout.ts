@@ -1,5 +1,5 @@
 /**
- * Where everything in town stands, in tiles (the town is 44 by 33, open from
+ * Where everything in the Telecenter (the town) stands, in tiles (the town is 44 by 33, open from
  * 2 to 42 across and 2 to 31 down). The simulation reads the stations, the
  * merchant, the dummies and the hero's start from here; the renderer reads
  * the decorations. Creator mode (Menu, Creator mode, in town) moves these and
@@ -20,7 +20,11 @@ export interface TownLayoutData {
   forge: Spot;
   bloodfountain: Spot;
   arcana: Spot;
-  waypoint: Spot;
+  /** The four gates out, one per difficulty (they replaced the waypoint on 2026-10-04). */
+  gateNormal: Spot;
+  gateNightmare: Spot;
+  gateHell: Spot;
+  gateInferno: Spot;
   /** Where the return portal appears after visiting the Proving Grounds. */
   returnPortal: Spot;
   /** The five training dummies, in the order of `DUMMIES`. */
@@ -30,7 +34,7 @@ export interface TownLayoutData {
   rubble: Spot[];
 }
 
-// The producer's arrangement from creator mode, 2026-10-04
+// The producer's arrangement from creator mode, 2026-10-04; the four gates stand where the waypoint was, in a row
 export const TOWN_LAYOUT: TownLayoutData = {
   spawn: [15.5, 14.6],
   vendor: [8, 6.5],
@@ -40,7 +44,10 @@ export const TOWN_LAYOUT: TownLayoutData = {
   forge: [29.3, 6.6],
   bloodfountain: [37.4, 11.7],
   arcana: [37.4, 17.3],
-  waypoint: [22.3, 6.8],
+  gateNormal: [17.3, 11.8],
+  gateNightmare: [19.8, 9.3],
+  gateHell: [22.3, 6.8],
+  gateInferno: [24.8, 4.3],
   returnPortal: [23.6, 28.2],
   dummies: [[5.3, 25.2], [7.9, 27.3], [9.2, 26.1], [6.7, 23.3], [36.5, 27]],
   braziers: [[6.5, 6.5], [38.5, 6.5], [6.5, 27.5], [38.5, 27.5], [22.5, 4.5], [14.5, 17.5], [30.5, 14.5]],
@@ -58,7 +65,10 @@ export const TOWN_SINGLES: [keyof TownLayoutData, string][] = [
   ['forge', 'Forge of Heaven'],
   ['bloodfountain', 'Blood Fountain'],
   ['arcana', 'Arcana Oracle'],
-  ['waypoint', 'Waypoint'],
+  ['gateNormal', 'Normal gate'],
+  ['gateNightmare', 'Nightmare gate'],
+  ['gateHell', 'Hell gate'],
+  ['gateInferno', 'Inferno gate'],
   ['returnPortal', 'Return portal'],
 ];
 

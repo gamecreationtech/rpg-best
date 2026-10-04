@@ -1,3 +1,4 @@
+import type { GateKind } from '../data/zones';
 import type { DummyDef } from '../data/dummies';
 import type { EnemyDef } from '../data/monsters';
 import type { BuffMods } from '../data/skills';
@@ -226,7 +227,7 @@ export interface Drop {
   age: number;
 }
 
-export type InteractableKind = 'vendor' | 'stash' | 'forge' | 'bloodfountain' | 'arcana' | 'waypoint' | 'town_portal' | 'return_portal';
+export type InteractableKind = 'vendor' | 'stash' | 'forge' | 'bloodfountain' | 'arcana' | GateKind | 'town_portal' | 'return_portal';
 
 export interface Interactable {
   id: number;
