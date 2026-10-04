@@ -51,7 +51,8 @@ optional: if it is missing, the code-drawn version is used.
   today `stash.png`, the player's chest at the stash, `merchant_chest.png`
   for the chest on the merchant's right, `caravan.png` for the caravan on his
   left, `portal.png` for the town portal and the return portal, and
-  `bloodfountain.png` for the blood fountain. An animated piece has its frames numbered
+  `bloodfountain.png` for the blood fountain, and `waypoint.png` for the
+  town's waypoint. An animated piece has its frames numbered
   (`portal_2.png`, `portal_3.png`...), shown at about eight a second.
   Transparent background, bottom centre on the ground, drawn at the game's
   size.

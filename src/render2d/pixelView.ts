@@ -177,7 +177,7 @@ export class PixelView {
       forge: forgeProp(pal, SIZE, OUTLINE),
       bloodfountain: propArt('bloodfountain') ? propAnim(propArt('bloodfountain')!) : bloodFountainProp(pal, SIZE, OUTLINE),
       arcana: arcanaProp(pal, SIZE, OUTLINE),
-      waypoint: portalProp(0xffd060, pal, SIZE, OUTLINE),
+      waypoint: propArt('waypoint') ? propAnim(propArt('waypoint')!) : portalProp(0xffd060, pal, SIZE, OUTLINE),
       // The producer's animated portal serves both the town portal and the return portal
       return_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
       town_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0xb070ff, pal, SIZE, OUTLINE),
