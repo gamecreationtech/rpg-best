@@ -1,3 +1,4 @@
+import { TOWN_LAYOUT, copyTownLayout, type Spot, type TownLayoutData } from '../../data/townLayout';
 import type { ZoneLayout } from '../../data/zones';
 import { Rng } from '../../gen/rng';
 
@@ -163,36 +164,59 @@ export class TileMap {
   }
 }
 
+type At = { x: number; z: number };
+
 export interface TownLayout {
   map: TileMap;
-  spawn: { x: number; z: number };
-  vendor: { x: number; z: number };
-  stash: { x: number; z: number };
-  forge: { x: number; z: number };
-  bloodfountain: { x: number; z: number };
-  arcana: { x: number; z: number };
-  waypoint: { x: number; z: number };
+  /** The positions as data, the source of everything below (`src/data/townLayout.ts`). */
+  layout: TownLayoutData;
+  spawn: At;
+  vendor: At;
+  caravan: At;
+  merchantChest: At;
+  stash: At;
+  forge: At;
+  bloodfountain: At;
+  arcana: At;
+  waypoint: At;
   /** Where the return portal appears after visiting the proving grounds. */
-  returnPortal: { x: number; z: number };
-  dummies: { x: number; z: number }[];
+  returnPortal: At;
+  dummies: At[];
+  braziers: At[];
+  pillars: At[];
+  rubble: At[];
 }
 
-/** Town: 44 x 33 tiles, safe zone cols 2-41 rows 2-30, no enemies, no obstacles. */
-export function buildTown(): TownLayout {
+/** Town: 44 x 33 tiles, safe zone cols 2-41 rows 2-30, no enemies, no obstacles; everything stands where the layout says. */
+export function buildTown(data: TownLayoutData = TOWN_LAYOUT): TownLayout {
   const map = new TileMap(44, 33, Tile.Wall);
   for (let r = 2; r <= 30; r++) for (let c = 2; c <= 41; c++) map.set(c, r, Tile.Safe);
-  return {
-    map,
-    spawn: { x: 23, z: 15 },
-    vendor: { x: 15.5, z: 12.5 },
-    stash: { x: 19.5, z: 9.5 },
-    forge: { x: 27.5, z: 9.5 },
-    bloodfountain: { x: 31.5, z: 12.5 },
-    arcana: { x: 23.5, z: 8 },
-    waypoint: { x: 30.5, z: 18.5 },
-    returnPortal: { x: 34.5, z: 21.5 },
-    dummies: [12.5, 15.5, 18.5, 21.5, 24.5].map((x) => ({ x, z: 22.5 })),
-  };
+  const town = { map } as TownLayout;
+  placeTown(town, data);
+  return town;
+}
+
+/** Moves everything in a town to the spots of a layout (a copy of it is kept). */
+export function placeTown(town: TownLayout, data: TownLayoutData): void {
+  const layout = copyTownLayout(data);
+  const at = (s: Spot): At => ({ x: s[0], z: s[1] });
+  Object.assign(town, {
+    layout,
+    spawn: at(layout.spawn),
+    vendor: at(layout.vendor),
+    caravan: at(layout.caravan),
+    merchantChest: at(layout.merchantChest),
+    stash: at(layout.stash),
+    forge: at(layout.forge),
+    bloodfountain: at(layout.bloodfountain),
+    arcana: at(layout.arcana),
+    waypoint: at(layout.waypoint),
+    returnPortal: at(layout.returnPortal),
+    dummies: layout.dummies.map(at),
+    braziers: layout.braziers.map(at),
+    pillars: layout.pillars.map(at),
+    rubble: layout.rubble.map(at),
+  });
 }
 
 export interface ArenaLayout {

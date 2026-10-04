@@ -638,3 +638,19 @@ body.custom-cursor, body.custom-cursor * { cursor: none !important; }
 .dev-number { width: 58px; }
 .dev-give .btn.small { min-height: 24px; padding: 2px 8px; font-size: 11px; }
 .dev-note { font-size: 11px; color: var(--muted); padding: 2px 4px; min-height: 14px; }
+
+/* Creator mode: the producer drags the town's pieces into place */
+.creator { position: absolute; inset: 0; z-index: 60; pointer-events: none; }
+.creator-layer { position: absolute; inset: 0; pointer-events: auto; touch-action: none; cursor: grab; overflow: hidden; }
+.creator-dot { position: absolute; left: 0; top: 0; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: rgba(232, 180, 90, 0.55); border: 1px solid rgba(8, 9, 15, 0.9); pointer-events: none; }
+.creator-dot.start { background: rgba(120, 220, 140, 0.8); width: 12px; height: 12px; margin: -6px 0 0 -6px; }
+.creator-dot.on { background: #ffd860; width: 12px; height: 12px; margin: -6px 0 0 -6px; box-shadow: 0 0 0 3px rgba(255, 216, 96, 0.35); }
+.creator-bar { position: absolute; bottom: calc(8px + var(--safe-b)); left: 50%; transform: translateX(-50%); max-width: calc(100% - 16px); padding: 6px 10px; background: var(--panel); border: 1px solid rgba(232, 180, 90, 0.5); border-radius: 8px; pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; }
+.creator-title { color: var(--accent); letter-spacing: 2px; text-transform: uppercase; font-size: 12px; }
+.creator-hint { color: var(--muted); font-size: 12px; flex-basis: 100%; text-align: center; }
+.creator-info { color: var(--text); font: 12px/1.4 var(--mono, monospace); min-width: 15ch; }
+.creator-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+@media (max-height: 500px) { .creator-hint { display: none; } }
+.creator-code { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100% - 16px)); padding: 12px; background: rgba(8, 10, 18, 0.96); border: 1px solid rgba(232, 180, 90, 0.5); border-radius: 8px; pointer-events: auto; }
+.creator-code .creator-title { display: block; margin-bottom: 4px; }
+.creator-code textarea { width: 100%; font: 11px/1.35 var(--mono, monospace); margin: 6px 0; }

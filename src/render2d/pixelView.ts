@@ -46,6 +46,8 @@ interface Placed {
   interactId: number;
   /** Lit smoothly like the characters, without the floor's dither. */
   smooth: boolean;
+  /** The town piece it is (`stash`, `braziers.3`), for creator mode; empty for anything else. */
+  piece: string;
 }
 
 interface StaticLight {
@@ -85,6 +87,30 @@ function cssOf(color: number): string {
  * stations, the hero and enemies as generated sprite sheets, projectiles, drops,
  * zones and effects into a small frame that the compositor lights and scales up.
  */
+const alphaCache = new WeakMap<HTMLCanvasElement, Uint8Array>();
+let alphaScratch: CanvasRenderingContext2D | null = null;
+
+/**
+ * A sprite's alpha channel, read once through a scratch canvas so the sprite
+ * itself is never read back (that would slow the browser's drawing of it).
+ * Only creator mode's picking uses it.
+ */
+function alphaOf(frame: HTMLCanvasElement): Uint8Array {
+  let a = alphaCache.get(frame);
+  if (a) return a;
+  if (!alphaScratch) alphaScratch = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+  const c = alphaScratch.canvas;
+  if (c.width < frame.width) c.width = frame.width;
+  if (c.height < frame.height) c.height = frame.height;
+  alphaScratch.clearRect(0, 0, c.width, c.height);
+  alphaScratch.drawImage(frame, 0, 0);
+  const data = alphaScratch.getImageData(0, 0, frame.width, frame.height).data;
+  a = new Uint8Array(frame.width * frame.height);
+  for (let i = 0; i < a.length; i++) a[i] = data[i * 4 + 3]!;
+  alphaCache.set(frame, a);
+  return a;
+}
+
 export class PixelView {
   readonly view = new IsoCamera();
   readonly numbers: DamageNumbers;
@@ -95,6 +121,8 @@ export class PixelView {
   readonly effects = new Effects2D();
   /** Interactable under the mouse, set by the game each frame. */
   hoverInteractable = -1;
+  /** Creator mode's camera spot, or null to follow the hero. */
+  creator: { x: number; z: number } | null = null;
   /** 1 while a menu covers the game: the frame darkens in dithered bands behind it. */
   dim = 0;
   readonly stats = { drawn: 0 };
@@ -283,7 +311,7 @@ export class PixelView {
   rebuildArea(): void {
     const w = this.world;
     const zone = w.zone;
-    const key = w.area + ':' + zone.id + ':' + w.map.cols + ':' + (w.arenaVisited ? 1 : 0);
+    const key = w.area + ':' + zone.id + ':' + w.map.cols + ':' + (w.arenaVisited || this.creator ? 1 : 0) + ':' + w.townVersion;
     if (key === this.areaKey) return;
     this.areaKey = key;
     this.placed.length = 0;
@@ -300,33 +328,32 @@ export class PixelView {
       this.tiles = tiles;
     }
     this.compositor.darkness = w.area === 'town' ? 0.42 : zone.darkness;
-    const place = (prop: Prop, x: number, z: number, interactId = -1, smooth = false) => this.placed.push({ prop, x, z, interactId, smooth });
+    const place = (prop: Prop, x: number, z: number, interactId = -1, smooth = false, piece = '') => this.placed.push({ prop, x, z, interactId, smooth, piece });
     const light = (x: number, z: number, color: number, intensity: number, radius: number, flicker = false, y = 1.2) => this.staticLights.push({ x, z, y, color, intensity, radius, flicker });
     const idOf = (kind: string) => w.interactables.find((i) => i.kind === kind)?.id ?? -1;
     if (w.area === 'town') {
       const t = w.town;
-      place(this.stations.stash!, t.stash.x, t.stash.z, idOf('stash'));
-      place(this.stations.forge!, t.forge.x, t.forge.z, idOf('forge'));
-      place(this.stations.bloodfountain!, t.bloodfountain.x, t.bloodfountain.z, idOf('bloodfountain'));
-      place(this.stations.arcana!, t.arcana.x, t.arcana.z, idOf('arcana'));
-      place(this.stations.waypoint!, t.waypoint.x, t.waypoint.z, idOf('waypoint'), true);
-      if (w.arenaVisited) place(this.stations.return_portal!, t.returnPortal.x, t.returnPortal.z, idOf('return_portal'));
+      place(this.stations.stash!, t.stash.x, t.stash.z, idOf('stash'), false, 'stash');
+      place(this.stations.forge!, t.forge.x, t.forge.z, idOf('forge'), false, 'forge');
+      place(this.stations.bloodfountain!, t.bloodfountain.x, t.bloodfountain.z, idOf('bloodfountain'), false, 'bloodfountain');
+      place(this.stations.arcana!, t.arcana.x, t.arcana.z, idOf('arcana'), false, 'arcana');
+      place(this.stations.waypoint!, t.waypoint.x, t.waypoint.z, idOf('waypoint'), true, 'waypoint');
+      // Creator mode shows the return portal even before it opens, so it can be moved
+      if (w.arenaVisited || this.creator) place(this.stations.return_portal!, t.returnPortal.x, t.returnPortal.z, idOf('return_portal'), false, 'returnPortal');
       light(t.forge.x, t.forge.z, 0xff8a30, 1.3, 3.2, true);
       light(t.bloodfountain.x, t.bloodfountain.z, 0xff3a3a, 1.0, 2.6);
       light(t.arcana.x, t.arcana.z, 0xb066ff, 1.1, 3);
       light(t.waypoint.x, t.waypoint.z, 0xffd060, 1.1, 3);
       if (w.arenaVisited) light(t.returnPortal.x, t.returnPortal.z, 0x6fa8ff, 1.1, 3);
-      const brazierSpots: [number, number][] = [[6, 6], [38, 6], [6, 27], [38, 27], [22, 4], [14, 17], [30, 14]];
-      for (const [x, z] of brazierSpots) {
-        place(this.stations.brazier!, x + 0.5, z + 0.5);
-        light(x + 0.5, z + 0.5, 0xff8a3a, 1.2, 4.2, true, 1.0);
-      }
-      for (let i = 0; i < 10; i++) place(this.stations.pillar!, 3 + ((i * 7) % 38) + 0.5, i % 2 ? 3.5 : 29.5);
-      for (let i = 0; i < 6; i++) place(this.stations.pillar!, i % 2 ? 3.5 : 40.5, 6 + i * 4);
-      for (let i = 0; i < 24; i++) place(this.rubble[i % this.rubble.length]!, 4 + ((i * 11) % 36) + 0.5, 4 + ((i * 7) % 25) + 0.5);
-      // The merchant's stall: two chests beside him
-      place(this.stations.caravan!, t.vendor.x - 1.6, t.vendor.z + 0.2);
-      place(this.stations.merchant_chest!, t.vendor.x + 1.3, t.vendor.z + 0.1);
+      t.braziers.forEach((b, i) => {
+        place(this.stations.brazier!, b.x, b.z, -1, false, `braziers.${i}`);
+        light(b.x, b.z, 0xff8a3a, 1.2, 4.2, true, 1.0);
+      });
+      t.pillars.forEach((p, i) => place(this.stations.pillar!, p.x, p.z, -1, false, `pillars.${i}`));
+      t.rubble.forEach((r, i) => place(this.rubble[i % this.rubble.length]!, r.x, r.z, -1, false, `rubble.${i}`));
+      // The merchant's stall: his caravan and a chest beside him
+      place(this.stations.caravan!, t.caravan.x, t.caravan.z, -1, false, 'caravan');
+      place(this.stations.merchant_chest!, t.merchantChest.x, t.merchantChest.z, -1, false, 'merchantChest');
     } else {
       const s = w.arena!.spawn;
       place(this.stations.town_portal!, s.x - 2, s.z, idOf('town_portal'));
@@ -1353,7 +1380,9 @@ export class PixelView {
     this.rebuildArea();
     const w = this.world;
     const lead = w.moving ? 0.6 : 0;
-    this.view.lookAt(w.px + Math.sin(w.pyaw) * lead, w.pz + Math.cos(w.pyaw) * lead);
+    // Creator mode looks wherever the producer drags the view
+    if (this.creator) this.view.snapTo(this.creator.x, this.creator.z);
+    else this.view.lookAt(w.px + Math.sin(w.pyaw) * lead, w.pz + Math.cos(w.pyaw) * lead);
     this.view.update(dt);
     this.syncHero(dt);
     if (w.pet.active) {
@@ -3077,6 +3106,51 @@ export class PixelView {
       }
     }
     return best;
+  }
+
+  /**
+   * Creator mode: the town piece drawn under a window point, front-most first,
+   * found from the sprite's box; the hero's start, which has no sprite, within
+   * 24 pixels of its spot.
+   */
+  townPieceAt(sx: number, sy: number): string | null {
+    const w = this.world;
+    if (w.area !== 'town') return null;
+    const cam = this.view;
+    const out = { x: 0, y: 0 };
+    let best: string | null = null;
+    let bestDepth = -Infinity;
+    const test = (piece: string, x: number, z: number, frame: HTMLCanvasElement, ox: number, oy: number, drawZ = z) => {
+      cam.project(x, 0, drawZ, out);
+      const px = Math.floor((sx - out.x) / cam.scale + ox);
+      const py = Math.floor((sy - out.y) / cam.scale + oy);
+      if (px < 0 || py < 0 || px >= frame.width || py >= frame.height) return;
+      // Only a drawn pixel counts, so a tap through an empty corner reaches what is behind
+      if (alphaOf(frame)[py * frame.width + px]! < 40) return;
+      const depth = cam.depth(x, drawZ);
+      if (depth > bestDepth) {
+        bestDepth = depth;
+        best = piece;
+      }
+    };
+    for (const p of this.placed) {
+      if (!p.piece) continue;
+      const f = p.prop.frames[0]!;
+      test(p.piece, p.x, p.z, f, p.prop.originX, p.prop.originY);
+    }
+    const t = w.town;
+    const vendor = this.vendor.front.idle;
+    test('vendor', t.vendor.x, t.vendor.z, vendor.frames[0]!, vendor.originX, vendor.originY, t.vendor.z + 0.9);
+    DUMMIES.forEach((d, i) => {
+      const sheet = this.dummies.get(d.id);
+      const at = t.dummies[i];
+      if (!sheet || !at) return;
+      const a = sheet.front.idle;
+      test(`dummies.${i}`, at.x, at.z, a.frames[0]!, a.originX, a.originY);
+    });
+    if (best) return best;
+    cam.project(t.spawn.x, 0, t.spawn.z, out);
+    return Math.hypot(out.x - sx, out.y - sy) < 24 ? 'spawn' : null;
   }
 
   /** Nearest interactable to a window point. */

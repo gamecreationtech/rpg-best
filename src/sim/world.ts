@@ -15,7 +15,8 @@ import { Inventory } from './items/inventory';
 import { generateItem, type Item } from './items/item';
 import { buyPrice, buybackPrice, generateStock, sellPrice } from './items/vendor';
 import { FlowField, findPath } from './map/pathing';
-import { buildTown, buildZone, type ArenaLayout, type TownLayout } from './map/tilemap';
+import { buildTown, buildZone, placeTown, type ArenaLayout, type TownLayout } from './map/tilemap';
+import type { TownLayoutData } from '../data/townLayout';
 import { ITEM_RULES, type Rarity } from '../data/items';
 import { setsForZone } from '../data/sets';
 import { ATTACK_SLOT, addXp, canEquipItem, deriveStats, resolveSlotSkill, type Buff, type DerivedStats, type PlayerState } from './player';
@@ -130,6 +131,8 @@ export class World {
   zoneMods: BuffMods = {};
   area: Area = 'town';
   readonly town: TownLayout = buildTown();
+  /** Goes up each time the town is rearranged, so the renderer redraws it. */
+  townVersion = 0;
   arena: ArenaLayout | null = null;
   /** The zone the hero is in, or was last in. */
   zoneId: string = ZONES[0]!.id;
@@ -236,6 +239,36 @@ export class World {
       this.player.mana = this.derived.maxMana;
     }
     this.emit({ type: 'area', area: 'town' });
+  }
+
+  /**
+   * Rearranges the town to a layout (creator mode). Stations, the merchant
+   * and the dummies move at once if the hero is in town; the hero's start
+   * applies on the next arrival.
+   */
+  applyTownLayout(data: TownLayoutData): void {
+    const t = this.town;
+    placeTown(t, data);
+    this.townVersion++;
+    if (this.area !== 'town') return;
+    const spots: Partial<Record<Interactable['kind'], { x: number; z: number }>> = {
+      vendor: t.vendor, stash: t.stash, forge: t.forge, bloodfountain: t.bloodfountain, arcana: t.arcana, waypoint: t.waypoint, return_portal: t.returnPortal,
+    };
+    for (const it of this.interactables) {
+      const at = spots[it.kind];
+      if (at) {
+        it.x = at.x;
+        it.z = at.z;
+      }
+    }
+    for (const e of this.enemies) {
+      if (!e.alive || !e.dummy) continue;
+      const at = t.dummies[DUMMIES.indexOf(e.dummy)];
+      if (at) {
+        e.x = at.x;
+        e.z = at.z;
+      }
+    }
   }
 
   get zone(): ZoneDef {

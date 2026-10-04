@@ -1,4 +1,5 @@
 
+import { Creator, loadTownDraft } from '../ui/game/creator';
 import type { ConsumableId } from '../data/consumables';
 import { difficultyForLevel, zoneById } from '../data/zones';
 import { Music } from '../audio/music';
@@ -36,6 +37,8 @@ export class Game {
   readonly settings: Settings = loadSettings();
   /** The hero plays itself while this is set (Settings > Autoplay); any manual move or cast switches it off. */
   private autoplay: Autoplay | null = null;
+  /** Creator mode: the producer rearranging the town, or null. */
+  private creator: Creator | null = null;
   private seed = Math.floor(Math.random() * 1e9);
   private hasSave = false;
   /** The saved heroes on this device and the slot the hero in play is saved to. */
@@ -99,7 +102,7 @@ export class Game {
       cancelToTitle: () => this.showTitle(),
     });
     this.input = new Input(canvas, {
-      active: () => this.state === 'playing' && !!this.world && !this.panels?.isOpen && !this.world.playerDead && !this.world.pledgePending,
+      active: () => this.state === 'playing' && !!this.world && !this.panels?.isOpen && !this.creator && !this.world.playerDead && !this.world.pledgePending,
       tapEnemy: (sx, sy) => {
         const e = this.view!.pickEnemy(sx, sy);
         if (!e) return false;
@@ -134,7 +137,8 @@ export class Game {
       joystick: (active, x, y, dx, dy) => this.hud?.setJoystick(active, x, y, dx, dy),
       openPanel: (kind) => this.openPanel(kind),
       escape: () => {
-        if (this.panels?.isOpen) this.closePanel();
+        if (this.creator) this.setCreator(false);
+        else if (this.panels?.isOpen) this.closePanel();
         else if (this.state === 'playing') this.openPanel('settings');
       },
       toggleHero: () => {
@@ -238,6 +242,12 @@ export class Game {
     this.seed = seed;
     this.teardown();
     this.world = new World(player, seed);
+    // The producer's town arrangement from creator mode, kept in this browser
+    const draft = loadTownDraft();
+    if (draft) {
+      this.world.applyTownLayout(draft);
+      if (this.world.area === 'town') this.world.teleportTo(this.world.town.spawn.x, this.world.town.spawn.z);
+    }
     this.view = new PixelView(this.canvas, this.gameUi, this.world, this.mobile, (id) => { this.setAutoplay(false); this.world?.pickup(id); });
     this.world.setLootFilter(hiddenLoot(this.settings));
     this.view.zoom = this.settings.zoom;
@@ -263,6 +273,7 @@ export class Game {
       close: () => this.closePanel(),
       autoplay: () => !!this.autoplay,
       setAutoplay: (on) => this.setAutoplay(on),
+      openCreator: () => this.setCreator(true),
       travel: (area, zoneId, level) => {
         this.closePanel();
         this.world!.travel(area, zoneId, level);
@@ -340,6 +351,8 @@ export class Game {
   }
 
   private teardown(): void {
+    this.creator?.destroy();
+    this.creator = null;
     this.world = null;
     this.view = null;
     this.dev = null;
@@ -351,7 +364,7 @@ export class Game {
   }
 
   private openPanel(kind: PanelKind): void {
-    if (!this.panels || !this.world || this.world.playerDead) return;
+    if (!this.panels || !this.world || this.world.playerDead || this.creator) return;
     // Any menu is the player taking over; the settings switch is the only way back on
     this.setAutoplay(false);
     this.world.stop();
@@ -385,6 +398,30 @@ export class Game {
     this.screens.hide();
     this.world.respawn();
     this.state = 'playing';
+  }
+
+  /** Creator mode on or off. It only works in town; the hero stands still while the producer arranges things. */
+  setCreator(on: boolean): void {
+    if (on === !!this.creator || !this.world || !this.view) return;
+    if (on) {
+      if (this.world.area !== 'town') {
+        this.hud?.message('Creator mode works in town', 0xff8a8a);
+        return;
+      }
+      this.closePanel();
+      this.setAutoplay(false);
+      this.world.stop();
+      this.view.creator = { x: this.world.px, z: this.world.pz };
+      const world = this.world;
+      this.creator = new Creator(this.gameUi, { world, view: this.view, exit: () => this.setCreator(false) });
+      this.hud?.root.classList.add('hidden');
+    } else {
+      this.creator?.destroy();
+      this.creator = null;
+      this.view.creator = null;
+      this.hud?.root.classList.remove('hidden');
+      this.hud?.message('Creator mode closed. Your town is kept in this browser until you reset it.', 0xa0a8c0);
+    }
   }
 
   setAutoplay(on: boolean): void {
@@ -508,6 +545,7 @@ export class Game {
     this.updateHover();
     this.view.dim = paused ? 1 : 0;
     this.view.update(dt, this.time);
+    this.creator?.update();
     this.hud.update(dt);
     if (render) this.view.render();
   }

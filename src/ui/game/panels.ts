@@ -26,6 +26,8 @@ export interface PanelHost {
   /** Whether the hero is playing itself, and the switch for it. */
   autoplay(): boolean;
   setAutoplay(on: boolean): void;
+  /** Opens creator mode, where the town's pieces are dragged into place. */
+  openCreator(): void;
   travel(area: 'town' | 'arena', zoneId?: string, level?: number): void;
   exportCode(): string;
   importCode(code: string): Promise<boolean>;
@@ -435,6 +437,11 @@ export class Panels {
       h('div', { class: 'section-label' }, 'Autoplay'),
       h('div', { class: 'actions' }, button(this.host.autoplay() ? 'Autoplay: on' : 'Autoplay: off', () => { this.host.setAutoplay(!this.host.autoplay()); this.render(); }, 'btn small' + (this.host.autoplay() ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'The hero plays itself: roams the zone, fights every pack with its skills, drinks potions when low and picks up the loot. Touching anything, moving, a menu or a death switches it off.'),
+      h('div', { class: 'section-label' }, 'Creator mode'),
+      h('div', { class: 'actions' }, button('Arrange the town', () => this.host.openCreator(), 'btn small' + (this.host.world.area === 'town' ? '' : ' disabled'))),
+      h('div', { class: 'dim small' }, this.host.world.area === 'town'
+        ? 'Drag the merchant, stations, dummies, braziers, pillars and rubble where you want them, then Get code and paste it to Claude to make it the town for everyone.'
+        : 'Go back to town to use it.'),
       h('div', { class: 'section-label' }, 'Pet'),
       h('div', { class: 'actions' }, button(s.pet ? 'Crab: on' : 'Crab: off', () => { s.pet = !s.pet; this.host.applySettings(); this.render(); }, 'btn small' + (s.pet ? ' on' : ''))),
       h('div', { class: 'dim small' }, 'A small crab follows you and fetches gold and items that drop within 300 px.'),
