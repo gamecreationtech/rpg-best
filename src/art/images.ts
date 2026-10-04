@@ -33,6 +33,13 @@ export const HERO_ART_SHRINK: Partial<Record<ClassId, number>> = {};
 export type HeroDir = 'n' | 's' | 'e' | 'w';
 export type HeroAnimName = 'idle' | 'walk' | 'attack';
 export type HeroArtSet = Record<HeroDir, HTMLCanvasElement[]>;
+/**
+ * Animations whose west frames are the east frames flipped left to right,
+ * made once at load. The producer's own west files for that animation are
+ * then ignored. Sorcerer2's west attack (producer's call, 2026-10-04): the
+ * drawn west set had no punch, the east one does.
+ */
+export const HERO_ART_MIRROR_WEST: Partial<Record<ClassId, HeroAnimName[]>> = { sorcerer2: ['attack'] };
 export interface HeroArt {
   idle: HeroArtSet;
   /** Walk and attack frames per direction; a direction without any uses its idle frames. */
@@ -148,7 +155,25 @@ async function loadHeroArt(classId: string): Promise<void> {
   };
   const idle = await load('idle');
   if (!HERO_DIRS.every((dir) => idle[dir])) return;
-  heroImages.set(classId, { idle: idle as HeroArtSet, walk: await load('walk'), attack: await load('attack') });
+  const art: HeroArt = { idle: idle as HeroArtSet, walk: await load('walk'), attack: await load('attack') };
+  for (const anim of HERO_ART_MIRROR_WEST[classId as ClassId] ?? []) {
+    const east = art[anim].e;
+    if (east) art[anim].w = east.map(mirrored);
+  }
+  heroImages.set(classId, art);
+}
+
+/** A copy of the frame flipped left to right, pixel for pixel. */
+function mirrored(src: HTMLCanvasElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = src.width;
+  c.height = src.height;
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingEnabled = false;
+  ctx.translate(src.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(src, 0, 0);
+  return c;
 }
 
 /** The hand-made sprites for a class, when its idle set is complete. */

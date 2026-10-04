@@ -9,7 +9,11 @@ optional: if it is missing, the code-drawn version is used.
   `sorcerer2`) is drawn from these instead of the code-drawn hero, whatever it
   wears. `anim` is `idle`, `walk` or `attack`; `dir` is `n` (back to the
   camera), `s` (facing the camera), `e` (facing right) or `w` (facing left).
-  The `w` drawing is used as is, never a mirrored `e`.
+  The `w` drawing is used as is, never a mirrored `e`, unless the animation is
+  listed in `HERO_ART_MIRROR_WEST`: then west is the east frames flipped and
+  the `w` files are ignored. Sorcerer2's attack is listed (2026-10-04), so its
+  `attack_w` files are kept but unused; ask to take it off the list to use a
+  new west drawing.
 - The idle set needs all four directions before it is used at all. Walk and
   attack are picked up one direction at a time as their frames arrive; a
   direction that has none yet shows its idle drawing, so idle alone is
