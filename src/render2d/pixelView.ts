@@ -7,7 +7,7 @@ import { SKILLS, orbiterPlace } from '../data/skills';
 import { ELEMENT_COLORS, type Element } from '../data/stats';
 import { crabSheet, dummySheet, heroLookKey, heroSheet, monsterSheet, vendorSheet, type CharacterSheet, type Facing, type HeroLook, type MonsterKind, type OffhandLook } from '../gen/pixel/characters';
 import { PALETTES, type Palette } from '../gen/pixel/palettes';
-import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, type Prop } from '../gen/pixel/props';
+import { arcanaProp, bloodFountainProp, decorProp, dropProp, forgeProp, portalProp, projectileProp, rubbleProp, waypointProp, type Prop } from '../gen/pixel/props';
 import { zoneById } from '../data/zones';
 import { effectSprites, isoTiles, propSprites, type EffectSprites, type PropSprites, type SpriteAnim, type TileSet } from '../gen/pixel/sprites';
 import { Tile } from '../sim/map/tilemap';
@@ -44,6 +44,8 @@ interface Placed {
   z: number;
   /** Keyed to an interactable id so hover can highlight it, or -1. */
   interactId: number;
+  /** Lit smoothly like the characters, without the floor's dither. */
+  smooth: boolean;
 }
 
 interface StaticLight {
@@ -177,7 +179,7 @@ export class PixelView {
       forge: forgeProp(pal, SIZE, OUTLINE),
       bloodfountain: propArt('bloodfountain') ? propAnim(propArt('bloodfountain')!) : bloodFountainProp(pal, SIZE, OUTLINE),
       arcana: arcanaProp(pal, SIZE, OUTLINE),
-      waypoint: propArt('waypoint') ? propAnim(propArt('waypoint')!) : portalProp(0xffd060, pal, SIZE, OUTLINE),
+      waypoint: propArt('waypoint') ? propAnim(propArt('waypoint')!) : waypointProp(0xffd060, pal, SIZE, OUTLINE),
       // The producer's animated portal serves both the town portal and the return portal
       return_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0x6fa8ff, pal, SIZE, OUTLINE),
       town_portal: propArt('portal') ? propAnim(propArt('portal')!) : portalProp(0xb070ff, pal, SIZE, OUTLINE),
@@ -298,7 +300,7 @@ export class PixelView {
       this.tiles = tiles;
     }
     this.compositor.darkness = w.area === 'town' ? 0.42 : zone.darkness;
-    const place = (prop: Prop, x: number, z: number, interactId = -1) => this.placed.push({ prop, x, z, interactId });
+    const place = (prop: Prop, x: number, z: number, interactId = -1, smooth = false) => this.placed.push({ prop, x, z, interactId, smooth });
     const light = (x: number, z: number, color: number, intensity: number, radius: number, flicker = false, y = 1.2) => this.staticLights.push({ x, z, y, color, intensity, radius, flicker });
     const idOf = (kind: string) => w.interactables.find((i) => i.kind === kind)?.id ?? -1;
     if (w.area === 'town') {
@@ -307,7 +309,7 @@ export class PixelView {
       place(this.stations.forge!, t.forge.x, t.forge.z, idOf('forge'));
       place(this.stations.bloodfountain!, t.bloodfountain.x, t.bloodfountain.z, idOf('bloodfountain'));
       place(this.stations.arcana!, t.arcana.x, t.arcana.z, idOf('arcana'));
-      place(this.stations.waypoint!, t.waypoint.x, t.waypoint.z, idOf('waypoint'));
+      place(this.stations.waypoint!, t.waypoint.x, t.waypoint.z, idOf('waypoint'), true);
       if (w.arenaVisited) place(this.stations.return_portal!, t.returnPortal.x, t.returnPortal.z, idOf('return_portal'));
       light(t.forge.x, t.forge.z, 0xff8a30, 1.3, 3.2, true);
       light(t.bloodfountain.x, t.bloodfountain.z, 0xff3a3a, 1.0, 2.6);
@@ -1561,6 +1563,7 @@ export class PixelView {
         draw: () => {
           if (hover) this.drawTinted(frame, fx - p.prop.originX, fy - p.prop.originY, false, '#ffffff', 0.3);
           else ctx.drawImage(frame, fx - p.prop.originX, fy - p.prop.originY);
+          if (p.smooth) this.maskDraw(frame, fx - p.prop.originX, fy - p.prop.originY, false);
         },
       });
     }

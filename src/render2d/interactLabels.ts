@@ -47,7 +47,8 @@ export class InteractLabels {
       const how = this.touch ? (inReach ? `Tap to ${info.verb}` : `Tap to walk over and ${info.verb}`) : inReach ? `Press F to ${info.verb}` : `Click to walk over and ${info.verb}`;
       el.innerHTML = `<b style="color:#${info.color.toString(16).padStart(6, '0')}">${info.name}</b><span>${how}</span>`;
       el.classList.toggle('near', inReach);
-      if (this.view.project(it.x, 3.2, it.z, this.tmp)) {
+      // The waypoint arch stands twice as tall as the other stations, so its tag floats higher
+      if (this.view.project(it.x, it.kind === 'waypoint' ? 5.6 : 3.2, it.z, this.tmp)) {
         el.style.display = 'block';
         el.style.transform = `translate(-50%, -100%) translate(${this.tmp.x.toFixed(0)}px, ${this.tmp.y.toFixed(0)}px)`;
       } else {

@@ -142,6 +142,138 @@ export function portalProp(color: number, pal: Palette, size: SpriteSize, outlin
   return prop(frames, 1 + 13 * s, H + 1, 0.12);
 }
 
+/**
+ * The town waypoint: twice the size of a portal (52 by 68) and drawn at that
+ * size, not scaled (producer's call, 2026-10-04). A stone arch laid in
+ * wedge-shaped blocks with a keystone gem, two pillars with capitals, plinths
+ * and carved runes that light up in turn, a two-step stone base, and a golden
+ * swirl inside with a bright rim, a white-hot core and sparks rising through it.
+ */
+export function waypointProp(color: number, pal: Palette, size: SpriteSize, outline: boolean): Prop {
+  const s = size === 'large' ? 2 : 1;
+  const stone = ramp(pal.wall, pal.contrast);
+  const glow = ramp(color, pal.contrast);
+  const white: Rgb = [0xff, 0xf8, 0xe0];
+  const W = 52;
+  const H = 68;
+  const cx = 25.5;
+  const springY = 24;
+  const outerR = 25.5;
+  const innerR = 16;
+  const FRAMES = 8;
+  // Small rune shapes carved into the pillars, 3 by 4
+  const RUNES = [
+    ['x.x', '.x.', 'x.x', '.x.'],
+    ['xxx', 'x..', 'xx.', 'x..'],
+    ['.x.', 'xxx', '.x.', 'x.x'],
+  ];
+  const inOpening = (x: number, y: number): boolean => {
+    if (y < springY) return Math.hypot(x - cx, y - springY) < innerR - 0.5;
+    return x >= 10 && x <= 41 && y <= 57;
+  };
+  const frames: HTMLCanvasElement[] = [];
+  for (let f = 0; f < FRAMES; f++) {
+    const b = new PixelBuffer((W + 2) * s, (H + 2) * s);
+    const set = (x: number, y: number, c: Rgb) => b.rect((1 + x) * s, (1 + y) * s, s, s, c);
+    // The swirl, filling the opening: spiral bands turning, a bright core, a glowing rim against the stone
+    for (let y = 0; y <= 57; y++) {
+      for (let x = 10; x <= 41; x++) {
+        if (!inOpening(x, y)) continue;
+        const dx = (x - cx) / 16;
+        const dy = (y - 34) / 24;
+        const r = Math.hypot(dx, dy);
+        const a = Math.atan2(dy, dx) + r * 5 - (f / FRAMES) * Math.PI * 2;
+        const band = (((a / Math.PI) * 3) % 2 + 2) % 2;
+        // Mostly deep gold, with one bright band per turn so the spiral reads
+        let c: Rgb = band < 0.8 ? glow[0] : band < 1.4 ? glow[1] : band < 1.7 ? glow[2] : glow[1];
+        if (r < 0.26) c = glow[2];
+        if (r < 0.15) c = glow[3];
+        if (r < 0.07) c = white;
+        const rim = !inOpening(x - 1, y) || !inOpening(x + 1, y) || !inOpening(x, y - 1) || !inOpening(x, y + 1);
+        if (rim) c = glow[2];
+        set(x, y, c);
+      }
+    }
+    // Sparks rising through the swirl, each on its own column and pace
+    for (let k = 0; k < 7; k++) {
+      const x = 13 + ((k * 11) % 26);
+      const y = 54 - ((f * (3 + (k % 3)) + k * 9) % 42);
+      if (inOpening(x, y)) set(x, y, k % 2 ? white : glow[3]);
+      if (inOpening(x, y + 1) && k % 3 === 0) set(x, y + 1, glow[2]);
+    }
+    // The arch: wedge-shaped blocks with dark joints, lit from the left, a tall keystone on top
+    for (let y = 0; y <= springY; y++) {
+      for (let x = 0; x < W; x++) {
+        const r = Math.hypot(x - cx, y - springY);
+        const ang = Math.atan2(y - springY, x - cx); // -PI (left) .. 0 (right), -PI/2 at the top
+        const key = Math.abs(ang + Math.PI / 2) < 0.2;
+        if (r < innerR - 0.5 || r > outerR + (key ? 2 : 0)) continue;
+        const seg = ((ang + Math.PI) / Math.PI) * 9;
+        const joint = Math.abs(seg - Math.round(seg)) < 0.09 * (outerR / Math.max(r, 1));
+        let c: Rgb = stone[1];
+        if (r > outerR - 1.2 || x < cx - 18) c = stone[2];
+        if (r < innerR + 0.8) c = stone[0];
+        if (noise(x, y, 7) > 0.82) c = stone[0];
+        if (joint && !key) c = stone[0];
+        if (key) {
+          c = r > outerR + 0.5 ? stone[3] : stone[2];
+          if (Math.abs(x - cx) < 1 && Math.abs(r - (innerR + outerR) / 2) < 1.6) c = f % 4 < 2 ? white : glow[3];
+          else if (Math.abs(x - cx) < 2 && Math.abs(r - (innerR + outerR) / 2) < 2.6) c = glow[2];
+        }
+        set(x, y, c);
+      }
+    }
+    // Pillars: courses of blocks with staggered joints, a capital where the arch springs, a plinth at the foot
+    for (const [x0, x1] of [[1, 9], [42, 50]] as [number, number][]) {
+      for (let y = springY + 1; y <= 57; y++) {
+        const course = Math.floor((y - springY - 1) / 6);
+        for (let x = x0; x <= x1; x++) {
+          let c: Rgb = x === x0 ? stone[2] : x === x1 ? stone[0] : stone[1];
+          if ((y - springY - 1) % 6 === 5) c = stone[0];
+          if (x === x0 + 3 + (course % 2) * 3 && (y - springY - 1) % 6 !== 5) c = stone[0];
+          if (noise(x, y, 3) > 0.86) c = stone[0];
+          set(x, y, c);
+        }
+      }
+      // Capital and plinth stick out a pixel on each side
+      for (let x = x0 - 1; x <= x1 + 1; x++) {
+        set(x, springY, x === x0 - 1 ? stone[3] : stone[2]);
+        set(x, springY + 1, stone[0]);
+        set(x, 55, stone[2]);
+        set(x, 56, stone[1]);
+        set(x, 57, stone[0]);
+      }
+      // Three runes down the face, lighting up one after another
+      RUNES.forEach((rune, i) => {
+        const lit = (f >> 1) % 4 === i;
+        const c = lit ? glow[3] : glow[0];
+        rune.forEach((row, ry) => {
+          for (let rx = 0; rx < 3; rx++) if (row[rx] === 'x') set(x0 + 3 + rx, 30 + i * 8 + ry, c);
+        });
+        if (lit) set(x0 + 4, 29 + i * 8, glow[2]);
+      });
+    }
+    // Two steps of stone at the base, top faces catching the light, joints staggered
+    const step = (x0: number, x1: number, y0: number, h: number, off: number) => {
+      for (let y = y0; y < y0 + h; y++) {
+        for (let x = x0; x <= x1; x++) {
+          let c: Rgb = y === y0 ? stone[3] : y === y0 + 1 ? stone[2] : y === y0 + h - 1 ? stone[0] : stone[1];
+          if (y > y0 + 1 && (x - x0 + off) % 9 === 0) c = stone[0];
+          if (y > y0 + 1 && noise(x, y, 11) > 0.88) c = stone[0];
+          set(x, y, c);
+        }
+      }
+    };
+    step(3, 48, 58, 4, 4);
+    step(0, 51, 62, 6, 0);
+    // The swirl's glow spills onto the top step
+    for (let x = 12; x <= 39; x++) if ((x + f) % 3 !== 0) set(x, 58, glow[2]);
+    if (outline) b.outline(hex(pal.outline));
+    frames.push(b.toCanvas());
+  }
+  return prop(frames, (1 + 26) * s, (H + 1) * s, 0.1);
+}
+
 /** A few broken stones. */
 export function rubbleProp(seed: number, pal: Palette, size: SpriteSize, outline: boolean): Prop {
   const s = size === 'large' ? 2 : 1;
